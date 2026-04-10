@@ -6,27 +6,27 @@ const chapters = [
   {
     index: "01",
     heading: "Started where numbers made sense.",
-    body: "I majored in accounting because I understood the world through spreadsheets and ledgers. Numbers told stories. I liked that. Then I kept going — a master's in financial economics, digging deeper into how markets really work.",
+    body: "I majored in accounting because I understood the world through spreadsheets and ledgers. Numbers told stories. I liked that. Then I kept going: a master's in financial economics, digging deeper into how markets really work.",
   },
   {
     index: "02",
     heading: "Then ChatGPT launched. Everything changed.",
-    body: "Halfway through my master's program, ChatGPT dropped. I became obsessed. Not in a novelty way — in a \"this fundamentally changes everything I thought I knew about knowledge work\" way. I couldn't stop thinking about what it meant for professions built on analysis, judgment, and expertise.",
+    body: "Halfway through my master's program, ChatGPT dropped. I became obsessed. Not in a novelty way. In a \"this fundamentally changes everything I thought I knew about knowledge work\" way. I couldn't stop thinking about what it meant for professions built on analysis, judgment, and expertise.",
   },
   {
     index: "03",
-    heading: "I started a PhD to research it — and hit a wall.",
+    heading: "I started a PhD to research it. Then hit a wall.",
     body: "I enrolled in a PhD program in accounting specifically to study how AI was reshaping the profession. But the data wasn't there yet. AI is moving faster than academic research cycles. The journals were two years behind the real world. I was trying to measure an ocean with a ruler.",
   },
   {
     index: "04",
     heading: "A conversation at the Arizona Department of Revenue.",
-    body: "While working with the Arizona Department of Revenue, I asked a simple question: \"How are you using AI?\" The answer was honest and stuck with me: \"We just don't have the bandwidth to figure it out right now.\" That was the moment. The gap wasn't knowledge — it was capacity and guidance.",
+    body: "While working with the Arizona Department of Revenue, I asked a simple question: \"How are you using AI?\" The answer was honest and stuck with me: \"We just don't have the bandwidth to figure it out right now.\" That was the moment. The gap wasn't knowledge. It was capacity and guidance.",
   },
   {
     index: "05",
     heading: "So I decided to fill the gap.",
-    body: "If institutions that want AI can't navigate it alone, and researchers can't study it fast enough — someone needs to bridge that. I left the theoretical for the practical. I founded Neyland Solutions to help companies and institutions actually implement AI, so they can do better work without waiting for the world to catch up.",
+    body: "If institutions that want AI can't navigate it alone, and researchers can't study it fast enough, someone needs to bridge that. I left the theoretical for the practical. I founded Neyland Solutions to help companies and institutions actually implement AI, so they can do better work without waiting for the world to catch up.",
   },
 ];
 

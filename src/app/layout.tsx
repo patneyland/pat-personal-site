@@ -21,11 +21,11 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Patrick Neyland — AI Leader",
+  title: "Patrick Neyland | AI Leader",
   description:
     "Patrick Neyland helps companies and institutions implement AI so they can do better work. Founder of Neyland Solutions.",
   openGraph: {
-    title: "Patrick Neyland — AI Leader",
+    title: "Patrick Neyland | AI Leader",
     description:
       "Patrick Neyland helps companies and institutions implement AI so they can do better work.",
     type: "website",
