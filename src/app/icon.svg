@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <defs>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&amp;display=swap');
+    </style>
+  </defs>
+  <rect width="32" height="32" rx="6" fill="#0e0e0e"/>
+  <text
+    x="16"
+    y="16"
+    font-family="'Playfair Display', Georgia, serif"
+    font-weight="700"
+    font-size="14"
+    fill="#c9a84c"
+    text-anchor="middle"
+    dominant-baseline="central"
+    letter-spacing="0.5"
+  >PN</text>
+</svg>
