@@ -97,7 +97,7 @@ export default function Hero() {
               </p>
               <p className="mt-3 text-body" style={{ color: "#1a1a1a" }}>
                 I love building cool stuff, watching people get excited about AI
-                and automation, and just making people's work more enjoyable,
+                and automation, and just making people&apos;s work more enjoyable,
                 through AI.
               </p>
               <p className="mt-3 text-body" style={{ color: "#555555" }}>
