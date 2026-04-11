@@ -8,10 +8,24 @@ import BlurFade from "@/components/ui/BlurFade";
 import { ArrowRight } from "lucide-react";
 
 const PHOTOS = [
-  "/assets/slideshow/photo-one.png",
-  "/assets/slideshow/photo-two.png",
-  "/assets/slideshow/photo-three.png",
-  "/assets/slideshow/photo-four.png",
+  {
+    src: "/assets/slideshow/photo-one.png",
+    caption: "AI-edited. I promise I'm not this pretentious.",
+  },
+  {
+    src: "/assets/slideshow/photo-two.png",
+    caption:
+      "I have a beautiful wife and four wonderful kids. This is us after church on Palm Sunday.",
+  },
+  {
+    src: "/assets/slideshow/photo-three.png",
+    caption:
+      "I earned my master's degree from Utah State in Financial Economics.",
+  },
+  {
+    src: "/assets/slideshow/photo-four.png",
+    caption: "Daddy-daughter dance.",
+  },
 ];
 
 export default function Hero() {
@@ -23,6 +37,8 @@ export default function Hero() {
     }, 7000);
     return () => clearInterval(timer);
   }, []);
+
+  const { src, caption } = PHOTOS[current];
 
   return (
     <section
@@ -100,7 +116,7 @@ export default function Hero() {
                     transition={{ duration: 0.8, ease: "easeInOut" }}
                   >
                     <Image
-                      src={PHOTOS[current]}
+                      src={src}
                       alt="Patrick Neyland"
                       fill
                       className="object-contain"
@@ -109,6 +125,27 @@ export default function Hero() {
                   </motion.div>
                 </AnimatePresence>
               </div>
+
+              {/* Caption */}
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={current}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5, ease: "easeInOut" }}
+                  style={{
+                    marginTop: "0.5rem",
+                    fontSize: "0.75rem",
+                    fontStyle: "italic",
+                    color: "#888888",
+                    textAlign: "center",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {caption}
+                </motion.p>
+              </AnimatePresence>
             </div>
           </div>
         </BlurFade>
