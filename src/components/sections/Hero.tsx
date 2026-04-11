@@ -82,12 +82,9 @@ export default function Hero() {
           >
             <div className="p-6">
               <p className="text-body" style={{ color: "#1a1a1a" }}>
-                I help companies and institutions implement AI so they can do
-                better work. Before that, I was an accounting student who got
-                sidetracked by AI.
-              </p>
-              <p className="mt-3 text-body" style={{ color: "#555555" }}>
-                I co-founded{" "}
+                I am a child of God, dad, and husband. For work, I am an AI
+                expert and act as a fractional Chief AI Officer through the
+                company{" "}
                 <a
                   href="https://neylandsolutions.com"
                   target="_blank"
@@ -95,8 +92,16 @@ export default function Hero() {
                   style={{ color: "#b8922a" }}
                 >
                   Neyland Solutions
-                </a>{" "}
-                with my brother Blake to put that to use.
+                </a>
+                , which I co-founded with my brother, Blake.
+              </p>
+              <p className="mt-3 text-body" style={{ color: "#1a1a1a" }}>
+                I love building cool stuff, watching people get excited about AI
+                and automation, and just making people's work more enjoyable,
+                through AI.
+              </p>
+              <p className="mt-3 text-body" style={{ color: "#555555" }}>
+                I also love cooking, woodworking, and birding (bird watching).
               </p>
             </div>
 
