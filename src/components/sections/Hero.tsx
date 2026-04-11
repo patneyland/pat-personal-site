@@ -68,10 +68,10 @@ export default function Hero() {
               <p className="text-body" style={{ color: "#1a1a1a" }}>
                 I help companies and institutions implement AI so they can do
                 better work. Before that, I was an accounting student who got
-                completely sidetracked by ChatGPT.
+                sidetracked by AI.
               </p>
               <p className="mt-3 text-body" style={{ color: "#555555" }}>
-                I founded{" "}
+                I co-founded{" "}
                 <a
                   href="https://neylandsolutions.com"
                   target="_blank"
@@ -80,7 +80,7 @@ export default function Hero() {
                 >
                   Neyland Solutions
                 </a>{" "}
-                to put that to use.
+                with my brother Blake to put that to use.
               </p>
             </div>
 
