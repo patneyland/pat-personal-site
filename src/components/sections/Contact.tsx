@@ -7,8 +7,8 @@ const links = [
   {
     icon: Mail,
     label: "Email",
-    href: "mailto:patrick@neylandsolutions.com",
-    display: "patrick@neylandsolutions.com",
+    href: "mailto:pat@neylandsolutions.com",
+    display: "pat@neylandsolutions.com",
   },
   {
     icon: Linkedin,
