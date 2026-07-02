@@ -573,7 +573,7 @@ export default function Story() {
 
           {/* 4 — extra top space so the merge arrows from FiscalSim and the
               ASC have room to curve in without crowding */}
-          <BlurFade delay={0.1} className="sm:mt-16">
+          <BlurFade delay={0.1} className="sm:mt-24">
             <div className="flex flex-wrap items-start gap-10">
               <Polaroid
                 ref={setFrame("asu")}
@@ -597,15 +597,15 @@ export default function Story() {
           {/* 5 — the note shrinks to fit beside the photos so the row stays
               on one line, keeping the air above both photos clear for the
               pair of arrows from ASU */}
-          <BlurFade delay={0.1} className="sm:mt-10">
+          <BlurFade delay={0.1} className="sm:mt-20">
             <div className="flex flex-wrap items-start justify-end gap-10">
               <Note align="right" style={{ flex: "1 1 240px" }}>
                 I took a leave of absence to start AI consulting, to better
                 understand it and help businesses implement it, so I&apos;d be a
-                much better informed researcher. I started Neyland Solutions, then
-                left the PhD program to do it full time so I could learn more
-                about AI. Now I help businesses use AI to generate revenue and
-                improve their operations.
+                much better informed researcher. I started Neyland Solutions to
+                formalize this consulting practice. Right now, I am helping
+                businesses use AI to generate revenue and improve their
+                operations.
               </Note>
               <div className="flex flex-wrap items-start justify-center gap-6">
                 <Polaroid
@@ -658,8 +658,8 @@ export default function Story() {
             </h4>
             <p style={{ color: INK_SOFT, fontSize: "1rem" }}>
               Along the way I got married and had four kids. I enjoy
-              woodworking, birding, a chili cook-off, and hiking the Grand
-              Canyon.
+              woodworking, birding, and cooking. I have won a chili cook-off,
+              and I have hiked rim-to-rim in the Grand Canyon.
             </p>
             <div className="mt-6 flex flex-wrap items-start justify-center gap-4 pb-2">
               {REAL_STUFF.map((shot) => (
