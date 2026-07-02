@@ -53,8 +53,6 @@ The aesthetic inspiration is [garysheng.com](https://www.garysheng.com/):
 pat-personal-site/
 ├── CLAUDE.md              ← you are here
 ├── design.md              ← design system rules
-├── assets/                ← logos, photos (Patrick adds these)
-│   └── README.md
 ├── src/
 │   ├── app/
 │   │   ├── layout.tsx
@@ -64,7 +62,9 @@ pat-personal-site/
 │       ├── sections/      ← Hero, Story, Projects, CTA, Contact
 │       └── ui/            ← reusable primitives (BlurFade, etc.)
 ├── public/
-│   └── assets/            ← symlink or copy from /assets
+│   └── assets/            ← logos, photos (Patrick adds these; the ONLY assets folder the site serves)
+│       ├── slideshow/     ← Hero slideshow photos
+│       └── story/         ← Journey/story page photos
 └── tailwind.config.ts
 ```
 
@@ -94,7 +94,7 @@ The short version:
 ## Collaboration Rules
 
 - Do not add features not requested. Stick to what Patrick asks.
-- When Patrick provides new content (copy, images), update `assets/` and relevant section files.
+- When Patrick provides new content (copy, images), place images in `public/assets/` and update the relevant section files. Next.js only serves files from `public/`, so images must live there to appear on the site.
 - Always check `design.md` before proposing any color, font, or spacing choice.
 - When Patrick approves a section, mark it ready for build.
 - Commit messages: short, present tense, descriptive (`add hero section`, `update story copy`).

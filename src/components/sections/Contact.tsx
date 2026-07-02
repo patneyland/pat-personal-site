@@ -13,8 +13,8 @@ const links = [
   {
     icon: Linkedin,
     label: "LinkedIn",
-    href: "https://linkedin.com/in/patrickneyland",
-    display: "linkedin.com/in/patrickneyland",
+    href: "https://www.linkedin.com/in/patrick-neyland",
+    display: "linkedin.com/in/patrick-neyland",
   },
   {
     icon: ExternalLink,
