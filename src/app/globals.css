@@ -197,8 +197,10 @@ body {
 .tile-blurb a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
 
 /* ─── Boring mode: the front page ───────────────────────────
-   A resume, set the way a resume is set. Times, white, ruled section heads,
-   dated entries, bullets. The plainness is the point. Do not add design. */
+   A resume, set the way a resume is set. Times, black on white, ruled section
+   heads, dated entries, bullets. Spacing runs on one 0.5em rhythm so the page
+   reads as a plain document rather than a designed one.
+   The plainness is the point. Do not add design. */
 .boring {
   background: #ffffff;
   color: #000000;
@@ -207,14 +209,14 @@ body {
   line-height: 1.45;
   max-width: 46em;
   margin: 0 auto;
-  padding: 2.25rem 1.25rem 3rem;
+  padding: 2rem 1.25rem 3rem;
   min-height: 100vh;
 }
 
 .boring h1 {
   font-size: 2.1em;
   font-weight: bold;
-  margin: 0 0 0.25em;
+  margin: 0 0 0.5em;
   letter-spacing: 0;
 }
 
@@ -222,39 +224,25 @@ body {
 .boring h2 {
   font-size: 1.25em;
   font-weight: bold;
-  margin: 1.35em 0 0.45em;
-  padding-bottom: 0.12em;
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.1em;
   border-bottom: 1px solid #000000;
 }
 
-/* One entry: role or degree. */
+/* One entry: role or degree, then the organisation, then dates and place. */
 .boring h3 {
   font-size: 1.05em;
   font-weight: bold;
-  margin: 0.95em 0 0;
+  margin: 1em 0 0;
 }
-
-/* The organisation sits directly under the role, the dates and place under
-   that in italic. Both come straight from the markdown. */
-.boring h3 + p { margin: 0.1em 0 0; }
+.boring h3 + p { margin: 0; }
 .boring h3 + p em { font-style: italic; font-size: 0.94em; }
 
-.boring p { margin: 0.6em 0; }
-.boring ul { margin: 0.35em 0 0.7em; padding-left: 1.4em; list-style: disc; }
-.boring li { margin: 0.18em 0; }
+.boring p { margin: 0.5em 0; }
+.boring ul { margin: 0.5em 0; padding-left: 1.4em; list-style: disc; }
+.boring li { margin: 0.25em 0; }
 .boring a { color: #0000ee; text-decoration: underline; }
 .boring a:visited { color: #551a8b; }
-.boring hr { margin: 2.5em 0 1.5em; border: 0; border-top: 1px solid #cccccc; }
-
-/* The one warm thing on the page. A rule, not a box, so it still reads as
-   something typed into a plain document. */
-.boring blockquote {
-  margin: 1.1em 0 1.5em;
-  padding: 0.05em 0 0.05em 1em;
-  border-left: 3px solid #cccccc;
-}
-.boring blockquote p:first-child { margin-top: 0; }
-.boring blockquote p:last-child { margin-bottom: 0; }
 
 /* White to the edges. It is a printed document, not a panel on a dark site. */
 html:has(.boring),

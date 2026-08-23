@@ -3,6 +3,6 @@ kind: boring
 order: 101
 tag: Boring, but important
 year: Aug 2024 to expected May 2029
-title: Doctoral Studies in Accounting, Arizona State University
+title: Doctor of Philosophy, Accounting
 ---
-Doctoral researcher. Research on the effects of generative AI on the accounting profession. Currently on leave of absence to build.
+Arizona State University, W. P. Carey School of Business. Researching the effects of generative AI on the accounting profession. On leave of absence to build, and returning to finish.

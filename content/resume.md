@@ -6,18 +6,18 @@
 
 # Patrick Neyland
 
-> Hi there, my name is Patrick and this is my website.
->
-> And [here is a much more fun version of my website](/fun).
+Hi there, my name is Patrick and this is my website.
+
+And [here is a much more fun version of my website](/fun).
 
 I am an AI engineer and researcher. I am currently on a leave of absence from my
 PhD program, to get more hands-on experience with AI.
 
-[pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) · [neylandsolutions.com](https://neylandsolutions.com)
+pat at neylandsolutions.com
 
 ## Education
 
-### Doctoral Studies in Accounting
+### Doctor of Philosophy, Accounting
 
 **Arizona State University, W. P. Carey School of Business**
 *Aug 2024 to expected May 2029 · Tempe, Arizona*
@@ -51,15 +51,14 @@ PhD program, to get more hands-on experience with AI.
 ### Doctoral Researcher
 
 **Arizona State University, W. P. Carey School of Business**
-*Aug 2024 to May 2026 · Tempe, Arizona*
+*Aug 2024 to present, currently on leave of absence · Tempe, Arizona*
 
-- Conducted independent empirical research: research design, data collection
-  and cleaning, statistical analysis, and interpretation of results
-- Communicated findings through written analysis and presentations, and
-  regularly pitched research questions and study designs to faculty and peer
-  groups
-- Collected data via SQL queries on the WRDS database and custom web scrapers
-  such as SEC EDGAR, then analyzed it in Python, SAS, and STATA
+- Conduct independent empirical research: research design, data collection and
+  cleaning, statistical analysis, and interpretation of results
+- Communicate findings through written analysis and presentations, and pitch
+  research questions and study designs to faculty and peer groups
+- Collect data via SQL queries on the WRDS database and custom web scrapers
+  such as SEC EDGAR, then analyze it in Python, SAS, and STATA
 
 ### Data Analytics Team Lead
 
