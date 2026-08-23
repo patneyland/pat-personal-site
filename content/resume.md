@@ -18,16 +18,6 @@
 
 Gilbert, Arizona · [pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) · [neylandsolutions.com](https://neylandsolutions.com)
 
-## Summary
-
-Empirical researcher and AI developer. I am on a leave of absence from my PhD
-program, where I was researching the effects of generative AI on the accounting
-profession, to more fully learn how professionals are actually using AI by
-consulting privately. Independent research design and statistical analysis
-across quantitative social science, and built and evaluated LLM and agent
-systems. Interested in AI control and model organisms. Builder of CPA-bench, a
-practitioner relevant benchmark for LLMs on accounting tasks.
-
 ## Education
 
 ### Doctoral Studies in Accounting

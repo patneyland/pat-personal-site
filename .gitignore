@@ -33,3 +33,5 @@ npm-debug.log*
 # email address, and this repository is public. Never commit it.
 Resume*.pdf
 *.pdf
+
+.vercel
