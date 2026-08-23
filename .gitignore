@@ -28,3 +28,8 @@ next-env.d.ts
 .DS_Store
 *.pem
 npm-debug.log*
+
+# Personal documents. The resume PDF carries a phone number and a personal
+# email address, and this repository is public. Never commit it.
+Resume*.pdf
+*.pdf

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, DM_Sans, JetBrains_Mono, Caveat } from "next/font/google";
 import "./globals.css";
+import Nav from "@/components/ui/Nav";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -48,7 +49,10 @@ export default function RootLayout({
       lang="en"
       className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
     >
-      <body className="bg-bg text-ink antialiased">{children}</body>
+      <body className="bg-bg text-ink antialiased">
+        <Nav />
+        {children}
+      </body>
     </html>
   );
 }

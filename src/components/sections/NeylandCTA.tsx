@@ -35,7 +35,7 @@ export default function NeylandCTA() {
 
         <BlurFade delay={0.18}>
           <p className="text-body mb-4 mx-auto max-w-lg" style={{ fontSize: "1.0625rem" }}>
-            Neyland Solutions helps small businesses (the ones running $1M–$3M
+            Neyland Solutions helps small businesses (the ones running $1M to $3M
             operations with no time to become AI researchers) implement AI the
             right way.
           </p>
