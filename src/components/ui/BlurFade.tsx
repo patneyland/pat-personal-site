@@ -10,6 +10,15 @@ interface BlurFadeProps {
   blur?: string;
   className?: string;
   once?: boolean;
+  /**
+   * Animate on mount instead of on scroll.
+   *
+   * Use for anything that is part of a page-load sequence rather than a
+   * scroll reveal. Without it, content sitting just past the fold stays at
+   * opacity 0 until the reader scrolls, which hides it with no hint that it
+   * is there.
+   */
+  immediate?: boolean;
 }
 
 export default function BlurFade({
@@ -19,16 +28,18 @@ export default function BlurFade({
   blur = "4px",
   className,
   once = true,
+  immediate = false,
 }: BlurFadeProps) {
   const ref = useRef(null);
   const inView = useInView(ref, { once, margin: "-60px" });
+  const show = immediate || inView;
 
   return (
     <motion.div
       ref={ref}
       initial={{ opacity: 0, filter: `blur(${blur})`, y: 12 }}
       animate={
-        inView
+        show
           ? { opacity: 1, filter: "blur(0px)", y: 0 }
           : { opacity: 0, filter: `blur(${blur})`, y: 12 }
       }

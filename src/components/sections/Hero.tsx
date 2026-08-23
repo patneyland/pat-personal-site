@@ -9,10 +9,6 @@ import { ArrowRight } from "lucide-react";
 
 const PHOTOS = [
   {
-    src: "/assets/slideshow/photo-one.png",
-    caption: "AI-edited. I promise I'm not this pretentious.",
-  },
-  {
     src: "/assets/slideshow/photo-two.png",
     caption:
       "I have a beautiful wife and four wonderful kids. This is us after church on Palm Sunday.",
@@ -26,6 +22,29 @@ const PHOTOS = [
     src: "/assets/slideshow/photo-four.png",
     caption: "Daddy-daughter dance.",
   },
+];
+
+const CAPTION_STYLE: React.CSSProperties = {
+  fontSize: "0.72rem",
+  fontStyle: "italic",
+  color: "#888888",
+  textAlign: "center",
+  lineHeight: 1.45,
+};
+
+/* The captions differ by two lines, which made the whole card grow and shrink
+   as the slideshow advanced. Rendering the longest one invisibly reserves the
+   space, so the frame holds still and stays correct if a photo is added. */
+const LONGEST_CAPTION = PHOTOS.reduce(
+  (longest, photo) =>
+    photo.caption.length > longest.length ? photo.caption : longest,
+  "",
+);
+
+const LINKS = [
+  { href: "/story", label: "Read my story" },
+  { href: "/portfolio", label: "See what I have built" },
+  { href: "/garden", label: "Poke around the garden" },
 ];
 
 export default function Hero() {
@@ -42,45 +61,102 @@ export default function Hero() {
 
   return (
     <section
-      className="relative overflow-hidden"
-      style={{ padding: "3rem 0 3rem" }}
+      className="relative flex flex-col justify-center overflow-hidden"
+      style={{
+        /* The home page is meant to sit on one screen. Everything inside is
+           sized off the viewport so it holds on a laptop as well as a large
+           monitor. */
+        minHeight: "100svh",
+        padding: "2rem 0",
+      }}
     >
-      {/* Ambient glow */}
       <div
-        className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2"
-        style={{
-          width: "900px",
-          height: "600px",
-          background:
-            "radial-gradient(ellipse at 50% 20%, rgba(201,168,76,0.06) 0%, transparent 65%)",
-        }}
-      />
-
-      <div
-        className="relative z-10 mx-auto flex flex-col items-center gap-6 text-center"
-        style={{ maxWidth: "620px", padding: "0 1.5rem" }}
+        className="relative z-10 mx-auto flex w-full flex-col items-center gap-5"
+        style={{ maxWidth: "940px", padding: "0 1.5rem" }}
       >
-{/* Name */}
-        <BlurFade delay={0.2}>
+        {/* Name */}
+        <BlurFade delay={0.2} immediate>
           <h1
             className="text-display whitespace-nowrap"
-            style={{ fontSize: "clamp(2rem, 6vw, 3rem)" }}
+            style={{ fontSize: "clamp(2rem, 5vw, 2.75rem)" }}
           >
             Patrick Neyland
           </h1>
         </BlurFade>
 
-        {/* Intro Card */}
-        <BlurFade delay={0.35} className="w-full">
+        {/* Card: photo on the left, everything to read on the right */}
+        <BlurFade delay={0.35} immediate className="w-full">
           <div
-            className="rounded-2xl text-left"
+            className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
             style={{
               backgroundColor: "#ffffff",
               border: "1px solid #e2e2e2",
               boxShadow: "0 4px 32px rgba(0,0,0,0.45)",
             }}
           >
-            <div className="p-6">
+            {/* Left: slideshow */}
+            <div>
+              <div
+                className="relative mx-auto w-full overflow-hidden rounded-xl"
+                style={{
+                  aspectRatio: "3/4",
+                  maxHeight: "min(340px, 42svh)",
+                  /* The photos are not all exactly 3:4 and object-contain
+                     avoids cropping faces, so let the letterboxing fall away
+                     into the card rather than showing as grey bars. */
+                  backgroundColor: "transparent",
+                }}
+              >
+                <AnimatePresence mode="sync">
+                  <motion.div
+                    key={current}
+                    className="absolute inset-0"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                  >
+                    <Image
+                      src={src}
+                      alt="Patrick Neyland"
+                      fill
+                      sizes="(max-width: 768px) 90vw, 300px"
+                      className="object-contain"
+                      priority={current === 0}
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <div style={{ position: "relative", marginTop: "0.5rem" }}>
+                {/* Height reservation only. Never shown, never read aloud. */}
+                <p aria-hidden style={{ ...CAPTION_STYLE, visibility: "hidden" }}>
+                  {LONGEST_CAPTION}
+                </p>
+
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={current}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.5, ease: "easeInOut" }}
+                    style={{
+                      ...CAPTION_STYLE,
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                    }}
+                  >
+                    {caption}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+            </div>
+
+            {/* Right: intro and where to go next */}
+            <div className="text-left">
               <p className="text-body" style={{ color: "#1a1a1a" }}>
                 I am a child of God, dad, and husband. For work, I am an AI
                 expert and act as a fractional Chief AI Officer through the
@@ -97,95 +173,36 @@ export default function Hero() {
               </p>
               <p className="mt-3 text-body" style={{ color: "#1a1a1a" }}>
                 I love building cool stuff, watching people get excited about AI
-                and automation, and just making people&apos;s work more enjoyable,
-                through AI.
+                and automation, and just making people&apos;s work more
+                enjoyable, through AI.
               </p>
               <p className="mt-3 text-body" style={{ color: "#555555" }}>
                 I also love cooking, woodworking, and birding (bird watching).
               </p>
-            </div>
 
-            {/* Slideshow */}
-            <div className="px-4 pb-4">
               <div
-                className="relative w-full overflow-hidden rounded-xl"
-                style={{ aspectRatio: "3/4", maxHeight: "384px" }}
+                className="mt-5 flex flex-col items-start gap-2 pt-4"
+                style={{ borderTop: "1px solid #ececec" }}
               >
-                <AnimatePresence mode="sync">
-                  <motion.div
-                    key={current}
-                    className="absolute inset-0"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.5, ease: "easeInOut" }}
+                {LINKS.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
+                    style={{ color: "#555555" }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = "#1a1a1a";
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.color = "#555555";
+                    }}
                   >
-                    <Image
-                      src={src}
-                      alt="Patrick Neyland"
-                      fill
-                      className="object-contain"
-                      priority={current === 0}
-                    />
-                  </motion.div>
-                </AnimatePresence>
+                    {link.label}
+                    <ArrowRight size={14} strokeWidth={2} />
+                  </Link>
+                ))}
               </div>
-
-              {/* Caption */}
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={current}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5, ease: "easeInOut" }}
-                  style={{
-                    marginTop: "0.5rem",
-                    fontSize: "0.75rem",
-                    fontStyle: "italic",
-                    color: "#888888",
-                    textAlign: "center",
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {caption}
-                </motion.p>
-              </AnimatePresence>
             </div>
-          </div>
-        </BlurFade>
-
-        {/* CTAs */}
-        <BlurFade delay={0.5}>
-          <div className="flex flex-col items-center gap-3">
-            <Link
-              href="/story"
-              className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
-              style={{ color: "var(--text-muted)" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-              }}
-            >
-              Read my story
-              <ArrowRight size={14} strokeWidth={2} />
-            </Link>
-            <Link
-              href="/cool-stuff"
-              className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
-              style={{ color: "var(--text-faint)" }}
-              onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text-muted)";
-              }}
-              onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.color = "var(--text-faint)";
-              }}
-            >
-              Other cool stuff
-              <ArrowRight size={14} strokeWidth={2} />
-            </Link>
           </div>
         </BlurFade>
       </div>

@@ -28,6 +28,10 @@
 }
 
 html {
+  /* The site is committed dark. Tell the browser, so scrollbars, form
+     controls, and the paint before CSS loads all match instead of
+     flashing light on a light OS. */
+  color-scheme: dark;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -139,3 +143,157 @@ body {
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+/* ─── Garden reading pages ───────────────────────────────────── */
+.garden-prose {
+  font-size: 1.0625rem;
+  line-height: 1.85;
+  color: #c3d2b8;
+}
+.garden-prose > * + * { margin-top: 1.35rem; }
+.garden-prose h2,
+.garden-prose h3 {
+  font-family: var(--font-display), Georgia, serif;
+  color: #e0e9d9;
+  line-height: 1.25;
+  margin-top: 2.5rem;
+}
+.garden-prose h2 { font-size: 1.5rem; }
+.garden-prose h3 { font-size: 1.2rem; }
+.garden-prose a {
+  color: #9ecb7e;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+.garden-prose a:hover { color: #e0e9d9; }
+.garden-prose ul,
+.garden-prose ol { padding-left: 1.4rem; }
+.garden-prose li + li { margin-top: 0.5rem; }
+.garden-prose blockquote {
+  border-left: 2px solid rgba(158,203,126,0.4);
+  padding-left: 1.1rem;
+  color: #8fa286;
+  font-style: italic;
+}
+.garden-prose code {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.9em;
+  background: rgba(158,203,126,0.1);
+  padding: 0.1em 0.35em;
+  border-radius: 3px;
+}
+.garden-prose pre {
+  overflow-x: auto;
+  background: rgba(0,0,0,0.35);
+  border: 1px solid rgba(158,203,126,0.2);
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+}
+.garden-prose pre code { background: none; padding: 0; }
+
+/* Markdown blurbs inside portfolio tiles stay tight and inherit tile colour. */
+.tile-blurb > * + * { margin-top: 0.6rem; }
+.tile-blurb a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ─── Boring mode: the front page ───────────────────────────
+   A resume, set the way a resume is set. Times, black on white, ruled section
+   heads, dated entries, bullets. Spacing runs on one 0.5em rhythm so the page
+   reads as a plain document rather than a designed one.
+   The plainness is the point. Do not add design. */
+.boring {
+  background: #ffffff;
+  color: #000000;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 17px;
+  line-height: 1.45;
+  max-width: 52em;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 3rem;
+  min-height: 100vh;
+}
+
+.boring h1 {
+  font-size: 2.1em;
+  font-weight: bold;
+  margin: 0 0 0.5em;
+  letter-spacing: 0;
+}
+
+/* Section heads get the underscore rule a resume uses. */
+.boring h2 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin: 1.5em 0 0.5em;
+  padding-bottom: 0.1em;
+  border-bottom: 1px solid #000000;
+}
+
+/* One entry: role or degree, then the organisation, then dates and place. */
+.boring h3 {
+  font-size: 1.05em;
+  font-weight: bold;
+  margin: 1em 0 0;
+}
+.boring h3 + p { margin: 0; }
+.boring h3 + p em { font-style: italic; font-size: 0.94em; }
+
+.boring p { margin: 0.5em 0; }
+.boring ul { margin: 0.5em 0; padding-left: 1.4em; list-style: disc; }
+.boring li { margin: 0.25em 0; }
+.boring a { color: #0000ee; text-decoration: underline; }
+.boring a:visited { color: #551a8b; }
+
+/* Two column opening: name and intro on the left, photo on the right.
+   Written as raw HTML in content/resume.md, styled here. */
+.boring .intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11em;
+  gap: 2em;
+  align-items: center;
+  margin-bottom: 1.5em;
+}
+.boring .intro-text > :first-child { margin-top: 0; }
+.boring .intro-text > :last-child { margin-bottom: 0; }
+/* The headshot is already a circle on a transparent ground, so no frame. */
+.boring .intro-photo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 46em) {
+  .boring .intro { grid-template-columns: 1fr; gap: 1.25em; }
+  .boring .intro-photo { max-width: 13em; }
+}
+
+/* Slot for Patrick's own drawing pointing at the fun link. Unused until he
+   supplies it. To wire it back up, wrap the fun link in content/resume.md:
+
+     <div class="fun-line">
+     <img class="fun-figure" src="/assets/<his-drawing>" alt="" width="132" height="96">
+
+     And [here is a much more fun version of my website](/fun).
+
+     </div>
+*/
+.boring .fun-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.5em 0;
+}
+.boring .fun-line p { margin: 0; }
+.boring .fun-figure {
+  width: 5em;
+  height: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 30em) {
+  .boring .fun-figure { width: 3.75em; }
+}
+
+/* White to the edges. It is a printed document, not a panel on a dark site. */
+html:has(.boring),
+body:has(.boring) { background: #ffffff; color: #000000; }

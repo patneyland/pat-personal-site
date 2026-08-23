@@ -199,3 +199,69 @@ Use `lucide-react` only. Always `strokeWidth={1.5}`. Size: `16` for inline, `20`
 - No drop shadows on cards (use border instead)
 - No decorative elements that don't serve the narrative
 - No stock illustrations or generic icons
+
+---
+
+## Per-Page Visual Worlds
+
+**This section overrides the single-palette rule above.** Patrick wants sections of the site to
+look dramatically different from one another, as a way of showing his interest in design. That is
+a deliberate departure, not drift. Do not flatten the pages back to one look.
+
+### The rule: vary the skin, never the skeleton
+
+Every page shares:
+
+- The dark ground, so moving between pages is a hue shift rather than a mode shift
+- The nav (`src/components/ui/Nav.tsx`), same position, same treatment
+- The type scale and the four font variables from `layout.tsx`
+- `BlurFade` as the only reveal motion, staggered 0.06 to 0.1
+
+Each page may define its own palette and texture, and nothing else.
+
+### How a world is declared
+
+One local constant at the top of the page's component file. Never in `globals.css`, because a
+page-specific colour in the global sheet is how the worlds start bleeding into each other.
+
+```ts
+/* The garden world. */
+const G = {
+  ground: "#101a13",
+  ink: "#e0e9d9",
+  inkSoft: "#8fa286",
+  accent: "#9ecb7e",
+  edge: "rgba(158,203,126,0.2)",
+  edgeHot: "rgba(158,203,126,0.55)",
+};
+```
+
+Where a world spans more than one route, put the constant in its own module and import it. See
+`src/components/sections/gardenTheme.ts`, shared by the plot and the reading pages.
+
+Give any page world a `minHeight: 100vh`. Short pages otherwise let the global background show
+below the world, which reads as a rendering bug.
+
+### Current worlds
+
+| Route | World |
+|---|---|
+| `/` | Warm dark editorial. The base palette above |
+| `/story` | Paper and polaroid collage, hand-drawn arrow connectors |
+| `/portfolio` | Base palette, with cream paper tiles for the boring items |
+| `/garden` | Greenhouse: moss ground, soft overhead light, handwritten stage labels |
+| `/portfolio/woodworking` | Workshop. Not built yet |
+
+### Direction still open
+
+The eventual visual language is **hand drawing**, not technical drafting. A blueprint direction
+was explored and rejected. The language already exists in `Story.tsx`, which has a working system
+of named frames, computed hand-drawn arrow paths, and a separate edge set for narrow screens.
+Extend that rather than inventing something new.
+
+**The hard constraint: the drawing is the frame, never the content.** Drawn elements are borders,
+arrows, annotations, and marginalia. Titles and body copy stay in real type at real sizes. This
+site has to keep working as a portfolio.
+
+Still undecided: how much wobble, whether Patrick draws on paper or iPad, and whether to replace
+Caveat with his own handwriting via Calligraphr.
