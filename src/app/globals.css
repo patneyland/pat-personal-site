@@ -204,17 +204,17 @@ body {
   color: #000000;
   font-family: "Times New Roman", Times, serif;
   font-size: 17px;
-  line-height: 1.5;
+  line-height: 1.45;
   max-width: 46em;
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 4rem;
+  padding: 2.25rem 1.25rem 3rem;
   min-height: 100vh;
 }
 
 .boring h1 {
   font-size: 2.1em;
   font-weight: bold;
-  margin: 0 0 0.35em;
+  margin: 0 0 0.25em;
   letter-spacing: 0;
 }
 
@@ -222,8 +222,8 @@ body {
 .boring h2 {
   font-size: 1.25em;
   font-weight: bold;
-  margin: 1.9em 0 0.6em;
-  padding-bottom: 0.15em;
+  margin: 1.35em 0 0.45em;
+  padding-bottom: 0.12em;
   border-bottom: 1px solid #000000;
 }
 
@@ -231,17 +231,17 @@ body {
 .boring h3 {
   font-size: 1.05em;
   font-weight: bold;
-  margin: 1.2em 0 0;
+  margin: 0.95em 0 0;
 }
 
 /* The organisation sits directly under the role, the dates and place under
    that in italic. Both come straight from the markdown. */
 .boring h3 + p { margin: 0.1em 0 0; }
-.boring h3 + p em { font-style: italic; color: #444444; font-size: 0.94em; }
+.boring h3 + p em { font-style: italic; font-size: 0.94em; }
 
-.boring p { margin: 0.85em 0; }
-.boring ul { margin: 0.5em 0 0.9em; padding-left: 1.5em; list-style: disc; }
-.boring li { margin: 0.3em 0; }
+.boring p { margin: 0.6em 0; }
+.boring ul { margin: 0.35em 0 0.7em; padding-left: 1.4em; list-style: disc; }
+.boring li { margin: 0.18em 0; }
 .boring a { color: #0000ee; text-decoration: underline; }
 .boring a:visited { color: #551a8b; }
 .boring hr { margin: 2.5em 0 1.5em; border: 0; border-top: 1px solid #cccccc; }
@@ -249,8 +249,8 @@ body {
 /* The one warm thing on the page. A rule, not a box, so it still reads as
    something typed into a plain document. */
 .boring blockquote {
-  margin: 1.4em 0 1.8em;
-  padding: 0.1em 0 0.1em 1.1em;
+  margin: 1.1em 0 1.5em;
+  padding: 0.05em 0 0.05em 1em;
   border-left: 3px solid #cccccc;
 }
 .boring blockquote p:first-child { margin-top: 0; }
@@ -258,4 +258,4 @@ body {
 
 /* White to the edges. It is a printed document, not a panel on a dark site. */
 html:has(.boring),
-body:has(.boring) { background: #ffffff; }
+body:has(.boring) { background: #ffffff; color: #000000; }

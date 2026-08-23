@@ -6,15 +6,12 @@
 
 # Patrick Neyland
 
-> **Please do not be too boring.**
+> Hi there, my name is Patrick and this is my website.
 >
-> I had a lot of fun designing the other version of this site, and I would much
-> rather you saw that one. It has photos, the story of how I got here, and the
-> things I have actually made.
->
-> [Take me to the fun version.](/fun)
->
-> If you are here for the record, no hard feelings. It is all below.
+> And [here is a much more fun version of my website](/fun).
+
+I am an AI engineer and researcher. I am currently on a leave of absence from my
+PhD program, to get more hands-on experience with AI.
 
 [pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) · [neylandsolutions.com](https://neylandsolutions.com)
 
@@ -23,7 +20,7 @@
 ### Doctoral Studies in Accounting
 
 **Arizona State University, W. P. Carey School of Business**
-*Aug 2024 to May 2026 · Tempe, Arizona*
+*Aug 2024 to expected May 2029 · Tempe, Arizona*
 
 ### Master of Financial Economics
 
