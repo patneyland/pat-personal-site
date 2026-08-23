@@ -52,31 +52,76 @@ The aesthetic inspiration is [garysheng.com](https://www.garysheng.com/):
 ```
 pat-personal-site/
 ├── CLAUDE.md              ← you are here
-├── design.md              ← design system rules
+├── design.md              ← design system rules, including per-page worlds
+├── content/               ← ALL page content. Patrick edits these, not code.
+│   ├── README.md          ← frontmatter formats, written for Patrick
+│   ├── resume.md          ← the ENTIRE front page at /
+│   ├── portfolio/*.md     ← one file per portfolio tile
+│   └── garden/*.md        ← one file per garden entry
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx
-│   │   ├── page.tsx       ← single-page story
+│   │   ├── page.tsx       ← renders Boring (the plain resume)
+│   │   ├── fun/           ← the designed home
+│   │   ├── story/ portfolio/ garden/
 │   │   └── globals.css
-│   └── components/
-│       ├── sections/      ← Hero, Story, Projects, CTA, Contact
-│       └── ui/            ← reusable primitives (BlurFade, etc.)
-├── public/
-│   └── assets/            ← logos, photos (Patrick adds these; the ONLY assets folder the site serves)
-│       ├── slideshow/     ← Hero slideshow photos
-│       └── story/         ← Journey/story page photos
-└── tailwind.config.ts
+│   ├── components/
+│   │   ├── sections/      ← Boring, Hero, Story, Portfolio, Garden, Woodworking
+│   │   └── ui/            ← BlurFade, Nav
+│   └── lib/               ← portfolio.ts, garden.ts (markdown readers)
+├── public/assets/         ← the ONLY assets folder the site serves
+│   ├── headshot.png       slideshow/  story/  portfolio/
+├── scripts/thumbnails.mjs ← npm run thumbnails
+└── next.config.ts         ← redirects for retired routes
 ```
 
-## Sections (Page Flow)
+## Pages
 
-1. **Hero** — Name, one-line mission, subtle animated background
-2. **Story** — Narrative arc: accounting → econ → ChatGPT → PhD → DOR encounter → Neyland Solutions
-3. **Projects / Built** — 3–5 things Patrick has built that demonstrate AI in practice
-4. **Neyland Solutions CTA** — Bridge to the company; explains how to work together
-5. **Contact / Connect** — Simple, low-friction
+Live at https://www.patrickneyland.com.
+
+| Route | What it is |
+|---|---|
+| `/` | **Boring mode.** A plain resume: Times, black on white, ruled section heads, no nav, no animation. The whole page is `content/resume.md`. It opens with a note inviting you to the designed version. **The plainness is the point. Do not style this page.** |
+| `/fun` | The designed home. Photo left, bio and three links right. Sized to fit one screen. |
+| `/story` | The polaroid collage. Patrick likes it. **Do not touch it.** |
+| `/portfolio` | Tiles from `content/portfolio/`. |
+| `/portfolio/woodworking` | Live but has no photos yet. |
+| `/garden` | Works in progress from `content/garden/`, marked seed / sprout / growing / ripe. |
+
+`/boring`, `/cool-stuff`, and `/woodworking` redirect to their new homes.
+
+**Each page owns its own palette** (see design.md). The shared parts are the dark ground, the type
+scale, `BlurFade`, and `Nav`. Do not flatten the site back to one look.
+
+## Content
+
+**Adding or changing anything on the site means editing a markdown file, not code.** Patrick does
+this through the GitHub web UI; Vercel rebuilds on push. `content/README.md` documents every field.
+
+- Only `title` is required. A link with a thumbnail is a complete portfolio entry, and a one
+  sentence seed is a complete garden entry. Never imply an entry is unfinished.
+- `draft: true` hides an entry without deleting it.
+- Raw HTML works inside these markdown files (`sanitize: false` is passed to remark-html). Leave a
+  blank line after an opening tag and before the closing one and markdown inside still parses.
+- `npm run thumbnails` screenshots any portfolio entry that has a public link.
 
 ## Copy & Voice Rules
+
+> **Claude does not write copy for this site.**
+>
+> Patrick, 2026-08-23: *"I don't want you to write anything. I want the content on this site to be
+> 1000% me."* He declined a drafts-and-reacts workflow.
+>
+> Build structure, layout, and plumbing. When a section needs words, **leave the slot empty and ask
+> him**. Do not fill gaps with drafts, sample sentences, or placeholder copy, because placeholders
+> ship. This is narrower than general writing help: commit messages, code comments, and analysis
+> are still welcome.
+>
+> Some copy on the live site was written by Claude before this rule existed (portfolio blurbs for
+> Tank Wars, Trivia and Woodworking; the second paragraph of the CPA-bench garden entry; the
+> Portfolio and Garden section headings and intro lines; the woodworking page paragraph). Patrick
+> plans to replace it. Do not add more.
+
+The rules below apply to anything Claude does write, and to editing Patrick's own text.
 
 **Full prohibition list is in `ai-writing-detection.md`. Read it before writing any copy.**
 
@@ -97,6 +142,12 @@ The short version:
 - When Patrick provides new content (copy, images), place images in `public/assets/` and update the relevant section files. Next.js only serves files from `public/`, so images must live there to appear on the site.
 - Always check `design.md` before proposing any color, font, or spacing choice.
 - When Patrick approves a section, mark it ready for build.
+- **Verify in a browser before claiming something works.** A stale `next start` will happily serve
+  an old build and make a correct change look broken. Kill the port first, and if a process will
+  not die, serve on a different port rather than fighting it.
+- **The repo is public.** Patrick's phone number, personal gmail, and home city must never appear
+  in it. His resume PDF is excluded by `*.pdf` in `.gitignore`. Scan for all three before any push.
+- Ask before pushing, and before deploying to production.
 - Commit messages: short, present tense, descriptive (`add hero section`, `update story copy`).
 - Do not push to GitHub without Patrick's explicit instruction.
 
