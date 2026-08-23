@@ -16,7 +16,7 @@
 >
 > If you are here for the record, no hard feelings. It is all below.
 
-Gilbert, Arizona · [pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) · [neylandsolutions.com](https://neylandsolutions.com)
+[pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) · [neylandsolutions.com](https://neylandsolutions.com)
 
 ## Education
 
@@ -40,7 +40,7 @@ Gilbert, Arizona · [pat@neylandsolutions.com](mailto:pat@neylandsolutions.com) 
 ### Founder, AI Developer and Consultant
 
 **[Neyland Solutions](https://neylandsolutions.com)**
-*Oct 2025 to present · Gilbert, Arizona*
+*Oct 2025 to present*
 
 - Propose, build, and document AI-driven business automations and data
   aggregation pipelines, turning unstructured sources into structured reports,
