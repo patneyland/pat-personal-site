@@ -29,19 +29,8 @@ export default async function Portfolio() {
               color: "var(--text)",
             }}
           >
-            Cool Stuff
+            Portfolio
           </h1>
-        </BlurFade>
-
-        <BlurFade delay={0.18}>
-          <p
-            className="text-body"
-            style={{ marginTop: "1.1rem", maxWidth: "34rem" }}
-          >
-            Some of this was paid work. Some of it I built on a Saturday to see
-            if it would run. I have stopped pretending those are different
-            skills.
-          </p>
         </BlurFade>
 
         <PortfolioGrid items={items} />

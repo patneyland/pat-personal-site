@@ -207,7 +207,7 @@ body {
   font-family: "Times New Roman", Times, serif;
   font-size: 17px;
   line-height: 1.45;
-  max-width: 46em;
+  max-width: 52em;
   margin: 0 auto;
   padding: 2rem 1.25rem 3rem;
   min-height: 100vh;
@@ -243,6 +243,56 @@ body {
 .boring li { margin: 0.25em 0; }
 .boring a { color: #0000ee; text-decoration: underline; }
 .boring a:visited { color: #551a8b; }
+
+/* Two column opening: name and intro on the left, photo on the right.
+   Written as raw HTML in content/resume.md, styled here. */
+.boring .intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 11em;
+  gap: 2em;
+  align-items: center;
+  margin-bottom: 1.5em;
+}
+.boring .intro-text > :first-child { margin-top: 0; }
+.boring .intro-text > :last-child { margin-bottom: 0; }
+/* The headshot is already a circle on a transparent ground, so no frame. */
+.boring .intro-photo {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+@media (max-width: 46em) {
+  .boring .intro { grid-template-columns: 1fr; gap: 1.25em; }
+  .boring .intro-photo { max-width: 13em; }
+}
+
+/* Slot for Patrick's own drawing pointing at the fun link. Unused until he
+   supplies it. To wire it back up, wrap the fun link in content/resume.md:
+
+     <div class="fun-line">
+     <img class="fun-figure" src="/assets/<his-drawing>" alt="" width="132" height="96">
+
+     And [here is a much more fun version of my website](/fun).
+
+     </div>
+*/
+.boring .fun-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0.5em 0;
+}
+.boring .fun-line p { margin: 0; }
+.boring .fun-figure {
+  width: 5em;
+  height: auto;
+  flex-shrink: 0;
+}
+
+@media (max-width: 30em) {
+  .boring .fun-figure { width: 3.75em; }
+}
 
 /* White to the edges. It is a printed document, not a panel on a dark site. */
 html:has(.boring),

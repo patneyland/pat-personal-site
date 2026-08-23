@@ -5,7 +5,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
-import BoringModeToggle from "@/components/ui/BoringModeToggle";
 import { ArrowRight } from "lucide-react";
 
 const PHOTOS = [
@@ -71,8 +70,6 @@ export default function Hero() {
         padding: "2rem 0",
       }}
     >
-      <BoringModeToggle />
-
       <div
         className="relative z-10 mx-auto flex w-full flex-col items-center gap-5"
         style={{ maxWidth: "940px", padding: "0 1.5rem" }}

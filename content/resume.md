@@ -4,6 +4,15 @@
   designed version of the site.
 -->
 
+<!--
+  Raw HTML works in this file, so drop into it wherever markdown is not
+  precise enough. Markdown inside an HTML block is still parsed as long as a
+  blank line follows the opening tag and precedes the closing one.
+-->
+
+<div class="intro">
+<div class="intro-text">
+
 # Patrick Neyland
 
 Hi there, my name is Patrick and this is my website.
@@ -14,6 +23,12 @@ I am an AI engineer and researcher. I am currently on a leave of absence from my
 PhD program, to get more hands-on experience with AI.
 
 pat at neylandsolutions.com
+
+</div>
+
+<img class="intro-photo" src="/assets/headshot.png" alt="Patrick Neyland" width="512" height="512">
+
+</div>
 
 ## Education
 
@@ -48,7 +63,7 @@ pat at neylandsolutions.com
 - Teach owners, executives, and teams to use the latest AI and data tools, and
   integrate them with how they already work
 
-### Doctoral Researcher
+### Research Assistant
 
 **Arizona State University, W. P. Carey School of Business**
 *Aug 2024 to present, currently on leave of absence · Tempe, Arizona*
@@ -84,8 +99,9 @@ pat at neylandsolutions.com
 
 - **CPA-bench.** A practitioner relevant benchmark for large language models on
   accounting tasks.
-- **FiscalSim.** Open source tax microsimulation model, as Python developer
-  and researcher. (Add the repo link here.)
+- **[FiscalSim US](https://github.com/TheCGO/fiscalsim-us).** Open source
+  microsimulation model of the US federal and state tax and benefit system, as
+  Python developer and researcher.
 - **Accounting Code Camp (2026).** Python, SAS, and STATA bootcamp covering
   data manipulation, web scraping, machine learning, and econometrics.
 

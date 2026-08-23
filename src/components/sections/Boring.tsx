@@ -19,7 +19,18 @@ export default async function Boring() {
     "utf8",
   );
 
-  const rendered = String(await remark().use(html).process(source));
+  /**
+   * sanitize: false lets Patrick write raw HTML directly in resume.md when
+   * markdown is not granular enough, and keeps markdown for everything else.
+   * (remark-html uses `sanitize`, not `allowDangerousHtml`, which silently
+   * strips tags instead of erroring.)
+   *
+   * Safe here because the only author is the repo owner and this runs at build
+   * time. Never point this at content submitted by anyone else.
+   */
+  const rendered = String(
+    await remark().use(html, { sanitize: false }).process(source),
+  );
 
   return (
     <main className="boring">

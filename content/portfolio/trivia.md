@@ -1,5 +1,4 @@
 ---
-kind: cool
 order: 7
 tag: Trivia
 year: 2024

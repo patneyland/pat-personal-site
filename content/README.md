@@ -1,6 +1,6 @@
 # Editing the site without touching code
 
-Everything on **Cool Stuff** and **The Garden** is a markdown file in this folder.
+Everything on **Portfolio** and **The Garden** is a markdown file in this folder.
 Add a file, commit it, and Vercel rebuilds in about a minute.
 
 You never need a terminal. On github.com, open this folder, hit **Add file → Create new
@@ -8,7 +8,7 @@ file**, name it, paste, and commit. That works from a phone.
 
 ---
 
-## Cool Stuff → `content/portfolio/`
+## Portfolio → `content/portfolio/`
 
 Filename becomes the slug. `tank-wars.md`, `ms-financial-economics.md`.
 

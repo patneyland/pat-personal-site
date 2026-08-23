@@ -26,7 +26,7 @@ export default function Woodworking() {
             }}
           >
             <ArrowLeft size={14} strokeWidth={2} />
-            Back to cool stuff
+            Back to portfolio
           </Link>
         </BlurFade>
 

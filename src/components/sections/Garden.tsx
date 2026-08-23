@@ -63,8 +63,7 @@ export default async function Garden() {
             }}
           >
             Projects and writing that are still in the ground. Some of it will
-            grow into something. Some of it will not. I would rather show you
-            the plot than wait until everything is picked.
+            grow into something. Some of it will not.
           </p>
         </BlurFade>
 

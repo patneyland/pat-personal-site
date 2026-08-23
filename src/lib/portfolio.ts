@@ -6,7 +6,6 @@ import html from "remark-html";
 
 export type Item = {
   slug: string;
-  kind: "cool" | "boring";
   order: number;
   tag: string;
   year: string;
@@ -50,8 +49,8 @@ export async function getItems(): Promise<Item[]> {
       const href = data.href ? String(data.href) : null;
 
       return {
+        draft: data.draft === true,
         slug,
-        kind: data.kind === "boring" ? "boring" : "cool",
         order: Number.isFinite(Number(data.order)) ? Number(data.order) : 999,
         tag: String(data.tag ?? ""),
         year: data.year ? String(data.year) : "",
@@ -61,12 +60,22 @@ export async function getItems(): Promise<Item[]> {
         internal: data.internal === true,
         image: data.image ? String(data.image) : null,
         blurb,
-      } satisfies Item;
+      };
     }),
   );
 
+  // `draft: true` keeps an entry in the repo but off the page, for work that
+  // is real but not ready to show yet.
+  const published: Item[] = items
+    .filter((i) => !i.draft)
+    .map((i) => {
+      const item = { ...i } as Partial<typeof i>;
+      delete item.draft;
+      return item as Item;
+    });
+
   // Explicit order, then filename, so the grid never shuffles between builds.
-  return items.sort(
+  return published.sort(
     (a, b) => a.order - b.order || a.slug.localeCompare(b.slug),
   );
 }

@@ -1,5 +1,5 @@
 ---
-kind: cool
+draft: true
 order: 1
 tag: Web App
 year: 2025

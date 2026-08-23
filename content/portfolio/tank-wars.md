@@ -1,8 +1,7 @@
 ---
-kind: cool
 order: 4
 tag: Game
-year: 2024
+year: 2025
 title: Tank Wars
 href: https://tankwars.neylandsolutions.com/
 image: /assets/portfolio/tank-wars.jpg

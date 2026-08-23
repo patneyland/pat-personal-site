@@ -1,5 +1,4 @@
 ---
-kind: cool
 order: 3
 tag: Wood, Not Software
 year: Ongoing

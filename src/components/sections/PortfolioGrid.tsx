@@ -8,43 +8,8 @@ import BlurFade from "@/components/ui/BlurFade";
 import { ArrowUpRight } from "lucide-react";
 import type { Item } from "@/lib/portfolio";
 
-/* Paper, for the boring tiles. Everything else comes from globals.css. */
-const PAPER = {
-  bg: "#f4f0e6",
-  ink: "#14120e",
-  soft: "#5a544a",
-  edge: "#b8b0a0",
-  label: "#8a8069",
-};
-
-/**
- * Spread the boring tiles evenly through the cool ones.
- *
- * Sorting by date would clump them, since the projects are recent and the
- * credentials are not. Deterministic, so server and client agree.
- */
-function interleave(cool: Item[], boring: Item[]): Item[] {
-  if (!boring.length) return cool;
-  if (!cool.length) return boring;
-
-  const out: Item[] = [];
-  let c = 0;
-  let b = 0;
-
-  while (c < cool.length || b < boring.length) {
-    if (b >= boring.length || (c < cool.length && c / cool.length <= b / boring.length)) {
-      out.push(cool[c++]);
-    } else {
-      out.push(boring[b++]);
-    }
-  }
-
-  return out;
-}
-
 function Tile({ item, delay }: { item: Item; delay: number }) {
   const [hot, setHot] = useState(false);
-  const paper = item.kind === "boring";
   const linked = Boolean(item.href);
 
   const shell: React.CSSProperties = {
@@ -56,17 +21,17 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
     borderRadius: 3,
     overflow: "hidden",
     textDecoration: "none",
-    backgroundColor: paper ? PAPER.bg : "var(--bg-card)",
+    backgroundColor: "var(--bg-card)",
     border: `1px solid ${
-      paper ? PAPER.edge : hot && linked ? "var(--accent-dim)" : "var(--border)"
+      hot && linked ? "var(--accent-dim)" : "var(--border)"
     }`,
-    boxShadow: paper ? "0 10px 26px rgba(0,0,0,0.45)" : "none",
-    fontFamily: paper ? "var(--font-display)" : undefined,
     transform: hot && linked ? "translateY(-2px)" : "translateY(0)",
     transition: "border-color 0.25s ease, transform 0.25s ease",
   };
 
-  const inset = item.image ? { paddingLeft: "1.4rem", paddingRight: "1.4rem" } : undefined;
+  const inset = item.image
+    ? { paddingLeft: "1.4rem", paddingRight: "1.4rem" }
+    : undefined;
 
   const body = (
     <>
@@ -77,7 +42,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
             overflow: "hidden",
             marginBottom: "1.1rem",
             backgroundColor: "var(--bg-alt)",
-            borderBottom: `1px solid ${paper ? PAPER.edge : "var(--border)"}`,
+            borderBottom: "1px solid var(--border)",
           }}
         >
           <img
@@ -109,13 +74,11 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
           textTransform: "uppercase",
         }}
       >
-        <span style={{ color: paper ? PAPER.label : "var(--accent)" }}>
-          {item.tag}
-        </span>
+        <span style={{ color: "var(--accent)" }}>{item.tag}</span>
         {item.year && (
           <span
             style={{
-              color: paper ? PAPER.label : "var(--text-muted)",
+              color: "var(--text-muted)",
               flexShrink: 0,
               fontVariantNumeric: "tabular-nums",
             }}
@@ -132,7 +95,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
           fontSize: "1.12rem",
           fontWeight: 600,
           lineHeight: 1.3,
-          color: paper ? PAPER.ink : "var(--text)",
+          color: "var(--text)",
         }}
       >
         {item.title}
@@ -149,7 +112,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
             fontFamily: "var(--font-heading)",
             fontSize: "0.89rem",
             lineHeight: 1.7,
-            color: paper ? PAPER.soft : "var(--text-muted)",
+            color: "var(--text-muted)",
           }}
           dangerouslySetInnerHTML={{ __html: item.blurb }}
         />
@@ -209,104 +172,19 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
 }
 
 export default function PortfolioGrid({ items }: { items: Item[] }) {
-  const [boring, setBoring] = useState(false);
-
-  const cool = items.filter((i) => i.kind === "cool");
-  const shown = boring
-    ? interleave(cool, items.filter((i) => i.kind === "boring"))
-    : cool;
-
   return (
-    <>
-      <BlurFade delay={0.24}>
-        <button
-          type="button"
-          onClick={() => setBoring((v) => !v)}
-          aria-pressed={boring}
-          style={{
-            marginTop: "2.25rem",
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "0.85rem",
-            padding: "0.7rem 1.1rem",
-            border: `1px solid ${boring ? "var(--accent-dim)" : "var(--border)"}`,
-            borderRadius: 3,
-            background: boring ? "rgba(201,168,76,0.09)" : "transparent",
-            cursor: "pointer",
-            textAlign: "left",
-            transition: "border-color 0.2s ease, background 0.2s ease",
-          }}
-        >
-          <span
-            aria-hidden
-            style={{
-              position: "relative",
-              width: 34,
-              height: 18,
-              borderRadius: 999,
-              border: `1px solid ${boring ? "var(--accent)" : "var(--border)"}`,
-              background: boring ? "var(--accent)" : "transparent",
-              flexShrink: 0,
-              transition: "background 0.2s ease, border-color 0.2s ease",
-            }}
-          >
-            <span
-              style={{
-                position: "absolute",
-                top: 2,
-                left: boring ? 17 : 2,
-                width: 12,
-                height: 12,
-                borderRadius: 999,
-                background: boring ? "#17150f" : "var(--text-muted)",
-                transition: "left 0.2s ease, background 0.2s ease",
-              }}
-            />
-          </span>
-
-          <span>
-            <span
-              style={{
-                display: "block",
-                fontFamily: "var(--font-mono)",
-                fontSize: "0.72rem",
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: boring ? "var(--text)" : "var(--text-muted)",
-                transition: "color 0.2s ease",
-              }}
-            >
-              Include the boring, but important stuff
-            </span>
-            <span
-              style={{
-                display: "block",
-                marginTop: "0.25rem",
-                fontSize: "0.78rem",
-                fontStyle: "italic",
-                color: "var(--text-muted)",
-              }}
-            >
-              for recruiters, academics, and anyone deciding whether to work
-              with me
-            </span>
-          </span>
-        </button>
-      </BlurFade>
-
-      <div
-        style={{
-          marginTop: "3rem",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
-          gap: "1.25rem",
-          alignItems: "stretch",
-        }}
-      >
-        {shown.map((item, i) => (
-          <Tile key={item.slug} item={item} delay={0.06 + i * 0.05} />
-        ))}
-      </div>
-    </>
+    <div
+      style={{
+        marginTop: "3rem",
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
+        gap: "1.25rem",
+        alignItems: "stretch",
+      }}
+    >
+      {items.map((item, i) => (
+        <Tile key={item.slug} item={item} delay={0.06 + i * 0.05} />
+      ))}
+    </div>
   );
 }
