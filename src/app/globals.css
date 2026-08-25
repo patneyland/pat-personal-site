@@ -267,31 +267,53 @@ body {
   .boring .intro-photo { max-width: 13em; }
 }
 
-/* Slot for Patrick's own drawing pointing at the fun link. Unused until he
-   supplies it. To wire it back up, wrap the fun link in content/resume.md:
+/* Patrick's drawing, pointing back at the fun link.
 
-     <div class="fun-line">
-     <img class="fun-figure" src="/assets/<his-drawing>" alt="" width="132" height="96">
+   It hangs off a zero size inline span placed right after the link in
+   content/resume.md, so it lands wherever that sentence happens to end at any
+   width. Absolute so it never opens up the line spacing around it: the whole
+   figure grows upward from the point set by `bottom`.
 
-     And [here is a much more fun version of my website](/fun).
+   Everything below is in em against the fixed 17px on .boring, so the geometry
+   is identical at every window size. That is the point. Three numbers are tied
+   together and none of them should move on its own:
 
-     </div>
-*/
-.boring .fun-line {
-  display: flex;
-  align-items: center;
-  gap: 0.5em;
-  margin: 0.5em 0;
+     bottom  where his soles land
+     width   how tall he is, which sets how far his shoulder sits above the link
+     the 32 degree arm rotation baked into pointing-figure.svg
+
+   Change his size and his shoulder moves relative to the link, so the angle
+   that aims at the link changes too. */
+.boring .fun-anchor {
+  position: relative;
+  display: inline-block;
+  width: 0;
+  height: 0;
 }
-.boring .fun-line p { margin: 0; }
+
+/* bottom is measured from the link's baseline. 1.36em down from there is the
+   top of the letters in the paragraph underneath: 0.39em of descender and half
+   leading, then the 0.5em collapsed paragraph margin, then 0.47em of the next
+   line box before its ink starts. The svg is trimmed to his soles, so this
+   plants him on that text at every size rather than near it. */
 .boring .fun-figure {
-  width: 5em;
+  position: absolute;
+  left: 0.3em;
+  bottom: -1.36em;
+  width: 1.6em;
   height: auto;
-  flex-shrink: 0;
+  /* The anchor is zero wide, and Tailwind's preflight max-width: 100% measures
+     against it, which collapses the drawing to nothing. */
+  max-width: none;
 }
 
+/* Narrow enough and the sentence wraps, which leaves him standing on a short
+   last line with a full line of text just above his head. He has to be under
+   about 1.3em wide to clear it. The breakpoint is wider than the width the
+   sentence actually wraps at, so a font fallback cannot slip a collision
+   through. */
 @media (max-width: 30em) {
-  .boring .fun-figure { width: 3.75em; }
+  .boring .fun-figure { width: 1.25em; }
 }
 
 /* White to the edges. It is a printed document, not a panel on a dark site. */

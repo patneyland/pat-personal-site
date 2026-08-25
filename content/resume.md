@@ -17,7 +17,7 @@
 
 Hi there, my name is Patrick and this is my website.
 
-And [here is a much more fun version of my website](/fun).
+And [here is a much more fun version of my website](/fun).<span class="fun-anchor"><img class="fun-figure" src="/assets/pointing-figure.svg" alt="" width="78" height="160"></span>
 
 I am an AI engineer and researcher. I am currently on a leave of absence from my
 PhD program, to get more hands-on experience with AI.
