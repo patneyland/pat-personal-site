@@ -1,11 +1,10 @@
 import Hero from "@/components/sections/Hero";
 
-export const metadata = {
-  title: "Patrick Neyland | AI Leader",
-  description:
-    "Patrick Neyland helps companies and institutions implement AI so they can do better work. Founder of Neyland Solutions.",
-};
-
+/**
+ * No metadata export on purpose. The title and description in layout.tsx are
+ * Patrick's own words and already describe this page, so it inherits them
+ * rather than carrying a second, drifting copy.
+ */
 export default function FunPage() {
   return (
     <main>

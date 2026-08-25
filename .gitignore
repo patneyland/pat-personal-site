@@ -35,3 +35,7 @@ Resume*.pdf
 *.pdf
 
 .vercel
+
+# Local capture output from scripts/. Useful while working, not worth
+# committing to a public repo.
+screenshots/

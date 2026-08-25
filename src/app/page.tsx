@@ -1,11 +1,10 @@
 import Boring from "@/components/sections/Boring";
 
-export const metadata = {
-  title: "Patrick Neyland",
-  description:
-    "Education, positions, projects, and research. Plus a request not to settle for the plain version.",
-};
-
+/**
+ * No metadata export on purpose. This page carried its own description that
+ * disagreed with the one in the link preview, so it now inherits Patrick's own
+ * line from layout.tsx and says one thing in both places.
+ */
 export default function Home() {
   return <Boring />;
 }
