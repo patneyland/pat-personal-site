@@ -50,8 +50,10 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Patrick Neyland",
     description: DESCRIPTION,
-    url: "/",
     siteName: "Patrick Neyland",
+    /* No url here on purpose. Set in the layout it is inherited by every
+       page, so each one would claim the homepage as its canonical URL.
+       Left out, sharing a page identifies that page. */
     type: "website",
     images: [
       {
