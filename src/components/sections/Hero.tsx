@@ -7,6 +7,25 @@ import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
 import { ArrowRight } from "lucide-react";
 
+/* The home world. A slightly warm off-white page with a near-black card set
+   on it, read light on dark. The card carries the site's own dark ground, so
+   the page is a frame around it rather than a second design.
+
+   No border on the card: against a light page a black block needs no outline,
+   and any edge lighter than the card reads as a halo. The shadow does the
+   lifting on its own. */
+const F = {
+  ground: "#faf8f4",
+  card: "#14120f",
+  edgeSoft: "rgba(255,255,255,0.12)",
+  ink: "#f2eee6",
+  inkSoft: "#a49d93",
+  inkFaint: "#8a837a",
+  accent: "#c9a84c",
+  shadow:
+    "0 1px 2px rgba(20,18,15,0.10), 0 12px 28px -8px rgba(20,18,15,0.22), 0 34px 64px -24px rgba(20,18,15,0.30)",
+};
+
 const PHOTOS = [
   {
     src: "/assets/slideshow/photo-two.png",
@@ -27,7 +46,7 @@ const PHOTOS = [
 const CAPTION_STYLE: React.CSSProperties = {
   fontSize: "0.72rem",
   fontStyle: "italic",
-  color: "#888888",
+  color: F.inkFaint,
   textAlign: "center",
   lineHeight: 1.45,
 };
@@ -61,37 +80,29 @@ export default function Hero() {
 
   return (
     <section
-      className="relative flex flex-col justify-center overflow-hidden"
+      className="fun-page relative flex flex-col justify-center overflow-hidden"
       style={{
         /* The home page is meant to sit on one screen. Everything inside is
            sized off the viewport so it holds on a laptop as well as a large
            monitor. */
         minHeight: "100svh",
         padding: "2rem 0",
+        /* Paints the light ground to the edges. The global background is dark
+           and this section is the whole page, so it covers it. */
+        backgroundColor: F.ground,
       }}
     >
       <div
         className="relative z-10 mx-auto flex w-full flex-col items-center gap-5"
         style={{ maxWidth: "940px", padding: "0 1.5rem" }}
       >
-        {/* Name */}
-        <BlurFade delay={0.2} immediate>
-          <h1
-            className="text-display whitespace-nowrap"
-            style={{ fontSize: "clamp(2rem, 5vw, 2.75rem)" }}
-          >
-            Patrick Neyland
-          </h1>
-        </BlurFade>
-
-        {/* Card: photo on the left, everything to read on the right */}
-        <BlurFade delay={0.35} immediate className="w-full">
+        {/* Card: photo on the left, name and everything to read on the right */}
+        <BlurFade delay={0.2} immediate className="w-full">
           <div
             className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
             style={{
-              backgroundColor: "#ffffff",
-              border: "1px solid #e2e2e2",
-              boxShadow: "0 4px 32px rgba(0,0,0,0.45)",
+              backgroundColor: F.card,
+              boxShadow: F.shadow,
             }}
           >
             {/* Left: slideshow */}
@@ -155,9 +166,20 @@ export default function Hero() {
               </div>
             </div>
 
-            {/* Right: intro and where to go next */}
+            {/* Right: the name, then the intro and where to go next */}
             <div className="text-left">
-              <p className="text-body" style={{ color: "#1a1a1a" }}>
+              <h1
+                className="text-display whitespace-nowrap"
+                style={{
+                  fontSize: "clamp(1.75rem, 4.5vw, 2.5rem)",
+                  color: F.ink,
+                  marginBottom: "1rem",
+                }}
+              >
+                Patrick Neyland
+              </h1>
+
+              <p className="text-body" style={{ color: F.ink }}>
                 I am a child of God, dad, and husband. For work, I am an AI
                 expert and act as a fractional Chief AI Officer through the
                 company{" "}
@@ -165,36 +187,36 @@ export default function Hero() {
                   href="https://neylandsolutions.com"
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{ color: "#b8922a" }}
+                  style={{ color: F.accent }}
                 >
                   Neyland Solutions
                 </a>
                 , which I co-founded with my brother, Blake.
               </p>
-              <p className="mt-3 text-body" style={{ color: "#1a1a1a" }}>
+              <p className="mt-3 text-body" style={{ color: F.ink }}>
                 I love building cool stuff, watching people get excited about AI
                 and automation, and just making people&apos;s work more
                 enjoyable, through AI.
               </p>
-              <p className="mt-3 text-body" style={{ color: "#555555" }}>
+              <p className="mt-3 text-body" style={{ color: F.inkSoft }}>
                 I also love cooking, woodworking, and birding (bird watching).
               </p>
 
               <div
                 className="mt-5 flex flex-col items-start gap-2 pt-4"
-                style={{ borderTop: "1px solid #ececec" }}
+                style={{ borderTop: `1px solid ${F.edgeSoft}` }}
               >
                 {LINKS.map((link) => (
                   <Link
                     key={link.href}
                     href={link.href}
                     className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
-                    style={{ color: "#555555" }}
+                    style={{ color: F.inkSoft }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = "#1a1a1a";
+                      (e.currentTarget as HTMLElement).style.color = F.ink;
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = "#555555";
+                      (e.currentTarget as HTMLElement).style.color = F.inkSoft;
                     }}
                   >
                     {link.label}
