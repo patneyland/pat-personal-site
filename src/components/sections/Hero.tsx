@@ -7,23 +7,17 @@ import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
 import { ArrowRight } from "lucide-react";
 
-/* The home world. A slightly warm off-white page with a near-black card set
-   on it, read light on dark. The card carries the site's own dark ground, so
-   the page is a frame around it rather than a second design.
-
-   No border on the card: against a light page a black block needs no outline,
-   and any edge lighter than the card reads as a halo. The shadow does the
-   lifting on its own. */
+/* The home world. One white card on the site's dark ground, read dark on
+   light. The shadow is deep because it falls on near-black, not on paper. */
 const F = {
-  ground: "#faf8f4",
-  card: "#14120f",
-  edgeSoft: "rgba(255,255,255,0.12)",
-  ink: "#f2eee6",
-  inkSoft: "#a49d93",
-  inkFaint: "#8a837a",
-  accent: "#c9a84c",
-  shadow:
-    "0 1px 2px rgba(20,18,15,0.10), 0 12px 28px -8px rgba(20,18,15,0.22), 0 34px 64px -24px rgba(20,18,15,0.30)",
+  card: "#ffffff",
+  edge: "#e2e2e2",
+  edgeSoft: "#ececec",
+  ink: "#1a1a1a",
+  inkSoft: "#555555",
+  inkFaint: "#888888",
+  accent: "#b8922a",
+  shadow: "0 4px 32px rgba(0,0,0,0.45)",
 };
 
 const PHOTOS = [
@@ -80,16 +74,13 @@ export default function Hero() {
 
   return (
     <section
-      className="fun-page relative flex flex-col justify-center overflow-hidden"
+      className="relative flex flex-col justify-center overflow-hidden"
       style={{
         /* The home page is meant to sit on one screen. Everything inside is
            sized off the viewport so it holds on a laptop as well as a large
            monitor. */
         minHeight: "100svh",
         padding: "2rem 0",
-        /* Paints the light ground to the edges. The global background is dark
-           and this section is the whole page, so it covers it. */
-        backgroundColor: F.ground,
       }}
     >
       <div
@@ -102,6 +93,7 @@ export default function Hero() {
             className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
             style={{
               backgroundColor: F.card,
+              border: `1px solid ${F.edge}`,
               boxShadow: F.shadow,
             }}
           >

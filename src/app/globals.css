@@ -319,12 +319,3 @@ body {
 /* White to the edges. It is a printed document, not a panel on a dark site. */
 html:has(.boring),
 body:has(.boring) { background: #ffffff; color: #000000; }
-
-/* ─── The designed home ──────────────────────────────────────
-   Its palette lives in Hero.tsx, as every page world does. Only the two
-   things a component cannot reach are here: the document ground, so
-   overscroll does not flash the dark site behind a white page, and the
-   scrollbar, which follows color-scheme rather than the page. */
-html:has(.fun-page) { color-scheme: light; }
-html:has(.fun-page),
-body:has(.fun-page) { background: #faf8f4; }
