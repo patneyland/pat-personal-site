@@ -39,3 +39,11 @@ Resume*.pdf
 # Local capture output from scripts/. Useful while working, not worth
 # committing to a public repo.
 screenshots/
+
+# Third-party source archives and generated exploration, kept locally only.
+# The sprite pack is CC0 (see CREDITS.md) but 27MB and not needed to build.
+stick_figure_character_sprites_2d.zip
+sprite-max-px-frames-*.png
+
+# Review sheets rebuilt by scripts/dev/rebuild-faces.mjs on demand.
+art/faces/sheets/

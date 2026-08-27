@@ -1,0 +1,73 @@
+{
+  "note": "Head centre per frame, source scale (512x512 sprites). Face sits +11.3,+6.2 from centre at r=44.",
+  "faceOffset": [
+    11.3,
+    6.2
+  ],
+  "frames": [
+    {
+      "frame": "fighter_walk_0009.png",
+      "head": [
+        269,
+        257
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0010.png",
+      "head": [
+        269,
+        254
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0011.png",
+      "head": [
+        271,
+        258
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0012.png",
+      "head": [
+        272,
+        262
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0013.png",
+      "head": [
+        271,
+        258
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0014.png",
+      "head": [
+        269,
+        254
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0015.png",
+      "head": [
+        269,
+        258
+      ],
+      "r": 44
+    },
+    {
+      "frame": "fighter_walk_0016.png",
+      "head": [
+        269,
+        262
+      ],
+      "r": 44
+    }
+  ]
+}

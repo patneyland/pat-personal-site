@@ -319,3 +319,28 @@ body {
 /* White to the edges. It is a printed document, not a panel on a dark site. */
 html:has(.boring),
 body:has(.boring) { background: #ffffff; color: #000000; }
+
+/* Gary pacing the top edge of the card on /fun. Two animations run on him at
+   once: gary-step advances the sprite sheet, gary-pace carries him across.
+   Their rates are tied together in GaryPacing.tsx so his feet do not slide.
+
+   100cqw is the track's width and 100% is his own, so the right-hand end is
+   exactly where he runs out of edge, at any viewport width. The flips are a
+   hundredth of a percent long, which reads as instant rather than as a squash
+   through zero. */
+@keyframes gary-step {
+  to { background-position: calc(var(--gary-w, 43px) * -8) 0; }
+}
+
+@keyframes gary-pace {
+  0%      { transform: translateX(0) scaleX(1); }
+  49.99%  { transform: translateX(calc(100cqw - 100%)) scaleX(1); }
+  50%     { transform: translateX(calc(100cqw - 100%)) scaleX(-1); }
+  99.99%  { transform: translateX(0) scaleX(-1); }
+  100%    { transform: translateX(0) scaleX(1); }
+}
+
+/* He is decoration. If motion is unwelcome he simply stands there. */
+@media (prefers-reduced-motion: reduce) {
+  [data-gary] { animation: none !important; }
+}

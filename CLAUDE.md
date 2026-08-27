@@ -41,6 +41,10 @@ The site tells Patrick's story. It is not a resume or a portfolio dump. It is a 
 See `design.md` for all color tokens, typography rules, and component patterns.
 **Always read `design.md` before writing any UI code.**
 
+`docs/` holds specs for work that is planned but not built. If a session is
+about to start on one of those, read its spec first: it records decisions that
+are expensive to rediscover.
+
 The aesthetic inspiration is [garysheng.com](https://www.garysheng.com/):
 - Dark, intentional, story-driven
 - Large bold type for impact
@@ -53,6 +57,9 @@ The aesthetic inspiration is [garysheng.com](https://www.garysheng.com/):
 pat-personal-site/
 ├── CLAUDE.md              ← you are here
 ├── design.md              ← design system rules, including per-page worlds
+├── docs/                  ← specs for work not built yet. Read before starting one.
+│   ├── character-pipeline.md    the drawn character: Krita → atlas → runtime
+│   └── character-session-1.md   the working session that starts it
 ├── content/               ← ALL page content. Patrick edits these, not code.
 │   ├── README.md          ← frontmatter formats, written for Patrick
 │   ├── resume.md          ← the ENTIRE front page at /

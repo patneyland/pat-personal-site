@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
+import GaryPacing from "@/components/ui/GaryPacing";
 import { ArrowRight } from "lucide-react";
 
 /* The home world. One white card on the site's dark ground, read dark on
@@ -87,134 +88,139 @@ export default function Hero() {
         className="relative z-10 mx-auto flex w-full flex-col items-center gap-5"
         style={{ maxWidth: "940px", padding: "0 1.5rem" }}
       >
-        {/* Card: photo on the left, name and everything to read on the right */}
+        {/* Card: photo on the left, name and everything to read on the right.
+            Gary walks the outside of its top edge, so the wrapper is the
+            positioning context he measures himself against. */}
         <BlurFade delay={0.2} immediate className="w-full">
-          <div
-            className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
-            style={{
-              backgroundColor: F.card,
-              border: `1px solid ${F.edge}`,
-              boxShadow: F.shadow,
-            }}
-          >
-            {/* Left: slideshow */}
-            <div>
-              <div
-                className="relative mx-auto w-full overflow-hidden rounded-xl"
-                style={{
-                  aspectRatio: "3/4",
-                  maxHeight: "min(340px, 42svh)",
-                  /* The photos are not all exactly 3:4 and object-contain
-                     avoids cropping faces, so let the letterboxing fall away
-                     into the card rather than showing as grey bars. */
-                  backgroundColor: "transparent",
-                }}
-              >
-                <AnimatePresence mode="sync">
-                  <motion.div
-                    key={current}
-                    className="absolute inset-0"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 1.5, ease: "easeInOut" }}
-                  >
-                    <Image
-                      src={src}
-                      alt="Patrick Neyland"
-                      fill
-                      sizes="(max-width: 768px) 90vw, 300px"
-                      className="object-contain"
-                      priority={current === 0}
-                    />
-                  </motion.div>
-                </AnimatePresence>
+          <div className="relative">
+            <GaryPacing />
+            <div
+              className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
+              style={{
+                backgroundColor: F.card,
+                border: `1px solid ${F.edge}`,
+                boxShadow: F.shadow,
+              }}
+            >
+              {/* Left: slideshow */}
+              <div>
+                <div
+                  className="relative mx-auto w-full overflow-hidden rounded-xl"
+                  style={{
+                    aspectRatio: "3/4",
+                    maxHeight: "min(340px, 42svh)",
+                    /* The photos are not all exactly 3:4 and object-contain
+                       avoids cropping faces, so let the letterboxing fall away
+                       into the card rather than showing as grey bars. */
+                    backgroundColor: "transparent",
+                  }}
+                >
+                  <AnimatePresence mode="sync">
+                    <motion.div
+                      key={current}
+                      className="absolute inset-0"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 1.5, ease: "easeInOut" }}
+                    >
+                      <Image
+                        src={src}
+                        alt="Patrick Neyland"
+                        fill
+                        sizes="(max-width: 768px) 90vw, 300px"
+                        className="object-contain"
+                        priority={current === 0}
+                      />
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+
+                <div style={{ position: "relative", marginTop: "0.5rem" }}>
+                  {/* Height reservation only. Never shown, never read aloud. */}
+                  <p aria-hidden style={{ ...CAPTION_STYLE, visibility: "hidden" }}>
+                    {LONGEST_CAPTION}
+                  </p>
+
+                  <AnimatePresence mode="wait">
+                    <motion.p
+                      key={current}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.5, ease: "easeInOut" }}
+                      style={{
+                        ...CAPTION_STYLE,
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                      }}
+                    >
+                      {caption}
+                    </motion.p>
+                  </AnimatePresence>
+                </div>
               </div>
 
-              <div style={{ position: "relative", marginTop: "0.5rem" }}>
-                {/* Height reservation only. Never shown, never read aloud. */}
-                <p aria-hidden style={{ ...CAPTION_STYLE, visibility: "hidden" }}>
-                  {LONGEST_CAPTION}
+              {/* Right: the name, then the intro and where to go next */}
+              <div className="text-left">
+                <h1
+                  className="text-display whitespace-nowrap"
+                  style={{
+                    fontSize: "clamp(1.75rem, 4.5vw, 2.5rem)",
+                    color: F.ink,
+                    marginBottom: "1rem",
+                  }}
+                >
+                  Patrick Neyland
+                </h1>
+
+                <p className="text-body" style={{ color: F.ink }}>
+                  I am a child of God, dad, and husband. For work, I am an AI
+                  expert and act as a fractional Chief AI Officer through the
+                  company{" "}
+                  <a
+                    href="https://neylandsolutions.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: F.accent }}
+                  >
+                    Neyland Solutions
+                  </a>
+                  , which I co-founded with my brother, Blake.
+                </p>
+                <p className="mt-3 text-body" style={{ color: F.ink }}>
+                  I love building cool stuff, watching people get excited about AI
+                  and automation, and just making people&apos;s work more
+                  enjoyable, through AI.
+                </p>
+                <p className="mt-3 text-body" style={{ color: F.inkSoft }}>
+                  I also love cooking, woodworking, and birding (bird watching).
                 </p>
 
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={current}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.5, ease: "easeInOut" }}
-                    style={{
-                      ...CAPTION_STYLE,
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                    }}
-                  >
-                    {caption}
-                  </motion.p>
-                </AnimatePresence>
-              </div>
-            </div>
-
-            {/* Right: the name, then the intro and where to go next */}
-            <div className="text-left">
-              <h1
-                className="text-display whitespace-nowrap"
-                style={{
-                  fontSize: "clamp(1.75rem, 4.5vw, 2.5rem)",
-                  color: F.ink,
-                  marginBottom: "1rem",
-                }}
-              >
-                Patrick Neyland
-              </h1>
-
-              <p className="text-body" style={{ color: F.ink }}>
-                I am a child of God, dad, and husband. For work, I am an AI
-                expert and act as a fractional Chief AI Officer through the
-                company{" "}
-                <a
-                  href="https://neylandsolutions.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ color: F.accent }}
+                <div
+                  className="mt-5 flex flex-col items-start gap-2 pt-4"
+                  style={{ borderTop: `1px solid ${F.edgeSoft}` }}
                 >
-                  Neyland Solutions
-                </a>
-                , which I co-founded with my brother, Blake.
-              </p>
-              <p className="mt-3 text-body" style={{ color: F.ink }}>
-                I love building cool stuff, watching people get excited about AI
-                and automation, and just making people&apos;s work more
-                enjoyable, through AI.
-              </p>
-              <p className="mt-3 text-body" style={{ color: F.inkSoft }}>
-                I also love cooking, woodworking, and birding (bird watching).
-              </p>
-
-              <div
-                className="mt-5 flex flex-col items-start gap-2 pt-4"
-                style={{ borderTop: `1px solid ${F.edgeSoft}` }}
-              >
-                {LINKS.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
-                    style={{ color: F.inkSoft }}
-                    onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = F.ink;
-                    }}
-                    onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.color = F.inkSoft;
-                    }}
-                  >
-                    {link.label}
-                    <ArrowRight size={14} strokeWidth={2} />
-                  </Link>
-                ))}
+                  {LINKS.map((link) => (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className="inline-flex items-center gap-2 text-sm font-medium transition-colors duration-200"
+                      style={{ color: F.inkSoft }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.color = F.ink;
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.color = F.inkSoft;
+                      }}
+                    >
+                      {link.label}
+                      <ArrowRight size={14} strokeWidth={2} />
+                    </Link>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
