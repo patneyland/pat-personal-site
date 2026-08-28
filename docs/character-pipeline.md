@@ -173,6 +173,36 @@ src/lib/character/
   director.ts                decides which clip plays where
 ```
 
+**The block above is the Krita-era plan, and it is no longer what is on disk.**
+Patrick draws in Procreate now, over bodies from a CC0 pack, so `clips/*.kra`
+and `faces.kra` were never created. What follows is the layout that is real.
+
+### Where drawings actually live
+
+```
+art/
+  paper-guy/       the original pencil photo, and what was traced from it
+  headon/raw/      the head-on pointing poses            -> /assets/gary-point.png
+  faces/raw/       Procreate face exports                -> face-N.png -> sheets/
+  scan-01..04/     scanned pages, cut into parts         (the other thread)
+  exports/         Krita frames from the first attempt   (dormant)
+  first-anim/      the very first Krita test             (dormant)
+```
+
+**New drawing goes in `art/<thing>/raw/`.** Three rules keep it buildable:
+
+1. `raw/` is yours alone. It holds the untouched export, and no script ever
+   writes back into it. Number frames in play order, `0001.png` upward, so a
+   script can read the directory sorted and get the timing for free.
+2. **Draw every frame on one canvas and export the whole canvas, uncropped.**
+   Trimming in Procreate destroys registration between frames, and that cannot
+   be recovered afterwards. A script can find one shared crop box across all
+   frames, which is what `make-pointer.mjs` does, but only if the frames still
+   share an origin.
+3. A script in `scripts/dev/` reads `raw/` and writes into `public/assets/`.
+   Nothing hand-authored lands in `public/assets/`, so any sprite on the site
+   can be rebuilt from the drawings after a redraw.
+
 `art/exports/` is committed on purpose. Krita's animation export is a manual
 GUI step, so the PNGs are the earliest point at which the build is
 reproducible. They are a few KB each for line art.

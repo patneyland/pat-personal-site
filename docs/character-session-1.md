@@ -147,14 +147,25 @@ The test that the architecture worked: adding those entries needs no code.
 
 - **I cannot see the screen.** The loop that worked: he draws and exports, I
   build and screenshot with Playwright, he looks at localhost. Keep that rhythm.
-- **`next build` clobbers a running `next dev`.** It rewrites `.next` and the
-  dev server starts throwing 500s. If it happens, kill the port, `rm -rf .next`,
-  restart.
+- **Only ever run one `next dev` on this project.** Two of them share `.next`
+  and overwrite each other's chunks, and the symptom does not point at the
+  cause: `Cannot find module './vendor-chunks/...'`, 500s on every route, or
+  the server exiting 127 mid-recompile. A concurrent `next build` does the same
+  thing. Before blaming the code, list the processes and check whether a second
+  server is already up:
+  `Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" | Select ProcessId, CommandLine`.
+  Kill the duplicate and use the survivor rather than starting a third.
 - **Port 3003 has a stuck process** (PID 41076) that refuses `taskkill /F /T`.
   Use another port, or kill it from an elevated terminal first.
-- Two loose files still sit untracked in the repo root, `PXL_20260825_180218028.jpg`
-  and `Screenshot 2026-08-25 110345.png`. The repo is public. Decide whether they
-  move to `art/` or get ignored before the next commit sweeps them up.
+- **The repo root is clean as of 2026-08-27.** The original pencil photo and the
+  placement screenshot are now `art/paper-guy/source-photo.jpg` and
+  `art/paper-guy/placement-brief.png`. `EPSON002-004.JPG` were deleted as exact
+  duplicates of `art/scan-0N/page.jpg`, which `scan-extract.mjs` writes itself
+  as a copy of its input. Only the CC0 zip and the sprite sheet remain loose,
+  and both are gitignored.
+- **Knock-on:** `scan-extract.mjs` keys its crop config on the input's basename,
+  so re-running it now throws `no PAGES entry for page.jpg`. Either give it a
+  `--page` override or pass a file renamed back to `EPSON00N.JPG`.
 
 ---
 

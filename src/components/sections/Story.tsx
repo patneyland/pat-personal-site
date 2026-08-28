@@ -9,6 +9,7 @@ import {
   useState,
 } from "react";
 import BlurFade from "@/components/ui/BlurFade";
+import StoryGary, { type StoryGaryProps } from "@/components/ui/StoryGary";
 
 const PAPER = "#f4efe4";
 const INK = "#3a342a";
@@ -19,6 +20,8 @@ const INK_SOFT = "#5b5342";
 const Polaroid = forwardRef<
   HTMLDivElement,
   {
+    /** Names this card as a surface, for anything that walks the board. */
+    id?: string;
     src?: string;
     alt?: string;
     icon?: string;
@@ -32,6 +35,7 @@ const Polaroid = forwardRef<
   }
 >(function Polaroid(
   {
+    id,
     src,
     alt,
     icon,
@@ -48,6 +52,7 @@ const Polaroid = forwardRef<
   return (
     <div
       ref={ref}
+      data-surface={id}
       className="relative shrink-0"
       style={{
         width,
@@ -456,11 +461,24 @@ function Connectors({
 
 /* ─── Section ───────────────────────────────────────────── */
 
-export default function Story() {
+export default function Story({
+  /** Only the lab passes this: debug overlay and the tuning knobs. */
+  gary,
+}: {
+  gary?: Partial<StoryGaryProps>;
+} = {}) {
   const boardRef = useRef<HTMLDivElement>(null);
   const frames = useRef<Record<string, HTMLDivElement | null>>({});
   const [version, setVersion] = useState(0);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Gary needs the board element itself, not a ref to it, so keep both: the
+  // connectors measure from the ref during layout, he mounts into the state.
+  const [board, setBoard] = useState<HTMLDivElement | null>(null);
+  const holdBoard = useCallback((el: HTMLDivElement | null) => {
+    boardRef.current = el;
+    setBoard(el);
+  }, []);
 
   const setFrame = (key: string) => (el: HTMLDivElement | null) => {
     frames.current[key] = el;
@@ -493,14 +511,20 @@ export default function Story() {
         </BlurFade>
 
         {/* Board */}
-        <div ref={boardRef} className="isolate relative mt-16 flex flex-col gap-16">
+        <div
+          ref={holdBoard}
+          data-story-board
+          className="isolate relative mt-16 flex flex-col gap-16"
+        >
           <Connectors boardRef={boardRef} frames={frames} version={version} />
+          <StoryGary board={board} version={version} {...gary} />
 
           {/* 1 — graduation */}
           <BlurFade delay={0.1}>
             <div className="flex flex-wrap items-start gap-10">
               <Polaroid
                 ref={setFrame("graduation")}
+                id="graduation"
                 onImgLoad={bump}
                 src="/assets/story/graduation.jpg"
                 alt="Patrick Neyland graduating from Utah Valley University"
@@ -527,6 +551,7 @@ export default function Story() {
               </Note>
               <Polaroid
                 ref={setFrame("masters")}
+                id="masters"
                 onImgLoad={bump}
                 src="/assets/slideshow/photo-three.png"
                 alt="Master's at Utah State"
@@ -552,6 +577,7 @@ export default function Story() {
             <div className="flex flex-wrap items-start justify-center gap-14">
               <Polaroid
                 ref={setFrame("fiscalsim")}
+                id="fiscalsim"
                 onImgLoad={bump}
                 src="/assets/story/fiscalsim.jpg"
                 alt="FiscalSim, a Python-based policy microsimulation model"
@@ -561,6 +587,7 @@ export default function Story() {
               />
               <Polaroid
                 ref={setFrame("asc")}
+                id="asc"
                 onImgLoad={bump}
                 src="/assets/story/analytics-solutions-center.jpg"
                 alt="Analytics Solutions Center"
@@ -577,6 +604,7 @@ export default function Story() {
             <div className="flex flex-wrap items-start gap-10">
               <Polaroid
                 ref={setFrame("asu")}
+                id="asu"
                 onImgLoad={bump}
                 src="/assets/story/asu.jpg"
                 alt="Patrick Neyland, Graduate Research Associate at Arizona State University"
@@ -610,6 +638,7 @@ export default function Story() {
               <div className="flex flex-wrap items-start justify-center gap-6">
                 <Polaroid
                   ref={setFrame("neyland")}
+                  id="neyland"
                   onImgLoad={bump}
                   src="/assets/story/neyland-solutions-profile.jpg"
                   alt="Neyland Solutions"
@@ -619,6 +648,7 @@ export default function Story() {
                 />
                 <Polaroid
                   ref={setFrame("presenting")}
+                  id="presenting"
                   onImgLoad={bump}
                   src="/assets/story/neyland-solutions-presenting.jpg"
                   alt="Patrick Neyland presenting as founder of Neyland Solutions"
@@ -635,6 +665,10 @@ export default function Story() {
         {/* torn side note */}
         <BlurFade delay={0.1}>
           <div
+            /* He finishes here, walking the tear itself: the route reads the
+               clip path below and treats it as the surface, so re-tearing the
+               note moves him with it. */
+            data-surface="realstuff"
             className="mx-auto mt-20"
             style={{
               maxWidth: 640,

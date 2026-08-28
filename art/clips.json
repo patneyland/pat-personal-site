@@ -1,0 +1,14 @@
+{
+  "idle": { "kind": "ambient", "fps": 2, "loop": true },
+
+  "stand": { "kind": "ambient",    "loop": true,  "fps": 8 },
+  "walk":  { "kind": "locomotion", "loop": true,  "stride": 75 },
+  "run":   { "kind": "locomotion", "loop": true,  "stride": 141 },
+  "jump":  { "kind": "oneshot",    "loop": false, "fps": 14, "next": "fall" },
+  "fall":  { "kind": "locomotion", "loop": true,  "stride": 150 },
+  "land":  { "kind": "oneshot",    "loop": false, "fps": 12, "next": "stand" },
+
+  "drop":  { "kind": "ambient",    "loop": false, "fps": 14, "next": "puff" },
+  "puff":  { "kind": "ambient",    "loop": true,  "fps": 9, "next": "rise" },
+  "rise":  { "kind": "ambient",    "loop": false, "fps": 9, "next": "walk" }
+}
