@@ -153,8 +153,7 @@ const AIR_SHARE = 0.46;
 const LAND_SPAN = 60;
 const BACKUP_SHARE = 0.42;
 /** After the last surface he walks in, stops, and settles. */
-const SETTLE_SPAN = 140;
-const REST_TAIL = 140;
+const REST_TAIL = 280;
 /** Floors for a hop and for the run before it, when the page is running out. */
 const MIN_AIR = 150;
 const MIN_GROUND = 150;
@@ -483,7 +482,7 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
      the page bottoms out. So the tail wins: work backwards from the end of the
      page, pulling departures earlier until the ending fits. Earlier is always
      safe overhead, which is the direction that matters. */
-  const tail = LAND_SPAN + SETTLE_SPAN + REST_TAIL;
+  const tail = LAND_SPAN + REST_TAIL;
   if (Number.isFinite(maxScroll)) {
     let cap = maxScroll - tail;
     for (let i = n - 1; i >= 1; i--) {
@@ -561,22 +560,29 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
     }
 
     if (!next) {
-      /* End of the road. He walks in off the corner he landed on and stops,
-         which reads as arriving somewhere rather than as an animation running
-         out of instructions. From there the caller has the clock: he settles,
-         and if the reader stays, he paces. */
-      const restT = landedT < 0.5 ? 0.42 : 0.58;
-      pushGround(p, landedT, restT, cursor, cursor + SETTLE_SPAN, "walk");
+      /* End of the road, and the end of him. He has just crossed the whole
+         board, so where he comes down is where he stops: no walking in off the
+         corner, because a man who still has two paces in him is not out of
+         breath. From here the caller has the clock, the reader having stopped
+         supplying one. He gets his breath back, and if they stay, he paces. */
       segs.push({
         kind: "stand",
-        s0: cursor + SETTLE_SPAN,
-        s1: cursor + SETTLE_SPAN + 6000,
+        s0: cursor,
+        s1: cursor + 6000,
         p,
-        t: restT,
+        t: landedT,
         dir: landedT < 0.5 ? 1 : -1,
         clip: "stand",
         d0: d,
-        rest: { p, at: restT, from: PACE_FROM, to: PACE_TO },
+        rest: {
+          p,
+          at: landedT,
+          /* The pacing window has to contain wherever he came down, and it can
+             always be widened to: he is standing there already, so it is
+             ground he has been proved able to stand on. */
+          from: Math.min(PACE_FROM, landedT),
+          to: Math.max(PACE_TO, landedT),
+        },
       });
       break;
     }
@@ -718,8 +724,16 @@ export function sampleRoute(route: Route, s: number): Pose | null {
 /* The arrival, in milliseconds. He has just crossed the whole board in a few
    seconds of scrolling and the reader has stopped supplying a clock, so this
    is the one beat that is his own. A flat wait here read as a freeze; what
-   fixes it is having something to do. He gets his breath first. */
-const BEAT = 180;    // upright, before it catches up with him
+   fixes it is having something to do. He gets his breath first.
+
+   The landing runs straight into the buckle with nothing between them. There
+   was an upright beat here once, on the theory that it sells "arrives, then
+   the legs give out", but the landing already ends in a crouch, so it played
+   as a bounce: down, up, down. Worse, a held beat of any length shows the
+   first frame of the idle, which is a relaxed arm out gesture, and one calm
+   pose between two winded ones undoes both. `drop` opens nearly upright of its
+   own accord, so the recoil survives as an accent inside one continuous
+   motion rather than as a pause. */
 const DROP = 215;    // knees going
 const PUFF = 2100;   // hands on knees, roughly three breaths
 const STAND_UP = 340; // straightening up
@@ -752,7 +766,7 @@ function eased(t: number): number {
 export function pacePose(rest: Rest, elapsed: number, baseDist: number): Pose {
   const total = edgeLength(rest.p);
   const span = (rest.to - rest.from) * total;
-  const START = BEAT + DROP + PUFF + STAND_UP;
+  const START = DROP + PUFF + STAND_UP;
 
   if (elapsed < START || span <= 0) {
     const spot = at(rest.p, rest.at);
@@ -760,9 +774,8 @@ export function pacePose(rest: Rest, elapsed: number, baseDist: number): Pose {
        the durations above and not the art. A clip that finishes early holds
        its last drawing, which is what `drop` and `rise` are shaped to do. */
     const clip =
-      elapsed < BEAT ? "stand"
-      : elapsed < BEAT + DROP ? "drop"
-      : elapsed < BEAT + DROP + PUFF ? "puff"
+      elapsed < DROP ? "drop"
+      : elapsed < DROP + PUFF ? "puff"
       : "rise";
     return {
       x: spot.x,
