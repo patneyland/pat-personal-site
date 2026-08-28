@@ -216,7 +216,8 @@ export default function StoryGary({
           /* At the very top of the page he has not set off yet, so he stands
              on the first card rather than being caught mid-stride with both
              feet off the paper. He starts running the moment the reader does. */
-          let pose = s <= 0 ? restingPose(platforms) : sampleRoute(route, s);
+          const atTop = s <= 0;
+          let pose = atTop ? restingPose(platforms) : sampleRoute(route, s);
           if (!pose) return;
 
           /* The end of the line. He has arrived, the page has run out, and
@@ -234,7 +235,14 @@ export default function StoryGary({
           } else {
             resting = 0;
             pacing = false;
-            if (s !== lastScroll) facing = pose.dir * (s > lastScroll ? 1 : -1);
+            /* Both ends of the page are places he stands while nobody is
+               scrolling, so the top takes its facing from the pose for the
+               same reason the pacing does. Reading it off the reader's travel
+               instead leaves him wearing the direction he came home in, which
+               is how he ended up back at the start looking off the left edge
+               of the first polaroid. */
+            if (atTop) facing = pose.dir;
+            else if (s !== lastScroll) facing = pose.dir * (s > lastScroll ? 1 : -1);
           }
           lastScroll = s;
 
