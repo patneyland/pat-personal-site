@@ -139,6 +139,18 @@ export interface Viewport {
 const TOP_SAFE = 74; // the sticky nav is 54 tall, so this clears it by 20
 const BOTTOM_SAFE = 76;
 /**
+ * Slack on the headroom, in pixels.
+ *
+ * The arc is solved for his feet, and three things sit above them that the
+ * solve does not know about: the drawing itself reaches higher than his
+ * nominal height on the frames where his arms go up, the lean pivots on his
+ * feet so it swings his head as well as tipping it, and the two passes leave a
+ * residual of their own. Measured together they came to under two pixels, so
+ * this is mostly margin on the margin, and it costs nothing but leaving each
+ * card six pixels sooner.
+ */
+const TOP_SLACK = 6;
+/**
  * How much of the gap between two departures is spent in the air. The rest is
  * spent on the card he landed on.
  */
@@ -164,16 +176,30 @@ const MIN_GROUND = 150;
  */
 const RUNUP_MIN = 200;
 /**
- * How hard he drives off the edge, in board pixels of upward throw.
+ * How high he actually climbs above the edge he leaves, in board pixels.
  *
- * Deliberately small. The arc's actual climb above the edge is only
- * RISE^2 / (4 * (drop + RISE)), a couple of pixels against a drop this size,
- * so a big number buys nothing you can see. What it does buy is a much larger
- * climb against the frame, which is headroom spent on nothing. Running off an
- * edge and accelerating downward is the right read anyway; the jump drawing
- * carries the push.
+ * Note what this is not. The arc is y = (drop + rise)u^2 - rise*u, so `rise`
+ * is a throw coefficient rather than a height, and the apex it produces is
+ * only rise^2 / (4 * (drop + rise)). Against the drops on this page a rise of
+ * 40 bought three quarters of one pixel: he ran off the edge, played the jump
+ * drawing, and started falling, with no hop in between. Tuning the height and
+ * solving for the coefficient is what makes the hop visible.
+ *
+ * It also makes every hop climb the same amount whatever is below it. A single
+ * shared coefficient does the opposite, because the same throw over a longer
+ * drop is a flatter arc, so the biggest gaps got the smallest hops.
  */
-const RISE = 40;
+const HOP_RISE = 26;
+
+/**
+ * The throw coefficient whose apex sits HOP_RISE above the launch edge.
+ *
+ * Inverting apex = rise^2 / (4 * (drop + rise)) for rise. A drop clamped at
+ * zero because landing higher than he left only ever needs more throw, and the
+ * extra comes out of the same arc for free.
+ */
+const riseFor = (drop: number) =>
+  2 * HOP_RISE + 2 * Math.sqrt(HOP_RISE * (HOP_RISE + Math.max(drop, 0)));
 /**
  * Where along an edge he plants his feet at either end of a hop. He leaves
  * from the very end of a card and comes down well in from the end of the next
@@ -404,7 +430,7 @@ export function measurePlatforms(
  * rate while the arc barely moves for its first third, so against the frame he
  * rises by
  *
- *     (RISE + air)^2 / (4 * (drop + RISE))
+ *     (rise + air)^2 / (4 * (drop + rise))
  *
  * before gravity catches up. Leaving each card that much lower than the
  * headroom, plus his own height, puts the peak of every hop exactly on the
@@ -449,11 +475,12 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
 
   const solve = () => {
     for (let i = 0; i < n - 1; i++) {
-      const rise = (RISE + air[i]) ** 2 / (4 * (Math.max(drop[i], 1) + RISE));
+      const r = riseFor(drop[i]);
+      const rise = (r + air[i]) ** 2 / (4 * (Math.max(drop[i], 1) + r));
       depart[i] =
         boardDocTop +
         at(platforms[i], launchT[i]).y -
-        (TOP_SAFE + charHeight + rise);
+        (TOP_SAFE + TOP_SLACK + charHeight + rise);
     }
   };
 
@@ -610,7 +637,7 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
       s1: marks[(i + 1) * 2],
       from,
       to,
-      rise: RISE,
+      rise: riseFor(to.y - from.y),
       d0: d,
       len: Math.hypot(to.x - from.x, to.y - from.y),
     });
