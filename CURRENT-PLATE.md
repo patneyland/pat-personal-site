@@ -4,7 +4,7 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-08-31.
+Last touched: 2026-09-01.
 
 ---
 
@@ -56,11 +56,21 @@ Full design and reasoning: [docs/gary-chat.md](docs/gary-chat.md).
    anything outside a comment counts as his voice. Keep the headings: the bubble reads
    the greeting out of "His greeting" by name and shows it word for word.
 
+Nothing else is blocked. The rest of the feature is finished and live.
+
 Done, for the record:
 
-- `OPENROUTER_API_KEY` set in Vercel on 2026-08-31, production target only. Add it to
-  Preview as well if branch deploys should ever answer.
+- `OPENROUTER_API_KEY` set by Pat in Vercel on 2026-08-31, production target only. Add it
+  to Preview as well if branch deploys should ever answer.
+- Redeployed and confirmed the key took effect, then again after the voice landed.
   https://vercel.com/neyland-solutions/pat-personal-site/settings/environment-variables
+
+## Worth knowing before you report a bug
+
+**The greeting shows once per browser tab.** It is remembered in `sessionStorage` under
+`gary.greeted`, so a second visit in the same tab gets no bubble even though he is
+working fine. Use a fresh tab or a private window when checking it. Clicking him always
+opens the chat regardless.
 
 ## Open decisions (Pat's)
 
@@ -83,15 +93,32 @@ Done, for the record:
 4. **Where Gary can be talked to.** Today: `/fun` and `/story`. Not `/`, not `/portfolio`
    or `/garden` unless a conversation is already open and follows you there.
 
+## Verified in production, 2026-09-01
+
+Driven in a real browser against www.patrickneyland.com, not just curled: on `/fun` the
+greeting bubble appears, he stops and faces you, and he answers in the bubble. On
+`/story` he is clickable and the chat opens with no greeting. Off-topic questions are
+still declined, and the answers stay inside one or two sentences.
+
+Deployment `3087e57`, READY and aliased to production.
+
+Note when checking by hand: `/story` looks like it has no launcher if you grep the
+served HTML, because Gary there is mounted by JavaScript once the sprite atlas loads
+rather than server rendered. Only a real browser tells you the truth on that page.
+
 ## Not yet verified
 
-- **The chat has never run in production.** Every test has been against localhost. The
-  first real check is only possible once the key is set.
 - **The mobile fallback has not been seen on a phone.** Below a 420px card the bubble is
   replaced by a sheet at the bottom of the screen, portalled to the body. It works in a
   narrow browser window; no real device has touched it.
 - **Rate limiting is per server instance.** Serverless means each instance keeps its own
-  counter, so 12 messages a minute is a speed bump, not a wall.
+  counter, so 12 messages a minute is a speed bump, not a wall. Untested against anything
+  deliberately abusive.
+- **Nobody but Pat and Claude has used it.** No real visitor has asked Gary anything yet,
+  so the questions people actually ask are still unknown.
+- **Cost in the wild is unmeasured.** A conversation runs a few cents at
+  `anthropic/claude-opus-5`, but that is arithmetic, not an observed bill. OpenRouter's
+  activity page is where that shows up.
 
 ## Lessons worth keeping
 
