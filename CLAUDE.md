@@ -2,6 +2,9 @@
 
 This is a collaborative workspace between Patrick and Claude. Read this file at the start of every session before touching any code.
 
+Then read **`CURRENT-PLATE.md`**. It is the state of the project: what is live, what is
+half done, and what is waiting on Patrick. Update it when that state changes.
+
 ---
 
 ## Project Purpose
@@ -56,6 +59,7 @@ The aesthetic inspiration is [garysheng.com](https://www.garysheng.com/):
 ```
 pat-personal-site/
 ├── CLAUDE.md              ← you are here
+├── CURRENT-PLATE.md       ← state of the project. Read after this file.
 ├── design.md              ← design system rules, including per-page worlds
 ├── docs/                  ← specs for work not built yet. Read before starting one.
 │   ├── character-pipeline.md    the drawn character: Krita → atlas → runtime
