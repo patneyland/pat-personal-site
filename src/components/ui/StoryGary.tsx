@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Character } from "@/lib/character/player";
+import { useGary } from "@/components/ui/GaryChat";
 import {
   buildRoute,
   measurePlatforms,
@@ -68,8 +69,17 @@ export default function StoryGary({
   strides,
   onSample,
 }: StoryGaryProps) {
+  /* He is clickable here too, but the chat is not what this file is about, so
+     the handler is held in a ref. Putting setOpen in the effect's dependencies
+     would tear down and rebuild the whole crossing every time the chat opened
+     or closed, which would drop him back at the start of the board. */
+  const { enabled, setOpen } = useGary();
+  const talk = useRef<() => void>(() => {});
+  talk.current = () => setOpen(true);
+
   useEffect(() => {
     if (!board) return;
+    const talkable = enabled;
 
     /* Narrow layouts stack every polaroid into one column. The hops would be
        vertical drops down a corridor barely wider than he is, which is not the
@@ -180,8 +190,30 @@ export default function StoryGary({
            because there is nothing for it to darken. It goes on his own root
            rather than on the layer, which spans the whole board and would be
            an enormous surface to rasterise every frame. */
-        (layer.firstElementChild as HTMLElement).style.filter =
+        const figure = layer.firstElementChild as HTMLElement;
+        figure.style.filter =
           "drop-shadow(0 0 2px rgba(0,0,0,0.85)) drop-shadow(0 2px 4px rgba(0,0,0,0.5))";
+
+        /* Clickable, so you can stop him and ask him something on this page as
+           well. He introduces himself only on /fun; here he waits to be asked.
+           The layer keeps pointer-events off so the rest of the board stays
+           clickable, and only he takes the pointer. */
+        if (talkable) {
+          layer.removeAttribute("aria-hidden");
+          figure.style.pointerEvents = "auto";
+          figure.style.cursor = "pointer";
+          figure.setAttribute("role", "button");
+          figure.setAttribute("tabindex", "0");
+          figure.setAttribute("aria-label", "Chat with Gary");
+          figure.addEventListener("click", () => talk.current());
+          figure.addEventListener("keydown", (e) => {
+            const k = (e as KeyboardEvent).key;
+            if (k === "Enter" || k === " ") {
+              e.preventDefault();
+              talk.current();
+            }
+          });
+        }
         c.play("run");
         measure();
 
@@ -296,7 +328,7 @@ export default function StoryGary({
       layer.remove();
       svg?.remove();
     };
-  }, [board, height, minWidth, version, debug, strides, onSample]);
+  }, [board, height, minWidth, version, debug, strides, onSample, enabled]);
 
   return null;
 }

@@ -59,12 +59,14 @@ pat-personal-site/
 ├── design.md              ← design system rules, including per-page worlds
 ├── docs/                  ← specs for work not built yet. Read before starting one.
 │   ├── character-pipeline.md    the drawn character: Krita → atlas → runtime
-│   └── character-session-1.md   the working session that starts it
+│   ├── character-session-1.md   the working session that starts it
+│   └── gary-chat.md             letting Gary talk: the chat feature
 ├── content/               ← ALL page content. Patrick edits these, not code.
 │   ├── README.md          ← frontmatter formats, written for Patrick
 │   ├── resume.md          ← the ENTIRE front page at /
 │   ├── portfolio/*.md     ← one file per portfolio tile
-│   └── garden/*.md        ← one file per garden entry
+│   ├── garden/*.md        ← one file per garden entry
+│   └── gary.md            ← Gary's voice. Patrick's words only.
 ├── src/
 │   ├── app/
 │   │   ├── page.tsx       ← renders Boring (the plain resume)

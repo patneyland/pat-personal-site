@@ -4,6 +4,8 @@ import "./globals.css";
 import Nav from "@/components/ui/Nav";
 import { SITE } from "@/lib/site";
 import { Analytics } from "@vercel/analytics/next";
+import { GaryProvider, GaryPanel } from "@/components/ui/GaryChat";
+import { readVoice, readGreeting } from "@/lib/gary/prompt";
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
@@ -83,8 +85,14 @@ export default function RootLayout({
       className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
     >
       <body className="bg-bg text-ink antialiased">
-        <Nav />
-        {children}
+        {/* Gary's panel is mounted here rather than in /fun on purpose. His job
+            is handing out links, and a panel inside a page would unmount
+            itself the moment a visitor followed one. See docs/gary-chat.md. */}
+        <GaryProvider enabled={readVoice().ok} greeting={readGreeting()}>
+          <Nav />
+          {children}
+          <GaryPanel />
+        </GaryProvider>
         {/* Page views only. No cookies, and it reports nothing until
             Analytics is switched on for the project in the Vercel dashboard. */}
         <Analytics />

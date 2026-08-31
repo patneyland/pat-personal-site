@@ -339,8 +339,11 @@ body:has(.boring) { background: #ffffff; color: #000000; }
    exactly where he runs out of edge, at any viewport width. The flips are a
    hundredth of a percent long, which reads as instant rather than as a squash
    through zero. */
+/* --gary-cells is negative and counts the cells in whichever sheet is on the
+   element: -8 for the walk, -2 for the two drawn head-on poses he stands in
+   while he talks. Defaulted to the walk so existing use needs no change. */
 @keyframes gary-step {
-  to { background-position: calc(var(--gary-w, 43px) * -8) 0; }
+  to { background-position: calc(var(--gary-w, 43px) * var(--gary-cells, -8)) 0; }
 }
 
 @keyframes gary-pace {
