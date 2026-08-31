@@ -200,6 +200,22 @@ const HOP_RISE = 26;
  */
 const riseFor = (drop: number) =>
   2 * HOP_RISE + 2 * Math.sqrt(HOP_RISE * (HOP_RISE + Math.max(drop, 0)));
+
+/**
+ * The share of a hop the jump drawing covers, and the share of it he spends
+ * still standing on the edge.
+ *
+ * The drawing is three frames: crouch, drive, rise. The first two happen with
+ * his feet on the paper and only the third leaves it, so the arc cannot start
+ * until two thirds of the way through the clip. Starting it at the top of the
+ * crouch instead had him drifting upward while still folded up, which reads as
+ * being lifted off the card rather than jumping off it.
+ *
+ * WINDUP is derived rather than typed so the two cannot drift apart: it is
+ * exactly the boundary between the second drawing and the third.
+ */
+const JUMP_SPAN = 0.2;
+const WINDUP = (JUMP_SPAN * 2) / 3;
 /**
  * Where along an edge he plants his feet at either end of a hop. He leaves
  * from the very end of a card and comes down well in from the end of the next
@@ -473,14 +489,39 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
   const startY = (i: number) =>
     boardDocTop + at(platforms[i], launchT[i]).y - depart[i];
 
+  /**
+   * How far a hop carries him up the frame, feet first.
+   *
+   * Two climbs, not one. He is planted for the wind-up, so the page alone
+   * carries him up by that much scroll; then the arc runs in what is left of
+   * the hop, which is a shorter run than the whole.
+   */
+  const climb = (i: number, a: number) => {
+    const r = riseFor(drop[i]);
+    return (
+      WINDUP * a +
+      (r + (1 - WINDUP) * a) ** 2 / (4 * (Math.max(drop[i], 1) + r))
+    );
+  };
+
+  /** The longest hop whose climb still fits in `room`. Inverts `climb` for a. */
+  const airFor = (i: number, room: number) => {
+    const r = riseFor(drop[i]);
+    const D = 4 * (Math.max(drop[i], 1) + r);
+    const k = 1 - WINDUP;
+    const qa = (k * k) / D;
+    const qb = WINDUP + (2 * r * k) / D;
+    const qc = (r * r) / D - room;
+    if (qc >= 0) return 0; // no room even standing on the edge
+    return (-qb + Math.sqrt(qb * qb - 4 * qa * qc)) / (2 * qa);
+  };
+
   const solve = () => {
     for (let i = 0; i < n - 1; i++) {
-      const r = riseFor(drop[i]);
-      const rise = (r + air[i]) ** 2 / (4 * (Math.max(drop[i], 1) + r));
       depart[i] =
         boardDocTop +
         at(platforms[i], launchT[i]).y -
-        (TOP_SAFE + TOP_SLACK + charHeight + rise);
+        (TOP_SAFE + TOP_SLACK + charHeight + climb(i, air[i]));
     }
   };
 
@@ -499,6 +540,24 @@ export function buildRoute(platforms: Platform[], view: Viewport): Route {
       air[i] = Math.max(air[i], startY(i) + drop[i] - (vh - BOTTOM_SAFE));
   }
   solve();
+
+  /* He cannot leave a card before the page has scrolled far enough to let him,
+     and the first hop is always up against that: there is no page above it, so
+     the departure it wants is off the top and gets clamped, and with it the
+     headroom guarantee. Where that happens the hop gets quicker instead. Less
+     scroll is less climb against the frame, and it costs nothing in board
+     space: the same arc, the same 26px over the edge, passed through sooner. */
+  const FLOOR = MIN_SPAN / 4;
+  for (let i = 0; i < n - 1; i++) {
+    if (depart[i] >= FLOOR) continue;
+    const room =
+      boardDocTop +
+      at(platforms[i], launchT[i]).y -
+      FLOOR -
+      (TOP_SAFE + TOP_SLACK + charHeight);
+    air[i] = Math.max(MIN_AIR, Math.min(air[i], airFor(i, room)));
+    depart[i] = FLOOR;
+  }
 
   const arrive: number[] = [0];
   for (let i = 0; i < n - 1; i++) arrive[i + 1] = depart[i] + air[i];
@@ -713,26 +772,31 @@ export function sampleRoute(route: Route, s: number): Pose | null {
     };
   }
 
-  // In the air. x is linear, y is a throw: up off the edge, then down, landing
-  // exactly on the next card's paper however far below it happens to be.
-  const x = lerp(seg.from.x, seg.to.x, u);
+  /* In the air, once he is actually in it. He coils on the edge for the first
+     part of the hop and only the rest is a throw: up off the paper, then down,
+     landing exactly on the next card however far below it happens to be. `a`
+     is how far through that throw he is, and it is what everything after the
+     crouch is timed against. */
+  const a = u <= WINDUP ? 0 : (u - WINDUP) / (1 - WINDUP);
+  const x = lerp(seg.from.x, seg.to.x, a);
   const drop = seg.to.y - seg.from.y;
-  const y = seg.from.y + (drop + seg.rise) * u * u - seg.rise * u;
+  const y = seg.from.y + (drop + seg.rise) * a * a - seg.rise * a;
   const dir = seg.to.x >= seg.from.x ? 1 : -1;
 
-  // He drives off the edge, windmills the whole way down, and tucks to absorb
-  // the last of it just before the paper.
+  // He coils, drives off the edge, windmills the whole way down, and tucks to
+  // absorb the last of it just before the paper.
+  const aJump = (JUMP_SPAN - WINDUP) / (1 - WINDUP);
   let clip: string;
   let phase: number;
-  if (u < 0.2) {
+  if (u < JUMP_SPAN) {
     clip = "jump";
-    phase = u / 0.2;
-  } else if (u < 0.9) {
+    phase = u / JUMP_SPAN;
+  } else if (a < 0.9) {
     clip = "fall";
-    phase = ((u - 0.2) / 0.7) * 2.5;
+    phase = ((a - aJump) / (0.9 - aJump)) * 2.5;
   } else {
     clip = "land";
-    phase = (u - 0.9) / 0.1;
+    phase = (a - 0.9) / 0.1;
   }
 
   return {
@@ -743,7 +807,7 @@ export function sampleRoute(route: Route, s: number): Pose | null {
     dir,
     // A little tip into the direction of travel reads as weight.
     tilt: dir * lerp(-6, 10, u),
-    dist: seg.d0 + seg.len * u,
+    dist: seg.d0 + seg.len * a,
     gaitDriven: false,
   };
 }
