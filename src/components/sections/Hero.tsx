@@ -6,6 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
 import GaryPacing from "@/components/ui/GaryPacing";
+import House from "@/components/ui/House";
 import { ArrowRight } from "lucide-react";
 
 /* The home world. One white card on the site's dark ground, read dark on
@@ -93,6 +94,7 @@ export default function Hero() {
             positioning context he measures himself against. */}
         <BlurFade delay={0.2} immediate className="w-full">
           <div className="relative">
+            <House />
             <GaryPacing />
             <div
               className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
