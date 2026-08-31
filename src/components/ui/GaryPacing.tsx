@@ -242,7 +242,14 @@ export default function GaryPacing() {
               width: WIDTH,
               height: HEIGHT,
               "--gary-w": `${WIDTH}px`,
-              backgroundImage: "url(/assets/gary-pace.png)",
+              /* Two layers, his sprite over his own knockout. The knockout is
+                 the same figure filled in the colour of the ground, so scenery
+                 behind him is covered by his silhouette instead of showing
+                 through his head. One background-position drives both layers,
+                 so gary-step keeps them in register for free. Built by
+                 scripts/dev/make-solid.mjs. */
+              backgroundImage:
+                "url(/assets/gary-pace.png), url(/assets/gary-pace-solid.png)",
               backgroundSize: `${WIDTH * FRAMES}px ${HEIGHT}px`,
               animation: seconds
                 ? `gary-step ${FRAMES / FPS}s steps(${FRAMES}) infinite,` +
@@ -279,7 +286,8 @@ export default function GaryPacing() {
                 height: HEIGHT,
                 "--gary-w": `${WIDTH}px`,
                 "--gary-cells": -FACING_FRAMES,
-                backgroundImage: "url(/assets/gary-facing.png)",
+                backgroundImage:
+                  "url(/assets/gary-facing.png), url(/assets/gary-facing-solid.png)",
                 backgroundSize: `${WIDTH * FACING_FRAMES}px ${HEIGHT}px`,
                 animation: `gary-step ${FACING_CYCLE}s steps(${FACING_FRAMES}) infinite`,
                 pointerEvents: "auto",
