@@ -266,15 +266,15 @@ space.
 
 # Repo-wide, unresolved
 
-**Every commit carries a personal gmail address as its git author email**, all 39 of them,
-and this repository is public on GitHub. `CLAUDE.md` says that address must never appear
+**Every commit carries a personal gmail address as its git author email**, without
+exception, and this repository is public on GitHub. `CLAUDE.md` says that address must never appear
 in the repo, and commit metadata is as public as file contents. It comes from the global
 git config rather than anything in the project, so it will keep happening.
 
 Not acted on, because the two ways out are both Pat's call: set a GitHub `noreply` address
-in `git config user.email` from here on and leave the history alone, or rewrite all 39
-commits and force push, which breaks every existing clone and link. Worth a decision
-either way.
+in `git config user.email` from here on and leave the history alone, or rewrite the whole
+history and force push, which breaks every existing clone and link. Worth a decision
+either way. The count only goes up while it is left.
 
 # Elsewhere
 
