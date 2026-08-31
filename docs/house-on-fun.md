@@ -29,16 +29,25 @@ Verified in Chromium at 1440 x 920: the page renders, no console errors,
 |---|---|
 | `src/components/ui/House.tsx` | new. The house, as inline SVG |
 | `src/components/sections/Hero.tsx` | two lines: the import, and `<House />` above `<GaryPacing />` |
+| `src/components/ui/GaryPacing.tsx` | one background layer added under each of his two sprites |
+| `scripts/dev/make-solid.mjs` | new. Builds the knockout sheets |
+| `public/assets/gary-*-solid.png` | new. Generated, committed |
 | `docs/drawing-to-geometry.md` | new. The method and the schedule |
 
-Removing it is deleting the component and those two lines. Nothing else in the
-page knows it exists.
+Removing the house is deleting the component and those two lines. The knockout
+in `GaryPacing` is worth keeping either way: it costs 4KB and it is what will
+let anything else stand behind him later.
 
 ---
 
 ## The two decisions that are not in the schedule
 
-**Where it stands.** `left: "7%"` of the card. Chosen by eye, and it is a prop.
+**Where it stands.** `right: "6%"` of the card, at the far end of his walk.
+Chosen by eye, and it is a prop.
+
+**How big it is.** `SCALE = 0.88`, so it stands at 2.5 times Gary rather than
+the 2.8 the drawing gives. Also by eye. Set SCALE to 1 for the drawing's own
+proportion.
 
 **How its line is inked.** `PEN = 0.27u`, not the 0.19u to 0.23u his sprite
 measures. The two are the same weight on screen: an antialiased SVG stroke reads
@@ -51,29 +60,28 @@ from `GARY_HEIGHT`.
 
 ---
 
-## The one open problem
+## How he stays in front of it
 
-**He disappears when he walks across the front of it.**
+He and the house are both white line art at the same weight on the same ground,
+so where they cross their lines used to run straight through each other and he
+stopped reading as a figure. Dimming the house fixes that and costs the house
+its weight, which is not the trade Patrick wanted.
 
-Gary is white line art. So is the house, now at his exact weight, on the same
-near-black ground. For the two or three seconds per lap where he crosses the
-door, his head and body outlines merge into the window mullions and he stops
-reading as a separate figure. The screenshots that show this are in the artifact
-from the session that built it.
+So he carries his own hole. `scripts/dev/make-solid.mjs` writes a second sheet
+of him filled solid in the ground colour, and `GaryPacing` draws it as a
+background layer underneath his sprite on the same element. One
+`background-position` drives both layers, so `gary-step` keeps them in register
+and none of the walk logic changed.
 
-This is a value problem, not a geometry problem, and there are three ways out:
+The fill is found by flooding in from the edge of each frame and keeping
+whatever the flood cannot reach, which is why his head goes solid but the gaps
+under his arms and between his legs stay open. That is correct: the house should
+show through a gap that is genuinely open.
 
-1. **Push the house back.** `<House ink="rgba(255,255,255,0.42)" />`. One prop,
-   already supported, and it works: verified. Cost is that the house then reads
-   lighter than Gary, which is the thing Patrick asked to stop.
-2. **Give Gary a halo.** Draw him over a slightly wider knockout of the ground
-   colour so he always cuts a silhouette out of whatever is behind him. Keeps
-   both at full weight. Costs a second sprite layer or a CSS filter.
-3. **Move the house out of his path.** Stand it far enough left that he turns
-   around before he reaches it, or put it past the end of his track.
-
-Not decided. Patrick has seen 1 and asked for full weight instead, so 2 and 3
-are the live options.
+**The one thing to know:** `GROUND` in that script is hard coded to `#0e0e0e`,
+which is `--bg`. The hole is only invisible on that ground. Putting him on a
+page with a different background means regenerating the sheets, or reworking
+the layer as a CSS mask so the colour comes from the page instead.
 
 ---
 
@@ -100,7 +108,8 @@ are the live options.
 ## Not done
 
 - Never opened on a phone. See above.
-- Not checked against the greeting bubble, which draws over the same area in the
-  first ten seconds. In the session's screenshots it covered the roof.
+- Not checked against the greeting bubble, which draws over the same area in
+  the first ten seconds. It covered the roof when the house was on the left; it
+  has not been looked at since the house moved right.
 - Nobody has decided whether the house belongs on `/fun` at all, or whether it
   is the first piece of the larger landscape and should wait for that.

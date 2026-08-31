@@ -30,23 +30,40 @@ const GARY_HEIGHT = 72;
 /** His height in schedule units, measured off the drawing he stands in. */
 const GARY_UNITS = 5.5;
 
-const U = GARY_HEIGHT / GARY_UNITS;
+/**
+ * How much smaller than the schedule the house is drawn.
+ *
+ * This is the one place the build knowingly departs from the drawing. At 1 the
+ * house is 2.8 times Gary, which is what he drew; Patrick asked for it a touch
+ * smaller once it was on the page, so it stands at 2.5 times him instead. Set
+ * this back to 1 to get the drawing's own proportion.
+ */
+const SCALE = 0.88;
+
+const U = (GARY_HEIGHT / GARY_UNITS) * SCALE;
 
 /** Eave to eave, and ground to apex. */
 const WIDTH = 13.5 * U;
 const HEIGHT = 15.4 * U;
 
-/** Gary's body line as it renders, in schedule units. See the note above. */
-const PEN = 0.27;
+/**
+ * Gary's body line as it renders, in schedule units. See the note above.
+ *
+ * Divided by SCALE because the pen is not part of the house. Shrinking the
+ * building shrinks its roof board, which is a real dimension of the roof, but
+ * the pen has to keep drawing at his weight or the house stops matching him,
+ * which was the whole point of measuring it.
+ */
+const PEN = 0.27 / SCALE;
 /** The roof is a drawn board, not a pen width: it measured 0.43u. */
 const PLANK = 0.45;
 
 interface Props {
   /**
-   * Where the left eave sits along the card, as a CSS length. He paces the
-   * whole width, so this only decides where he passes in front of it.
+   * Inset from the card's right edge, as a CSS length. He paces the whole
+   * width, so this only decides where along his walk he passes in front of it.
    */
-  left?: string;
+  right?: string;
   /**
    * Ink. Gary's sprite is pure white, so the house matches him by default.
    *
@@ -59,13 +76,13 @@ interface Props {
   ink?: string;
 }
 
-export default function House({ left = "7%", ink = "#ffffff" }: Props) {
+export default function House({ right = "6%", ink = "#ffffff" }: Props) {
   return (
     <div
       aria-hidden
       style={{
         position: "absolute",
-        left,
+        right,
         /* The card's top edge is the ground line, the same one his feet use. */
         bottom: "100%",
         width: WIDTH,
