@@ -8,6 +8,30 @@ Last touched: 2026-09-01.
 
 ---
 
+# ON A BRANCH: the house on /fun
+
+**Branch `house-on-fun`, committed, not pushed and not merged.** Checkout and
+`npm run dev` to see it; `/fun` shows it standing on the left of the card's top
+edge with Gary pacing across the front.
+
+It is the first thing built through a new method for turning Pat's pencil
+drawings into geometry: read the drawing for what it means, write it down as
+numbers on a unit grid, then build from the numbers. The method and the house's
+schedule are in [docs/drawing-to-geometry.md](docs/drawing-to-geometry.md).
+
+**One open problem, and it is the reason this is not merged.** Gary and the
+house are both white line art at the same weight on the same ground, so on the
+frames where he walks across the door he merges into the window mullions and
+stops reading as a separate figure. Dimming the house fixes it and Pat has said
+no to that, because he asked for the house to be at Gary's full weight. The
+remaining options are a halo behind Gary, or moving the house out of his path.
+Not decided.
+
+Handoff notes, including what was verified and what was never opened on a phone:
+[docs/house-on-fun.md](docs/house-on-fun.md).
+
+---
+
 # ACTIVE: Gary's chat
 
 **Live and on, running a Claude-drafted voice that Pat is replacing.** Shipped
