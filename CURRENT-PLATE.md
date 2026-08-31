@@ -10,9 +10,16 @@ Last touched: 2026-08-31.
 
 # ACTIVE: Gary's chat
 
-**Shipped 2026-08-31 and deliberately switched off.** Commit `77b4b6d` is live on
-production. No visitor can see Gary's chat yet, and nothing about the rest of the site
-changed. Two things have to happen before he turns on, and both are Pat's.
+**Live and on, running a Claude-drafted voice that Pat is replacing.** Shipped
+2026-08-31 switched off; switched on 2026-09-01 once the OpenRouter key was set and
+`content/gary.md` was filled in.
+
+**The voice in `content/gary.md` is Claude's, not Pat's.** Pat asked for the throwaway
+test voice to be committed as a starting point he would then improve. It is the one
+place on the site where the copy rule has been knowingly set aside, and only as a
+draft. Only the greeting is close to Pat's own words, from how he described it out loud
+when the feature was scoped. Everything else is a guess at Gary and should be read as
+placeholder until Pat has been through it.
 
 ## Where things stand
 
@@ -44,18 +51,16 @@ Full design and reasoning: [docs/gary-chat.md](docs/gary-chat.md).
 
 ## Blocked on Pat
 
-1. **Write `content/gary.md`.** This is the gate, and it is the real outstanding work.
-   The mechanism is finished; Gary does not sound like anyone yet. The file has empty
-   sections with a note in each explaining what goes there. Every note in it is inside an
-   HTML comment, so anything written outside a comment counts as his voice.
-2. **Set `OPENROUTER_API_KEY` in Vercel.** The project currently has **no environment
-   variables at all**. Add it to Production, and to Preview if branch deploys should
-   work too, then redeploy: environment variables are read at build and runtime, so an
-   existing deployment will not pick it up on its own.
+1. **Rewrite `content/gary.md` in his own words.** The draft in there is Claude's and is
+   live to visitors right now. Every note in that file is inside an HTML comment, so
+   anything outside a comment counts as his voice. Keep the headings: the bubble reads
+   the greeting out of "His greeting" by name and shows it word for word.
 
-   https://vercel.com/neyland-solutions/pat-personal-site/settings/environment-variables
+Done, for the record:
 
-   The key is in the local `.env.local`, which is gitignored because this repo is public.
+- `OPENROUTER_API_KEY` set in Vercel on 2026-08-31, production target only. Add it to
+  Preview as well if branch deploys should ever answer.
+  https://vercel.com/neyland-solutions/pat-personal-site/settings/environment-variables
 
 ## Open decisions (Pat's)
 

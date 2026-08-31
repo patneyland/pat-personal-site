@@ -1,8 +1,9 @@
 # Gary, the chat
 
-Status: **built and shipped, switched off.** The code is live. Gary is not,
-because the gate below is closed until Patrick writes `content/gary.md`. See
-"What production needs before the chat works" at the end.
+Status: **live, on a draft voice.** The code shipped 2026-08-31 and was switched
+on 2026-09-01. The words in `content/gary.md` are Claude's, committed at
+Patrick's explicit request as a starting point for him to improve, and they are
+what visitors hear today. See "His personality" under Outstanding.
 
 Gary can already walk. This is about letting him talk. A visitor clicks him on
 `/fun`, a small panel opens, and they can ask him about the site. He answers
@@ -234,15 +235,17 @@ Flagged by Patrick on 2026-08-31, at the point the mechanism was finished and
 shipped. Everything around Gary works. Gary himself does not sound like anyone
 yet.
 
-`content/gary.md` is still empty, which means the gate is closed and the chat is
-switched off in production. That is the intended failure: the plumbing can ship
-without a personality, and a personality Claude invented cannot ship by
-accident. Local development has been running against a throwaway voice in a file
-outside the repo, pointed at by `GARY_VOICE_FILE`. None of that is his voice and
-none of it is committed.
+**Updated 2026-09-01.** The gate held right up until Patrick chose to open it. He
+asked for the throwaway test voice to be committed as something to react to
+rather than starting from an empty file, so `content/gary.md` now carries
+Claude's words and the chat is on. The `GARY_VOICE_FILE` override has been
+removed from local development, so local and production now read the same file.
 
-What the throwaway voice has already shown up, worth fixing when the real one is
-written:
+This is the one place on the site where the copy rule has been knowingly set
+aside, and only as a draft. Only the greeting is close to Patrick's own words,
+from how he described it when the feature was scoped.
+
+What the draft voice has already shown up, worth fixing when he rewrites it:
 
 - He is fine at short factual answers and weak the moment a question is about a
   person. "Who is Patrick?" came back as "He's the one whose site this is, and
