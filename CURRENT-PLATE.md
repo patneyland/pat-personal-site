@@ -122,13 +122,127 @@ committed, so this only matters when changing a sprite.
 
 ---
 
-# Also in flight
+# SHIPPED: Gary crossing the story page
 
-**Gary crossing the story page**, by a second agent working in this same repo at the same
-time. Committed straight to `master` (`9e296f5` through `e236c97`) and already live. That
-work owns `src/components/ui/StoryGary.tsx`, `src/lib/character/`, and `src/app/lab/`.
-The chat added 35 lines to `StoryGary.tsx` to make him clickable, so that one file has
-two authors in it.
+**Live on production, `9e296f5` through `e236c97`.** He starts on the first polaroid,
+runs the top edge of each card and leaps between them as you scroll, and finishes on the
+torn note, where he gets his breath back and then paces it for as long as you stay.
+
+Owns `src/lib/character/`, `src/components/ui/StoryGary.tsx` and `src/app/lab/`. The chat
+later added 35 lines to `StoryGary.tsx` to make him clickable, so that one file has two
+authors in it. The collage itself is unchanged apart from the `data-surface` hooks the
+layer reads: it was not restyled and should not be.
+
+## Where things stand
+
+**Position is a pure function of `scrollY`, not a simulation.** That is the decision the
+rest hangs off. Scrolling back up needs no rewind logic, because the same function
+returns the same place and only the sign of the reader's travel changes, which is exactly
+what sets his facing. One accumulator survives, the gait, and it counts *unsigned*
+distance so his legs cycle forward while his body retraces.
+
+Surfaces are arc-length parameterised polylines read off the layout, which is what makes
+the torn note's `clip-path` polygon a genuinely walkable jagged edge instead of a straight
+line with a landing pinned to it. Cards are measured through `offsetLeft`/`offsetTop`
+chains rather than `getBoundingClientRect`, because `BlurFade` holds them at `y: 12` and
+the rect would put his feet through the paper.
+
+Staying inside the frame is solved rather than tuned. A fall drifts upward against the
+viewport before gravity catches up, so departure anchors are solved backwards from the
+margin. Headroom measures 80 to 83px against a floor of 74 at 1280x900, 1280x720 and
+1920x1080.
+
+Three clips are drawn rather than borrowed, in `scripts/dev/make-story-clips.mjs`, because
+nothing in the sprite pack is out of breath: `drop`, `puff` and `rise`. The body is six
+strokes at the pack's own measured weights, under the same generated head, so they arrive
+through the same door as the rest.
+
+## Known limits
+
+- **The crest is skippable on the two short hops.** `fiscalsim -> asu` and
+  `neyland -> realstuff` do their whole rise in 25 to 40 scroll pixels, so a fast flick of
+  the wheel can jump straight past it. Inherent to scroll-driven animation, not a defect.
+- **Pacing does not carry back into the scroll.** Pace for a while, then scroll up, and he
+  snaps back to where he first stopped. There are 140px of scroll before it happens and
+  the page is moving when it does, so it is well hidden. Fixing it properly means feeding
+  the pace position back into the route, which is real complexity for a case you have to
+  work at to see.
+- **Below 720px wide he does not render at all.** Deliberate: the cards stack into one
+  column and the leaps would be vertical drops down a corridor barely wider than he is.
+- **Reduced motion parks him standing on the first card.** Checked only in an emulated
+  browser, never on a machine with the OS setting actually on.
+- **No real phone has seen any of it.**
+
+## Waiting on Pat
+
+1. **The sprite pack lives outside the repo, in a Windows temp folder.**
+   `scripts/dev/make-story-clips.mjs` reads from it, and Windows will clear it on its own
+   schedule. The packed atlas is committed so the site is safe, but once that folder goes
+   the clips cannot be rebuilt from source. Moving it somewhere permanent is a two minute
+   job; it ships a `License.txt` and `.gitignore` already excludes the zip.
+2. **The Playwright verification harness was never committed.** Frame safety, footing and
+   facing sweeps, written and thrown away several times over. Worth keeping as
+   `npm run gary:check` if this is going to be touched again.
+
+## Lessons worth keeping
+
+**A number that looks like the thing it controls but is not.** The jump arc is
+`y = (drop + rise)u^2 - rise*u`, so `rise` is a throw coefficient and the apex it actually
+buys is `rise^2 / (4 * (drop + rise))`. At `rise = 40` over a 541px drop that is 0.69px:
+he ran off every edge and fell. Worse, the comment above the constant had reasoned its way
+to 40 and then recorded the result as deliberate, which is how a bug survives a reading.
+The fix was to tune the height and solve the coefficient, and to solve it *per hop*, since
+one shared coefficient reads flatter over a longer drop and was giving the widest gaps the
+smallest hops.
+
+**Facing read off the reader is meaningless the moment the reader stops.** Deriving it
+from scroll direction is right while the page moves and undefined once it does not. It bit
+twice at opposite ends of the page: a moonwalk on every return leg of the pacing, and then
+standing at the top wearing the direction he came home in. Both ends now take facing from
+the pose. If a third place appears where he stands still, that is the rule it will need.
+
+**A drawing's ground contact is part of its timing.** The jump clip is crouch, drive,
+rise, and only the third frame leaves the paper, but the arc started at the top of the
+crouch, so he climbed while still folded up and read as being lifted rather than jumping.
+The boundary is now derived from the clip's own frame count rather than typed, so the two
+cannot drift apart.
+
+**Verify the committed tree, not the working tree.** Two files, `src/app/layout.tsx` and
+`src/components/ui/GaryPacing.tsx`, were coupled to the chat while the chat was still
+uncommitted, so a local build proved nothing about what would deploy. The check that works
+is a throwaway `git worktree` at the commit with the other work genuinely absent.
+
+**The first hop was never inside the guarantee.** The first card sits near the top of the
+document, so the departure the frame solve asks for is off the top of the page and gets
+clamped, and the headroom guarantee is silently discarded with it. It went unnoticed until
+a change made it visible. Where a departure is clamped the hop now gets *quicker* rather
+than lower: less scroll is less climb against the frame and it costs nothing in board
+space.
+
+## Tooling built
+
+| Script | Purpose |
+|---|---|
+| `scripts/sprites.mjs` | packs `art/exports/*` into the atlas and `character.json` (`npm run sprites`) |
+| `scripts/dev/make-story-clips.mjs` | every clip on the story page, including the three drawn ones |
+| `scripts/dev/rig.mjs` | rig for the traced drawings |
+| `scripts/dev/trace.mjs` | traces a scan into an outline |
+| `scripts/dev/scan-extract.mjs` | pulls drawings out of a flatbed scan |
+| `scripts/dev/make-fixtures.mjs` | fixtures for the sprite packer's self test |
+
+---
+
+# Repo-wide, unresolved
+
+**Every commit carries a personal gmail address as its git author email**, all 39 of them,
+and this repository is public on GitHub. `CLAUDE.md` says that address must never appear
+in the repo, and commit metadata is as public as file contents. It comes from the global
+git config rather than anything in the project, so it will keep happening.
+
+Not acted on, because the two ways out are both Pat's call: set a GitHub `noreply` address
+in `git config user.email` from here on and leave the history alone, or rewrite all 39
+commits and force push, which breaks every existing clone and link. Worth a decision
+either way.
 
 # Elsewhere
 
