@@ -14,8 +14,8 @@ git checkout house-on-fun
 npm run dev
 ```
 
-Then open `/fun`. The house stands on the left of the white card's top edge,
-which is the same ground line Gary's feet use. Wait about twelve seconds for his
+Then open `/fun`. The house stands at the right end of the white card's top
+edge, which is the same ground line Gary's feet use. Wait about twelve seconds for his
 greeting to drift away and he paces across the front of it.
 
 Verified in Chromium at 1440 x 920: the page renders, no console errors,
@@ -55,8 +55,8 @@ thinner than the sprite's hard edged ink at the same nominal width, so the pen
 was raised until both sampled at 3.5 CSS px in the same screenshot. If Gary's
 sprite is ever redrawn, re-measure rather than trusting 0.27.
 
-Everything else, including the 177 x 202 size, follows from the schedule and
-from `GARY_HEIGHT`.
+Everything else, including the resulting 156 x 178 size, follows from the
+schedule, `GARY_HEIGHT` and `SCALE`.
 
 ---
 
@@ -98,7 +98,7 @@ the layer as a CSS mask so the colour comes from the page instead.
   coupled; a shared constant would be an improvement, not a regression.
 - **The house is `aria-hidden` and `pointerEvents: none`.** It is scenery. It
   must never sit between a reader and Gary's click target.
-- **Nothing about it is responsive.** It is a fixed 177 x 202 px at every card
+- **Nothing about it is responsive.** It is a fixed 156 x 178 px at every card
   width, because it is sized off Gary and he is a fixed height too. On a narrow
   phone the card is much smaller than the house is wide. Untested below about
   700px, and that is the first thing to check.
