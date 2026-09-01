@@ -106,7 +106,8 @@ These hold for every drawing put through this.
 
 ## Schedule: the house
 
-From `PXL_20260831_201732819.jpg`. Origin at the foot of the left wall, x right,
+From `PXL_20260831_201732819.jpg`, kept in the pat_agent repo at
+`projects/pat-personal-site/sketches/`. Origin at the foot of the left wall, x right,
 y up, 1u = 1/12 of the wall width.
 
 | Piece | Shape | Geometry |

@@ -44,9 +44,11 @@ the house follows.
 3. **The knockout is hard coded to `#0e0e0e`.** It is only invisible on `--bg`.
    Scenery on a page with a different ground needs the sheets regenerated, or
    the layer reworked as a CSS mask.
-4. **The source photo is not in the repo.** `drawing-to-geometry.md` names
-   `PXL_20260831_201732819.jpg` as the evidence, and it is untracked. Commit it
-   or drop the reference.
+4. **The source photo lives in pat_agent, not here.** `drawing-to-geometry.md`
+   names `PXL_20260831_201732819.jpg` as the evidence. It is in
+   `projects/pat-personal-site/sketches/` in the pat_agent repo, which is where
+   sketches and working art live from 2026-09-01 on. Resolved, kept here so the
+   path is findable.
 
 Full notes: [docs/house-on-fun.md](docs/house-on-fun.md).
 
@@ -149,6 +151,36 @@ Deployment `3087e57`, READY and aliased to production.
 Note when checking by hand: `/story` looks like it has no launcher if you grep the
 served HTML, because Gary there is mounted by JavaScript once the sprite atlas loads
 rather than server rendered. Only a real browser tells you the truth on that page.
+
+## To change: he should not point while he is talking
+
+**Pat, 2026-09-01.** When Gary stops to chat he keeps bending and straightening
+his arm. That gesture is the pointing loop, and it belongs on `/`, where he is
+pointing at the link to the fun page. Standing in front of someone who is
+talking to him, he should not be pointing at anything.
+
+The cause is that the standing sheet *is* the pointing pair.
+`public/assets/gary-facing.png` is 228 x 144, two 114 x 144 poses, the same two
+drawn poses `gary-point.png` uses on the front page, alternated every 1.6s by
+`FACING_CYCLE` in `GaryPacing.tsx`. Nothing distinguishes talking from pointing
+because both read from the same art.
+
+The replacement art already exists and is not in this repo. `idle-sheet.png` is
+a four frame standing sheet, arms out and slightly varying, no point in it. It
+lives in pat_agent at `projects/pat-personal-site/sketches/idle-sheet.png` and
+is still the raw scan: 1024 x 400, black line on white, four 256 x 400 cells.
+
+To do it:
+
+1. Process the scan into the site's sprite format, white line on transparent,
+   four 114 x 144 cells, the way `gary-pace.png` and `gary-facing.png` are.
+2. Generate the knockout companion with `scripts/dev/make-solid.mjs`, or he will
+   dissolve into the house the moment he stands in front of it.
+3. Point the standing sprite at the new sheet and set `FACING_FRAMES` to 4.
+   `gary-point.png` on `/` is untouched: that one is correct as it is.
+
+The gesture rate probably wants a look at the same time. 1.6s for two poses was
+chosen to read as talking; four frames may want a different cycle.
 
 ## Not yet verified
 

@@ -213,7 +213,9 @@ src/components/ui/GaryPacing.tsx   gains a click target and an idle state
 The panel: about 320px, white card, `#e2e2e2` border, the same shadow as the
 Hero card, anchored to a card corner so it never covers the photo or the name.
 A bottom sheet on mobile. Gary stops pacing and stands while it is open;
-`public/assets/idle-sheet.png` already exists for this.
+The art for this exists but is not in this repo: `idle-sheet.png` is in
+pat_agent at `projects/pat-personal-site/sketches/`, still as the raw scan. See
+the standing-sheet note on the plate.
 
 The greeting appears once on load, then retreats to something small so it is
 not shouting at repeat visitors.
