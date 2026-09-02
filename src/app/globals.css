@@ -191,6 +191,26 @@ body {
   padding: 1rem 1.1rem;
 }
 .garden-prose pre code { background: none; padding: 0; }
+/* Illustrations. The container is narrow, so anything wider than it has to be
+   pulled back in rather than allowed to overflow. */
+.garden-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 6px;
+  border: 1px solid rgba(158,203,126,0.18);
+}
+/* Browsers give figure a 40px side margin by default, which breaks the column.
+   Zero the sides, keep a little more air than a paragraph gets. */
+.garden-prose figure { margin: 2.25rem 0 0; }
+.garden-prose figcaption {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: #8fa286;
+  margin-top: 0.6rem;
+  text-align: center;
+}
 
 /* Markdown blurbs inside portfolio tiles stay tight and inherit tile colour. */
 .tile-blurb > * + * { margin-top: 0.6rem; }

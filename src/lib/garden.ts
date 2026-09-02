@@ -64,10 +64,14 @@ export async function getEntries(): Promise<Entry[]> {
   const entries = await Promise.all(
     files.map(async ({ slug, data, content }) => {
       const trimmed = content.trim();
+      // sanitize:false keeps raw HTML in the markdown, which is what lets an
+      // entry use <figure>/<figcaption> around an illustration. Safe here
+      // because every entry in content/garden is written by hand, never by a
+      // reader. Without it remark-html silently drops the tags.
       const body = trimmed
         ? String(
             await remark()
-              .use(html)
+              .use(html, { sanitize: false })
               .process(expandWikiLinks(trimmed, titles)),
           )
         : null;
