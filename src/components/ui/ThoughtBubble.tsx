@@ -47,25 +47,34 @@ const INK = "#1a1a1a";
 const PAPER = "#ffffff";
 
 export default function ThoughtBubble({
-  /** Which way the trailing puffs run, towards wherever Gary is standing. */
+  /** Which edge the trailing puffs leave, running towards wherever Gary is
+      standing: off the bottom, the top, or either side. */
   tail = "down",
-  /** Where the trail sits along the bubble's width, in px. */
+  /** Where the trail sits along that edge, in px: x from the left for
+      up/down, y from the top for left/right. */
   tailX,
   /** Extra scramble on the wobble. Kept for callers that pass it; the
       drawing itself is picked per mount, not per seed. */
   seed = 11,
   /** Pin one of the recipes (0..3). Omit for the per-mount random pick. */
   variant,
+  /** Pin the exact draw seed. A caller that has to know the trail's true
+      reach BEFORE the bubble mounts (StoryGary places the box by it) rolls
+      this itself, measures the shape with buildBubbleShape + tailReach, and
+      passes variant and wobble down so the drawing here is byte-for-byte
+      the one it measured. Omit for the per-mount random wobble. */
+  wobble,
   role,
   ariaLabel,
   className,
   style,
   children,
 }: {
-  tail?: "up" | "down";
+  tail?: "up" | "down" | "left" | "right";
   tailX: number;
   seed?: number;
   variant?: number;
+  wobble?: number;
   role?: string;
   ariaLabel?: string;
   className?: string;
@@ -104,12 +113,12 @@ export default function ThoughtBubble({
             w,
             h,
             variant ?? pick.variant,
-            (pick.wobble + seed * 1013904223) | 0,
+            wobble ?? ((pick.wobble + seed * 1013904223) | 0),
             tailX,
             tail,
           )
         : null,
-    [w, h, variant, pick, seed, tailX, tail],
+    [w, h, variant, wobble, pick, seed, tailX, tail],
   );
 
   return (
@@ -142,11 +151,13 @@ export default function ThoughtBubble({
           />
 
           {shape.tail.map((p, i) => {
-            const cx = tailX + p.dx;
+            /* dy runs away from the exit edge, dx drifts across the trail's
+               axis; for a side exit those roles rotate with it. */
+            const out = shape.tailStart + p.dy;
+            const cx =
+              tail === "left" ? -out : tail === "right" ? w + out : tailX + p.dx;
             const cy =
-              tail === "down"
-                ? h + shape.tailStart + p.dy
-                : -(shape.tailStart + p.dy);
+              tail === "up" ? -out : tail === "down" ? h + out : tailX + p.dx;
             return (
               <ellipse
                 key={i}

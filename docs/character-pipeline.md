@@ -207,6 +207,19 @@ art/
 GUI step, so the PNGs are the earliest point at which the build is
 reproducible. They are a few KB each for line art.
 
+**Exception: `art/exports/idle/` is generated, not exported.** Since
+2026-09-03 it is built by `scripts/dev/make-idle-clip.mjs` from
+`art/headon/raw/pose-*.png`, the same two drawings `make-facing.mjs` turns
+into the /fun standing sheet, so the figure who stops to talk is the same
+drawing on every page. The script derives its geometry rather than choosing
+it: box, ground row and figure height are read off `art/exports/walk` (so
+`play("idle")` mid-crossing cannot change his size or footing), the two poses
+share one crop box (trimming them separately would break their registration),
+and the magenta head mark is placed at the centre of the largest region the
+ink encloses, which is the head. Redrawing the head-on poses means running
+that script and then `npm run sprites`. Do not export into `idle/` by hand;
+the script clears the directory when it runs.
+
 `public/assets/character/` is generated but also committed, so Vercel does not
 need `sharp` or a build step. Run `npm run sprites` locally and commit the
 result.

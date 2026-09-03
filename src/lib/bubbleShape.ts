@@ -182,9 +182,10 @@ export function buildBubbleShape(
   h: number,
   variant: number,
   seed: number,
-  /** Where the trail leaves, for clearing the lobes it must not overlap. */
+  /** Where the trail leaves, measured ALONG the exit edge (x for up/down,
+      y for left/right), for clearing the lobes it must not overlap. */
   tailX: number,
-  tailSide: "up" | "down",
+  tailSide: "up" | "down" | "left" | "right",
 ): BubbleShape {
   const rec = RECIPES[((variant % VARIANT_COUNT) + VARIANT_COUNT) % VARIANT_COUNT];
   const rnd = mulberry32((seed * 374761393 + variant * 668265263) | 0);
@@ -317,16 +318,23 @@ export function buildBubbleShape(
 
     /* How far past the box does this lobe reach where the trail will hang?
        Sampled off the actual curve, because an estimate from the depth alone
-       once left the first two puffs buried inside a deep bottom lobe. */
+       once left the first two puffs buried inside a deep bottom lobe. The
+       trail can leave any of the four edges; the along-edge coordinate is x
+       for a top/bottom exit and y for a side exit. */
+    const sideways = tailSide === "left" || tailSide === "right";
     for (let q = 1; q < 8; q++) {
       const t = q / 8;
       const mt = 1 - t;
       const x =
         mt * mt * mt * a.p.x + 3 * mt * mt * t * c1.x + 3 * mt * t * t * c2.x + t * t * t * b.p.x;
-      if (Math.abs(x - tailX) > 30) continue;
       const y =
         mt * mt * mt * a.p.y + 3 * mt * mt * t * c1.y + 3 * mt * t * t * c2.y + t * t * t * b.p.y;
-      const beyond = tailSide === "down" ? y - h : -y;
+      if (Math.abs((sideways ? y : x) - tailX) > 30) continue;
+      const beyond =
+        tailSide === "down" ? y - h
+        : tailSide === "up" ? -y
+        : tailSide === "right" ? x - w
+        : -x;
       if (beyond > tailClear) tailClear = beyond;
     }
   }
@@ -363,4 +371,24 @@ export function buildBubbleShape(
     padX: 18,
     padY: 15,
   };
+}
+
+/**
+ * How far past the box edge THIS drawing's trail actually paints, in px:
+ * the start clearance plus the far edge of the furthest puff plus half its
+ * stroke (ThoughtBubble draws puffs at max(1.6, strokeWidth - 0.2)).
+ * max(rx, ry) bounds a rotated ellipse's extent along the trail axis, so
+ * this can overstate by a pixel at most and never understates.
+ *
+ * This is what lets a caller place the bubble by the trail it will really
+ * draw instead of by a worst-case constant: a short-trailed recipe sits
+ * close to Gary, a long-trailed one sits further out, and neither touches
+ * him. buildBubbleShape is pure, so the caller can compute the shape ahead
+ * of the bubble mounting, measure it here, and hand the same variant and
+ * seed down so the drawing matches the measurement.
+ */
+export function tailReach(shape: BubbleShape): number {
+  let far = 0;
+  for (const p of shape.tail) far = Math.max(far, p.dy + Math.max(p.rx, p.ry));
+  return shape.tailStart + far + Math.max(1.6, shape.strokeWidth - 0.2) / 2;
 }

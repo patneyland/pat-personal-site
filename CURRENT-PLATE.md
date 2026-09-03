@@ -4,7 +4,7 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-09-01.
+Last touched: 2026-09-03.
 
 ---
 
@@ -132,11 +132,57 @@ hanging in the air (`Pose.ground` in `route.ts`). Close it and he resumes from
 exactly where he stood; if the reader scrolled while it was open, he runs a
 short 450ms catch-up to wherever the route now puts him instead of teleporting.
 
+**The "same two drawn poses" parenthesis only became true on 2026-09-03.** The
+atlas `idle` was still the first-attempt Krita figure (small head, spiky hair)
+while every other clip had been redrawn, so stopping him on /story swapped in
+an old character. `scripts/dev/make-idle-clip.mjs` now regenerates
+`art/exports/idle/` from `art/headon/raw/pose-*.png`, the same drawings
+`make-facing.mjs` builds the /fun sheet from. It derives everything: box,
+ground row and figure height are read off `art/exports/walk` so the swap
+cannot change his size or footing (the old idle stood a full box tall and was
+5% bigger than walking Gary), and the magenta head mark goes at the centre of
+the largest region the ink encloses, which is the head. `npm run sprites`
+repacked the atlas to `atlas.fab94f.png` (1024x512 now the tall old frames
+are gone) and the self test passed. Verified in a served build at 1440x900
+and 1024x900, several scroll positions each: same drawing on both pages by
+eye, frozen rect identical over 1.6s, resume after close, feet on the
+polaroid edge, walk and the drawn breath clips untouched. Redraw the poses,
+run both scripts, and both pages update together.
+
 Bubble placement is deterministic and sticky: above his head when that clears
-the nav, else below his feet, else beside him, else pinned inside the viewport
-with the trail aimed at wherever he is; the last choice is kept while it still
-fits so it cannot flip-flop on the threshold. Scroll him off screen with the
-chat open and the bubble pins to the near viewport edge, still usable.
+the nav, else below his feet, else beside him, else a shorter bubble above or
+below (the box shrinks in 20px steps down to 160 before giving up), else
+pinned inside the viewport with the trail aimed at wherever he is; the last
+choice is kept while it still fits so it cannot flip-flop on the threshold.
+Scroll him off screen with the chat open and the bubble pins to the near
+viewport edge, still usable.
+
+**The trail is placed by its own measured reach, and it stops short of his
+face (2026-09-03).** Pat reported build-up puffs landing on Gary's face and
+trails starting from inconsistent places. The cause was a fixed 78px gap
+against a variable trail: the four recipes reach 45 to 137px past the box,
+so long-trailed recipes overshot him, and the side placements still ran the
+trail off the top or bottom, aimed at nothing. Now `StoryGary` rolls the
+recipe and seed itself per open (`?bubble=N` / `?wobble=N` pin them for
+checking), measures the exact painted trail with `tailReach` over the same
+pure `buildBubbleShape` call the bubble renders, and places the box so the
+last puff stops 12px short of his ink, the clearance the approved drawing
+already had in the common case. The side modes now run the trail out of the
+side edge at his head height, pointing straight at his head; the generator
+and `ThoughtBubble` learned left/right exits for it (`tail` prop, plus a
+`wobble` prop so the caller and the drawing share one seed, both backwards
+compatible). In pinned mode, when the trail cannot stop short of a visible
+Gary, it dodges to a column at least 48px off his centre line so no puff can
+sit on his face; on very short windows the pinned box itself can still cover
+him, which the shrinking above/below modes now make rare. TAIL_BLEED (138)
+remains as the worst-case cap that sizes `h` and keeps the viewport clamps
+satisfiable; every per-open decision uses the real reach. Verified in a
+served build: all four recipes in all five placements screenshotted and
+looked at, no puff on his face anywhere, trail origin consistent (always the
+edge facing him, aimed at his head); painted-extent sweep 7 widths x 13
+scroll fractions with the chat open, including 768 at 0.40-0.55, zero
+clipped, zero face hits; freeze/facing/resume and the 390px fallback
+re-checked.
 
 The handover is `claimConversation()` in `GaryChat.tsx`: StoryGary claims the
 conversation while his crossing is alive, and `GaryPanel` stands down while
@@ -153,13 +199,15 @@ lab page knobs against the frozen state, and no real phone has seen any of it.
 The clamp works on the painted shape, not the box. The bubble's SVG is
 `overflow: visible` and the lobes are drawn outside their own layout box, so a
 first pass that kept the box 40px off the edge still had the lobes sliced flat
-at x = 0 around 720-800px wide, mid-board. `LOBE_BLEED` (44) and `TAIL_BLEED`
-(138) in `StoryGary.tsx` are derived from the caps in `bubbleShape.ts` and
-cross-checked against the generator; the clamp uses them, and the deeper tail
-figure applies only to the side the trail actually leaves from. Re-verified on
-the painted vectors over 88 runs, 8 widths x 11 scroll positions, zero clipped.
-If the shape generator's lobe depth or tail length changes, these two numbers
-need re-deriving.
+at x = 0 around 720-800px wide, mid-board. `LOBE_BLEED` (44) in
+`StoryGary.tsx` is derived from the caps in `bubbleShape.ts` and cross-checked
+against the generator; `TAIL_BLEED` (138) is the cap of the trail's reach over
+every recipe and seed, and since 2026-09-03 it is used only to size `h` so the
+clamps stay satisfiable, while the clamp on the trail's own side uses the real
+measured reach of the drawing being made (`tailReach`). Re-verified on the
+painted vectors, 7 widths x 13 scroll fractions with the chat held open, zero
+clipped. If the shape generator's lobe depth or tail length changes, these two
+numbers need re-deriving.
 
 ## Blocked on Pat
 
@@ -244,6 +292,11 @@ To do it:
    dissolve into the house the moment he stands in front of it.
 3. Point the standing sprite at the new sheet and set `FACING_FRAMES` to 4.
    `gary-point.png` on `/` is untouched: that one is correct as it is.
+4. The atlas `idle` clip (his standing pose on /story) is built from the same
+   `art/headon/raw/` drawings by `scripts/dev/make-idle-clip.mjs`. If the
+   standing art moves to the four-frame sheet, land the new frames in
+   `art/headon/raw/` (or repoint that script), run it, then `npm run sprites`,
+   or /story will keep gesturing with the pointing pair after /fun stops.
 
 The gesture rate probably wants a look at the same time. 1.6s for two poses was
 chosen to read as talking; four frames may want a different cycle.
@@ -286,6 +339,7 @@ lobes, each a large fraction of the shape, biggest two or three times the smalle
 |---|---|
 | `scripts/dev/make-pacer.mjs` | the walking sprite for the top edge of the `/fun` card |
 | `scripts/dev/make-facing.mjs` | the standing sprite he swaps to when he stops to talk |
+| `scripts/dev/make-idle-clip.mjs` | the atlas `idle` clip, from the same head-on drawings, so /story stops to the same figure |
 | `scripts/dev/make-pointer.mjs` | the pointing figure on the plain front page |
 | `scripts/thumbnails.mjs` | screenshots any portfolio entry with a public link |
 
