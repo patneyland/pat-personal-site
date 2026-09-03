@@ -11,6 +11,9 @@
  *    drawing and 72px tall on the page, so one schedule unit is 13.09px and the
  *    house lands at 177 x 202. Change his display height and the house follows,
  *    which is why GARY_HEIGHT is duplicated here rather than a magic 13.09.
+ *    That size is a maximum: on a card too narrow to hold it (see W_EXPR
+ *    below) the whole drawing scales down, pen included, so it is always
+ *    complete rather than sometimes full-scale and cropped.
  *
  * 2. It is drawn with his pen. His sprite is a 2x sheet 144px tall inked at
  *    5 to 6px through the torso, which is 0.19u to 0.23u at his scale. PEN is
@@ -42,9 +45,49 @@ const SCALE = 0.88;
 
 const U = (GARY_HEIGHT / GARY_UNITS) * SCALE;
 
-/** Eave to eave, and ground to apex. */
+/** Eave to eave: the house's full width at Gary's own scale, in px. */
 const WIDTH = 13.5 * U;
-const HEIGHT = 15.4 * U;
+
+/** The viewBox below, which is the drawing plus its pen margins. */
+const VIEW_W = 139;
+const VIEW_H = 159;
+
+/**
+ * How wide the house may render, as CSS. Percentages resolve against the
+ * card, which is the house's containing block, so this is one expression the
+ * browser re-evaluates at every card width and no JS measures anything.
+ *
+ * Full size is WIDTH, the size Gary gives it. It shrinks only when a smaller
+ * card forces it, for two reasons:
+ *
+ * - So it is never clipped and never dwarfs the card: 38% of the card is the
+ *   most it may take.
+ * - So the greeting bubble cannot draw over the roof. The greeting is up to
+ *   320px wide (GREET_W in GaryPacing), anchored near the card's left edge,
+ *   with its underside 120px above the card top (his height 72 plus the 48px
+ *   gap). So the house is clear of it when either its left edge stays right
+ *   of x = 328 (the `94% - 328px` term: 94% is where its right edge sits,
+ *   given `right: 6%`), or it is shorter than 112px, which keeps the whole
+ *   roof below the bubble (the 98px floor: 112 / (VIEW_H / VIEW_W)).
+ *
+ * If GREET_W, GAP, or Gary's height change in GaryPacing, the 328 and 98
+ * change with them.
+ */
+const W_EXPR = `min(${WIDTH.toFixed(2)}px, 38%, max(94% - 328px, 98px))`;
+
+/**
+ * The vertical room the card's wrapper must hold open above itself so the
+ * house is never cut off by the section's overflow: hidden. Imported by
+ * Hero.tsx as a margin-top on the wrapper: margin rather than padding,
+ * because the house hangs from the wrapper's top edge (`bottom: 100%`) and
+ * padding would lift it off the card's ground line.
+ *
+ * It is the house's rendered height less 24px, because the section keeps
+ * 2rem of its own padding above the wrapper: the apex still clears the clip
+ * edge by 8px on the tightest layout, and every looser layout has centring
+ * slack on top of that.
+ */
+export const HOUSE_HEADROOM = `calc(${W_EXPR} * ${(VIEW_H / VIEW_W).toFixed(5)} - 24px)`;
 
 /**
  * Gary's body line as it renders, in schedule units. See the note above.
@@ -85,17 +128,21 @@ export default function House({ right = "6%", ink = "#ffffff" }: Props) {
         right,
         /* The card's top edge is the ground line, the same one his feet use. */
         bottom: "100%",
-        width: WIDTH,
-        height: HEIGHT,
+        width: W_EXPR,
+        aspectRatio: `${VIEW_W} / ${VIEW_H}`,
         pointerEvents: "none",
         /* Behind his track, which is a sibling. He walks in front of it. */
         zIndex: 0,
       }}
     >
+      {/* The svg fills the div, so shrinking the div scales the whole
+          drawing, stroke included: a smaller house is drawn with a
+          proportionally finer pen, which keeps the line weight the same
+          relative to the building. Gary's own pen is matched at full size. */}
       <svg
-        viewBox="80.5 8.5 139 159"
-        width={WIDTH}
-        height={HEIGHT}
+        viewBox={`80.5 8.5 ${VIEW_W} ${VIEW_H}`}
+        width="100%"
+        height="100%"
         fill="none"
         stroke={ink}
         strokeWidth={PEN * 10}

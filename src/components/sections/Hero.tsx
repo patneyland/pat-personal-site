@@ -6,7 +6,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
 import GaryPacing from "@/components/ui/GaryPacing";
-import House from "@/components/ui/House";
+import House, { HOUSE_HEADROOM } from "@/components/ui/House";
 import { ArrowRight } from "lucide-react";
 
 /* The home world. One white card on the site's dark ground, read dark on
@@ -93,7 +93,12 @@ export default function Hero() {
             Gary walks the outside of its top edge, so the wrapper is the
             positioning context he measures himself against. */}
         <BlurFade delay={0.2} immediate className="w-full">
-          <div className="relative">
+          {/* The margin holds the house's height open above the card, so the
+              section's overflow: hidden can never cut the roof off however
+              little sky the centring leaves. Margin, not padding: the house
+              hangs from this wrapper's top edge, which must stay the card's
+              top edge or the house lifts off its ground line. */}
+          <div className="relative" style={{ marginTop: HOUSE_HEADROOM }}>
             <House />
             <GaryPacing />
             <div

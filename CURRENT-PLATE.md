@@ -35,12 +35,25 @@ the house follows.
 
 ## Known gaps
 
-1. **Never opened on a phone.** The house is a fixed 156 x 178 px at every card
-   width, because it is sized off Gary and he is a fixed height. On a narrow
-   screen the card is smaller than the house is wide. This is the first thing to
-   check.
-2. **Not looked at against the greeting bubble** since the house moved to the
-   right. The bubble drew over the roof when the house was on the left.
+1. **Resolved 2026-09-03: it can no longer be cut off.** The house now sizes
+   itself in one CSS expression (`W_EXPR` in `House.tsx`): the Gary-derived
+   156 x 178 wherever it fits, scaled down on narrower cards, and the card's
+   wrapper holds the house's height open above itself (`HOUSE_HEADROOM`,
+   imported as a margin in `Hero.tsx`) so the section's overflow: hidden can
+   never clip the roof. Below full size the whole drawing scales, pen
+   included, so the line keeps its weight relative to the house; Gary stays
+   72px, so a small card shows a smaller house beside the same Gary.
+   Verified by screenshot at 320, 375, 390, 414, 480, 640, 768, 1024, 1280,
+   1440, 1920 and 2560, each one looked at. Still never on a real phone,
+   only emulated widths.
+2. **Resolved 2026-09-03: checked against the greeting bubble.** `W_EXPR`
+   keeps them apart: on wide cards the house stands clear to the bubble's
+   right, on mid-width cards it shrinks until either its left edge clears
+   x = 328 or its roof stays below the bubble's underside, and on the
+   narrowest cards the bubble flips below the card anyway. Screenshotted
+   with the greeting up at 375 through 1440 and with the chat open. The 328
+   and 98 in `W_EXPR` encode GREET_W, GAP and Gary's height from
+   `GaryPacing.tsx`; change those there and these need re-deriving.
 3. **The knockout is hard coded to `#0e0e0e`.** It is only invisible on `--bg`.
    Scenery on a page with a different ground needs the sheets regenerated, or
    the layer reworked as a CSS mask.
@@ -83,6 +96,18 @@ boring mode stays plain.
 Runs on **OpenRouter**, currently `anthropic/claude-opus-5`, changed in one line in
 `src/lib/gary/model.ts`.
 
+**The bubble is a fresh drawing every time it opens (2026-09-03).** The outline
+is now a scalloped walk around a convex rounded-rect spine, built in
+`src/lib/bubbleShape.ts`, replacing the union of circles whose oversized corner
+lobes made a wide bubble read as a dog bone. There are four distinct recipes
+(cumulus, popcorn, hero, billow), one picked at random per open and held
+deterministically for its life, so two visits get two different bubbles and no
+bubble shivers on re-render. The tail puffs drift and tilt, and vary with the
+recipe. Checked by eye at greeting, one line, three lines, long chat, flipped
+below him, and the phone sheet, and 1,600 rendered seeds were scanned for fill
+holes after two winding bugs were found and fixed. The header comment in
+`ThoughtBubble.tsx` records both dead ends so they do not come back.
+
 **The gate.** `content/gary.md` holds his voice and is Pat's to write. While it is empty
 the launcher does not render and `/api/gary` refuses. This is on purpose: the plumbing
 can ship without a personality, and a personality Claude invented cannot ship by
@@ -94,6 +119,47 @@ Verified live after the push: all five routes 200, the new sprite serves, `/api/
 correctly refuses, the launcher correctly does not render.
 
 Full design and reasoning: [docs/gary-chat.md](docs/gary-chat.md).
+
+## /story now works like /fun: he stops, faces you, and the bubble is his (2026-09-03)
+
+The corner panel is gone from `/story` wherever Gary is on the board. Clicking
+him freezes his crossing on the spot (board coordinates, so he scrolls with the
+content), swaps him to the head-on `idle` clip from the atlas (the same two
+drawn poses the /fun facing sheet uses), and opens the ThoughtBubble beside
+him, portalled to the body as `position: fixed` and re-anchored to him every
+frame. Clicked mid-leap he comes down on the nearer end of the arc rather than
+hanging in the air (`Pose.ground` in `route.ts`). Close it and he resumes from
+exactly where he stood; if the reader scrolled while it was open, he runs a
+short 450ms catch-up to wherever the route now puts him instead of teleporting.
+
+Bubble placement is deterministic and sticky: above his head when that clears
+the nav, else below his feet, else beside him, else pinned inside the viewport
+with the trail aimed at wherever he is; the last choice is kept while it still
+fits so it cannot flip-flop on the threshold. Scroll him off screen with the
+chat open and the bubble pins to the near viewport edge, still usable.
+
+The handover is `claimConversation()` in `GaryChat.tsx`: StoryGary claims the
+conversation while his crossing is alive, and `GaryPanel` stands down while
+anyone holds a claim. Below 720px, under reduced motion, or with a missing
+atlas nothing claims, so the corner panel comes back by itself; verified at
+390px via /fun -> /story with the chat open.
+
+Verified by driving a real browser at 720/1024/1280/1440/1920 x4 scroll
+positions each: frozen (identical transform over 2s), facing pose, bubble on
+screen, clear of him and clear of the nav in all 20 runs, resume after close.
+Screenshots in the pat_agent scratchpad under `story/`. Not yet exercised: the
+lab page knobs against the frozen state, and no real phone has seen any of it.
+
+The clamp works on the painted shape, not the box. The bubble's SVG is
+`overflow: visible` and the lobes are drawn outside their own layout box, so a
+first pass that kept the box 40px off the edge still had the lobes sliced flat
+at x = 0 around 720-800px wide, mid-board. `LOBE_BLEED` (44) and `TAIL_BLEED`
+(138) in `StoryGary.tsx` are derived from the caps in `bubbleShape.ts` and
+cross-checked against the generator; the clamp uses them, and the deeper tail
+figure applies only to the side the trail actually leaves from. Re-verified on
+the painted vectors over 88 runs, 8 widths x 11 scroll positions, zero clipped.
+If the shape generator's lobe depth or tail length changes, these two numbers
+need re-deriving.
 
 ## Blocked on Pat
 

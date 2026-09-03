@@ -7,6 +7,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import { usePathname } from "next/navigation";
 import { CornerDownLeft } from "lucide-react";
@@ -69,6 +70,44 @@ type GaryState = {
 };
 
 const Ctx = createContext<GaryState | null>(null);
+
+/**
+ * Who is presenting the conversation.
+ *
+ * The corner panel is the fallback, not the preferred form: wherever Gary
+ * himself is on screen the conversation should come off him as a bubble, and
+ * the panel should stand down. StoryGary claims the conversation while he is
+ * walking the story board; GaryPacing never needs to, because the panel
+ * already excuses itself on /fun by pathname.
+ *
+ * A module-level count rather than context state, because the claimant
+ * (StoryGary) manages the character imperatively inside one long-lived effect
+ * and must not re-run that effect when the claim changes hands.
+ */
+let presenterCount = 0;
+const presenterSubs = new Set<() => void>();
+
+export function claimConversation(): () => void {
+  presenterCount++;
+  presenterSubs.forEach((fn) => fn());
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    presenterCount--;
+    presenterSubs.forEach((fn) => fn());
+  };
+}
+
+function subscribePresenters(fn: () => void) {
+  presenterSubs.add(fn);
+  return () => {
+    presenterSubs.delete(fn);
+  };
+}
+
+const readPresenters = () => presenterCount;
+const readPresentersServer = () => 0;
 
 export function useGary(): GaryState {
   const ctx = useContext(Ctx);
@@ -307,6 +346,8 @@ export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) 
 export function GaryPanel() {
   const { enabled, open, setOpen } = useGary();
   const pathname = usePathname();
+  const claimed =
+    useSyncExternalStore(subscribePresenters, readPresenters, readPresentersServer) > 0;
 
   useEffect(() => {
     if (!open) return;
@@ -319,8 +360,13 @@ export function GaryPanel() {
 
   /* "/" is boring mode, a plain academic page with no nav and no animation.
      Nav hides itself there for the same reason. On /fun the bubble over Gary's
-     head is the conversation, so the panel would be a second copy of it. */
-  if (!enabled || !open || pathname === "/" || pathname === "/fun") return null;
+     head is the conversation, so the panel would be a second copy of it. And
+     wherever StoryGary has claimed the conversation, the bubble beside him is
+     the conversation, so the panel stands down there too: it comes back by
+     itself when he is not on the board (narrow screens, reduced motion, or a
+     missing atlas), because nothing claims it then. */
+  if (!enabled || !open || claimed || pathname === "/" || pathname === "/fun")
+    return null;
 
   return (
     <ThoughtBubble

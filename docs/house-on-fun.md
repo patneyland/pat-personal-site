@@ -98,18 +98,19 @@ the layer as a CSS mask so the colour comes from the page instead.
   coupled; a shared constant would be an improvement, not a regression.
 - **The house is `aria-hidden` and `pointerEvents: none`.** It is scenery. It
   must never sit between a reader and Gary's click target.
-- **Nothing about it is responsive.** It is a fixed 156 x 178 px at every card
-  width, because it is sized off Gary and he is a fixed height too. On a narrow
-  phone the card is much smaller than the house is wide. Untested below about
-  700px, and that is the first thing to check.
+- **It sizes itself, since 2026-09-03.** 156 x 178, the size Gary gives it, is
+  now a maximum: `W_EXPR` in `House.tsx` shrinks the whole drawing (pen
+  included) on cards too narrow to hold it or to keep it clear of the greeting
+  bubble, and `HOUSE_HEADROOM`, a margin `Hero.tsx` puts above the card,
+  reserves the house's height so the section's overflow: hidden can never cut
+  the roof off. Verified by screenshot from 320 to 2560 wide.
 
 ---
 
 ## Not done
 
-- Never opened on a phone. See above.
-- Not checked against the greeting bubble, which draws over the same area in
-  the first ten seconds. It covered the roof when the house was on the left; it
-  has not been looked at since the house moved right.
+- Never opened on a real phone. The 2026-09-03 responsive work was verified in
+  emulated viewports from 320 up, greeting bubble included, but no device has
+  touched it.
 - Nobody has decided whether the house belongs on `/fun` at all, or whether it
   is the first piece of the larger landscape and should wait for that.

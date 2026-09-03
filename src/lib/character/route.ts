@@ -113,6 +113,13 @@ export interface Pose {
   ambient?: boolean;
   /** Present only on the last pose, where the caller takes over the clock. */
   rest?: Rest;
+  /**
+   * Present only while airborne: the nearer end of the hop, on paper. It is
+   * where he should be put if he has to stop right now (the chat opening mid
+   * leap), because a figure frozen in the air reads as levitating, not as
+   * stopping to talk.
+   */
+  ground?: Pt;
 }
 
 /** What the route needs to know about the window it has to stay inside. */
@@ -809,6 +816,9 @@ export function sampleRoute(route: Route, s: number): Pose | null {
     tilt: dir * lerp(-6, 10, u),
     dist: seg.d0 + seg.len * a,
     gaitDriven: false,
+    // Where to stand him if he has to stop mid hop: whichever end of the arc
+    // he is closer to finishing.
+    ground: a < 0.5 ? seg.from : seg.to,
   };
 }
 
