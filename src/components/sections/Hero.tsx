@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BlurFade from "@/components/ui/BlurFade";
 import GaryPacing from "@/components/ui/GaryPacing";
 import House, { HOUSE_HEADROOM } from "@/components/ui/House";
+import ScriptureMarquee from "@/components/ui/ScriptureMarquee";
 import { ArrowRight } from "lucide-react";
 
 /* The home world. One white card on the site's dark ground, read dark on
@@ -231,6 +232,13 @@ export default function Hero() {
               </div>
             </div>
           </div>
+        </BlurFade>
+
+        {/* Inside the column, so the verse is exactly as wide as the card it
+            sits under and lines up with its edges at every width. The column's
+            gap-5 sets the space above it. */}
+        <BlurFade delay={0.6} immediate className="w-full">
+          <ScriptureMarquee />
         </BlurFade>
       </div>
     </section>

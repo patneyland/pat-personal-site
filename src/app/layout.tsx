@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
-import { Playfair_Display, DM_Sans, JetBrains_Mono, Caveat } from "next/font/google";
+import {
+  Playfair_Display,
+  DM_Sans,
+  JetBrains_Mono,
+  Caveat,
+  EB_Garamond,
+} from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/ui/Nav";
 import { SITE } from "@/lib/site";
@@ -16,6 +22,16 @@ const playfair = Playfair_Display({
 const caveat = Caveat({
   subsets: ["latin"],
   variable: "--font-hand",
+  display: "swap",
+});
+
+/* The scripture on /fun. A Garamond revival rather than Times: same old book
+   authority, but rounder bowls and a warmer, less clinical colour on the page.
+   Upright only. The verse is set roman, so the italic face would be dead
+   weight in the page's font payload. */
+const ebGaramond = EB_Garamond({
+  subsets: ["latin"],
+  variable: "--font-scripture",
   display: "swap",
 });
 
@@ -82,7 +98,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable}`}
+      className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable} ${ebGaramond.variable}`}
     >
       <body className="bg-bg text-ink antialiased">
         {/* Gary's panel is mounted here rather than in /fun on purpose. His job
