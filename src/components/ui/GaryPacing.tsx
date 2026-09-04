@@ -5,6 +5,16 @@ import { createPortal } from "react-dom";
 
 import { useGary, GaryConversation, F } from "@/components/ui/GaryChat";
 import ThoughtBubble from "@/components/ui/ThoughtBubble";
+import {
+  fitWidth,
+  H_MIN,
+  LOBE_BLEED,
+  placeBubble,
+  rollDraw,
+  type Bounds,
+  type BubbleMode,
+  type Draw,
+} from "@/lib/bubblePlacement";
 
 /**
  * Gary, pacing the top edge of the card, and stopping to talk.
@@ -60,15 +70,30 @@ const GREET_FADE_MS = 700;
 const GREET_W = 320;
 /** The conversation reads better wide and shallow, roughly 16:9. */
 const CHAT_W = 480;
-/** Clearance between bubble and Gary, so the trail puffs land in the gap
-    rather than on top of his head. */
-const GAP = 48;
-/** Roughly how tall a greeting runs, for the does-it-fit-above test. */
+/** Roughly how tall a greeting runs. Only the first guess: the greeting box
+    is auto height, and the bubble reports its real measured height back
+    (ThoughtBubble's onSize), after which the placement is redone off the
+    true box the outline is built from. */
 const GREET_H = 84;
-/** A conversation needs about this much height to be worth having. */
-const CHAT_H = Math.round((CHAT_W * 9) / 16);
 /** Narrower than this and the card is a phone: no room to speak beside him. */
 const MIN_TRACK_W = 420;
+
+/* There is deliberately no gap constant in this file. How far the bubble
+   stands off him is `placeBubble` in src/lib/bubblePlacement.ts, measured
+   off the trail actually being drawn, and it is the same rule /story uses.
+   A fixed 48px lived here once, after /story had switched to measuring, and
+   the next change to the tail art put the last puff on his head. */
+
+/** What the bubble has to know about the page: the track's width and
+    position, and the viewport, all read in one measure. */
+type Geo = {
+  trackW: number;
+  trackLeft: number;
+  /** Viewport distance to the top of the track, i.e. to the top of his head. */
+  roomAbove: number;
+  vw: number;
+  vh: number;
+};
 
 export default function GaryPacing() {
   const track = useRef<HTMLDivElement>(null);
@@ -82,10 +107,44 @@ export default function GaryPacing() {
   const [leaving, setLeaving] = useState(false);
   /** Where he stopped, in px from the left of the track. Null while walking. */
   const [anchor, setAnchor] = useState<number | null>(null);
-  const [trackW, setTrackW] = useState(0);
-  const [roomAbove, setRoomAbove] = useState(0);
+  const [geo, setGeo] = useState<Geo>({
+    trackW: 0,
+    trackLeft: 0,
+    roomAbove: 0,
+    vw: 0,
+    vh: 0,
+  });
 
   const stopped = greetingNow || open;
+
+  /* One drawing per open, rolled here rather than inside ThoughtBubble,
+     because the placement needs the trail's true reach before the bubble
+     exists: variant and wobble go into the placement for measuring and are
+     handed down so the bubble draws exactly the shape that was measured.
+     Held across the greeting growing into the conversation, so the bubble
+     keeps its character while re-fitting the new box; cleared when he walks
+     on, so the next stop is a fresh drawing. rollDraw honours `?bubble=N` /
+     `?wobble=N` for checking every recipe deliberately. */
+  const [draw, setDraw] = useState<Draw | null>(null);
+  /** The side chosen last render, kept while it still fits so the bubble
+      does not flip on a scroll tick. Keyed to the box it was chosen for:
+      the greeting and the conversation are different boxes, so the side
+      the greeting settled on is not carried into the chat, which picks
+      afresh by the shared preference order and stays put from then on.
+      Read and written during render, deliberately, so the very first chat
+      frame already starts from a clean choice. */
+  const bubbleMode = useRef<{ open: boolean; mode: BubbleMode } | null>(null);
+  /** The greeting box's real height, reported by the bubble once drawn. */
+  const [greetH, setGreetH] = useState<number | null>(null);
+  useEffect(() => {
+    if (!stopped) {
+      setDraw(null);
+      setGreetH(null);
+      bubbleMode.current = null;
+      return;
+    }
+    setDraw(rollDraw());
+  }, [stopped]);
 
   useEffect(() => {
     if (!enabled || greeted || !greeting) return;
@@ -107,8 +166,23 @@ export default function GaryPacing() {
     if (!el) return;
 
     const measure = () => {
-      setTrackW(el.clientWidth);
-      setRoomAbove(el.getBoundingClientRect().top);
+      const r = el.getBoundingClientRect();
+      const next: Geo = {
+        trackW: el.clientWidth,
+        trackLeft: r.left,
+        roomAbove: r.top,
+        vw: window.innerWidth,
+        vh: window.innerHeight,
+      };
+      setGeo((prev) =>
+        prev.trackW === next.trackW &&
+        prev.trackLeft === next.trackLeft &&
+        prev.roomAbove === next.roomAbove &&
+        prev.vw === next.vw &&
+        prev.vh === next.vh
+          ? prev
+          : next,
+      );
       const width = el.clientWidth - WIDTH;
       if (width <= 0) return;
       // one cycle covers STRIDE_RATIO of his height, and a cycle takes
@@ -121,9 +195,11 @@ export default function GaryPacing() {
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     window.addEventListener("scroll", measure, { passive: true });
+    window.addEventListener("resize", measure);
     return () => {
       ro.disconnect();
       window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", measure);
     };
   }, []);
 
@@ -166,36 +242,62 @@ export default function GaryPacing() {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, setOpen]);
 
-  // The bubble is centred on him and clamped inside the card's width, so it is
-  // always fully on screen however close to an edge he stopped.
-  const wanted = open ? CHAT_W : GREET_W;
-  const bubbleW = Math.min(wanted, trackW || wanted);
+  const { trackW, trackLeft, roomAbove, vw, vh } = geo;
   const centre = (anchor ?? 0) + WIDTH / 2;
-  const bubbleLeft = Math.max(
-    0,
-    Math.min(centre - bubbleW / 2, Math.max(0, trackW - bubbleW)),
-  );
-  /**
-   * The card sits centred in the viewport, which on a laptop leaves only about
-   * 150px of sky above it. A greeting fits in that; a conversation does not.
-   * So the bubble flips the way a tooltip does, and when it flips it hangs
-   * below him over the card, with the tail pointing back up at his feet. It is
-   * still him speaking, and it is only in the way while the chat is open.
-   */
-  /* roomAbove is the viewport distance to the top of the track, and the track
-     is exactly his height, so it already measures the sky above his head. Do
-     not subtract HEIGHT again here: doing so double counts him and sends the
-     greeting down over the card when there was room for it all along. */
-  const wantedH = open ? CHAT_H : GREET_H;
-  const above = roomAbove - GAP >= wantedH;
+
+  /* The bubble is positioned inside the card's wrapper, whose top edge is
+     the ground his feet stand on, so the placement is solved in wrapper
+     coordinates: his feet at y = 0, his head top at y = -HEIGHT. The edges
+     it must respect are the card's track sideways (the box stays over the
+     card, as it always has) AND the section's clip edges, which are the
+     viewport's: the section is overflow: hidden, so a lobe or a puff past
+     the viewport top is sliced off, not merely out of view. The bounds are
+     the painted drawing's; the shared solver keeps the layout box inside
+     them by the lobes' and the trail's real reach.
+
+     roomAbove is the viewport distance to the top of the track, and the
+     track is exactly his height, so it already measures the sky above his
+     head. The wrapper's top is HEIGHT below that. */
+  const groundTop = roomAbove + HEIGHT;
+  const bounds: Bounds = {
+    left: Math.max(-trackLeft, -LOBE_BLEED),
+    right: trackW + Math.min(vw - trackLeft - trackW, LOBE_BLEED),
+    top: -groundTop,
+    bottom: vh - groundTop,
+  };
+  const bubbleW = fitWidth(open ? CHAT_W : GREET_W, bounds);
   /* Hold the 16:9 even when the card is too narrow for the full width, so it
-     stays a wide screen rather than becoming a square again. */
-  const chatH = Math.round((bubbleW * 9) / 16);
-  const bubbleH = open
-    ? above
-      ? Math.min(Math.max(roomAbove - GAP, chatH), 420)
-      : chatH
-    : undefined;
+     stays a wide screen rather than becoming a square again. The greeting
+     is as tall as its handwriting: the measured height once the bubble has
+     reported it, the estimate until then. */
+  const bubbleH = open ? Math.round((bubbleW * 9) / 16) : (greetH ?? GREET_H);
+
+  /**
+   * The card sits centred in the viewport, which on a laptop leaves only
+   * about 150px of sky above it. So the bubble flips the way a tooltip does:
+   * above his head when the drawing fits there, otherwise hanging below him
+   * over the card with the trail pointing back up at his feet. It is still
+   * him speaking, and it is only in the way while the chat is open. Which
+   * side, and how far off him, is the shared rule; this page only says the
+   * two sides it allows.
+   */
+  const placed =
+    draw && trackW > 0
+      ? placeBubble({
+          speaker: { x: centre, top: -HEIGHT, bottom: 0, halfW: WIDTH / 2 },
+          draw,
+          w: bubbleW,
+          hMax: bubbleH,
+          hMin: open ? H_MIN : bubbleH,
+          bounds,
+          modes: ["above", "below"],
+          prev:
+            bubbleMode.current && bubbleMode.current.open === open
+              ? bubbleMode.current.mode
+              : null,
+        })
+      : null;
+  if (placed) bubbleMode.current = { open, mode: placed.mode };
 
   /** A phone: nothing sensible fits beside a 57px figure. */
   const compact = open && trackW > 0 && trackW < MIN_TRACK_W;
@@ -303,22 +405,23 @@ export default function GaryPacing() {
           ThoughtBubble, which builds the outline from the measured size so the
           puffs stay round whether he is saying one line or holding a whole
           conversation. */}
-      {enabled && stopped && anchor !== null && !compact && (
+      {enabled && stopped && anchor !== null && placed && draw && !compact && (
         <ThoughtBubble
           role={open ? "dialog" : undefined}
           ariaLabel={open ? "Chat with Gary" : undefined}
-          tail={above ? "down" : "up"}
-          tailX={Math.max(16, Math.min(centre - bubbleLeft, bubbleW - 16))}
+          tail={placed.tail}
+          tailX={placed.tailX}
+          variant={draw.variant}
+          wobble={draw.wobble}
+          onSize={open ? undefined : ({ h }) => setGreetH(h)}
           style={{
             position: "absolute",
             /* Above his head when it fits, otherwise hanging below his feet
                over the card. Either way the trail leads back to him. */
-            ...(above
-              ? { bottom: `calc(100% + ${HEIGHT + GAP}px)` }
-              : { top: GAP }),
-            left: bubbleLeft,
-            width: bubbleW,
-            height: bubbleH,
+            left: placed.left,
+            top: placed.top,
+            width: placed.w,
+            height: open ? placed.h : undefined,
             zIndex: 20,
             opacity: leaving ? 0 : 1,
             transition: `opacity ${GREET_FADE_MS}ms ease`,

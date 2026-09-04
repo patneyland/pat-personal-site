@@ -64,6 +64,12 @@ export default function ThoughtBubble({
       passes variant and wobble down so the drawing here is byte-for-byte
       the one it measured. Omit for the per-mount random wobble. */
   wobble,
+  /** Reports the measured box, the same integers the outline is built from,
+      whenever it changes. A caller placing an auto-height bubble (the /fun
+      greeting) uses it to measure the trail of exactly the drawing being
+      made rather than of a guessed height. Optional; nothing else changes
+      when it is omitted. */
+  onSize,
   role,
   ariaLabel,
   className,
@@ -75,6 +81,7 @@ export default function ThoughtBubble({
   seed?: number;
   variant?: number;
   wobble?: number;
+  onSize?: (size: { w: number; h: number }) => void;
   role?: string;
   ariaLabel?: string;
   className?: string;
@@ -92,10 +99,19 @@ export default function ThoughtBubble({
     wobble: (Math.random() * 0x7fffffff) | 0,
   }));
 
+  /* Held in a ref so a caller passing a fresh arrow each render does not
+     re-subscribe the observer. */
+  const report = useRef(onSize);
+  report.current = onSize;
+
   useEffect(() => {
     const el = box.current;
     if (!el) return;
-    const measure = () => setSize({ w: el.offsetWidth, h: el.offsetHeight });
+    const measure = () => {
+      const next = { w: el.offsetWidth, h: el.offsetHeight };
+      setSize(next);
+      report.current?.(next);
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);

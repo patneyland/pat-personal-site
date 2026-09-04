@@ -11,10 +11,14 @@ import {
 } from "@/components/ui/GaryChat";
 import ThoughtBubble from "@/components/ui/ThoughtBubble";
 import {
-  buildBubbleShape,
-  tailReach,
-  VARIANT_COUNT,
-} from "@/lib/bubbleShape";
+  fitWidth,
+  H_MIN,
+  placeBubble,
+  rollDraw,
+  type Bounds,
+  type BubbleMode,
+  type Draw,
+} from "@/lib/bubblePlacement";
 import {
   buildRoute,
   measurePlatforms,
@@ -48,313 +52,25 @@ export const ROUTE_KEYS = [
 ];
 
 /* ── Talking to him ──────────────────────────────────────────────────────
-   The numbers the bubble is placed with. The bubble itself is the same
-   ThoughtBubble the /fun conversation uses; only the placement is new,
-   because here he can be anywhere on a scrolling board rather than on one
-   fixed track. */
+   The bubble is the same ThoughtBubble the /fun conversation uses, and so
+   is its placement: `placeBubble` in src/lib/bubblePlacement.ts is the one
+   rule for how far it stands off him (the measured reach of the trail being
+   drawn plus SPEAKER_MARGIN) and where it may go. This page only supplies
+   what is its own: where he is frozen, and the edges he has to respect,
+   which here are the viewport and the sticky nav. Nothing in this file is a
+   clearance number, and nothing should become one. */
 
 /** Same conversation size as /fun and the corner panel. */
 const CHAT_W = 480;
 const CHAT_H = Math.round((CHAT_W * 9) / 16);
-/** Gap between the trail's last puff and his ink. 12px is the clearance the
-    approved drawing already had in the common case (the old fixed 78px gap
-    minus the ~66px a typical trail reaches), so the spacing Pat liked is
-    kept; it also swallows his drop shadow (up to ~6px of blur) and the
-    integer rounding of the published anchor, with room to spare, while
-    staying under one head-height so the trail still reads as attached. The
-    trail's own length is no longer budgeted here: it is measured off the
-    actual drawing (tailReach) per open, so a short-trailed recipe stands
-    close to him and a long-trailed one further out, and neither touches. */
-const MARGIN = 12;
-/** The chat box will shrink this far to stay out of pinned mode: header,
-    a couple of lines and the input still fit at 160. A shorter bubble
-    above or below him beats a full-size one clamped over the top of him,
-    which is what pinned used to do on short windows. */
-const H_MIN = 160;
-/** His head centre sits about 15% below the top of the drawn figure. The
-    side-mode trail exits at this height so it points at his head, and the
-    above mode stops the last puff MARGIN short of the figure's top. */
-const HEAD_FRAC = 0.85;
-/** Pinned only: minimum sideways offset between the trail column and his
-    centre line when the trail cannot stop short of him. His half-width is
-    garyH * 0.42 (~28px), the fattest puff adds ~15px with its stroke, and
-    the puffs drift up to ~5px sideways, so 48 keeps every puff clear of
-    his figure while staying as close as the guarantee allows. */
-const PINNED_CLEAR_X = 48;
-/* ── The painted bleed ───────────────────────────────────────────────────
-   The clamp below keeps the bubble's LAYOUT BOX inside the viewport, but
-   ThoughtBubble's SVG is overflow:visible and the drawing reaches past that
-   box, so the box has to stay clear of the edges by the drawing's worst
-   reach, not by a flat margin. Both numbers are derived from the caps in
-   src/lib/bubbleShape.ts and were checked against 960k generated shapes
-   (worst lobe 42.7, worst tail 131.2). If that generator's caps change,
-   re-derive these.
-
-   A lobe past the box edge: valley jitter (6 x wobble, wobble <= 1.2, so
-   7.2) plus the cubic's bulge (control offset k <= 46, and a cubic with
-   both controls at k peaks at 3/4 of k, so 34.5) plus half the heaviest
-   stroke (2.4 / 2): 7.2 + 34.5 + 1.2 = 42.9. */
-const LOBE_BLEED = 44;
-/* The trail hangs much further past the box on the side it leaves:
-   tailStart (a lobe's reach + 3, so 44.7) plus up to four puffs (unit
-   u <= 26; radii u * (0.42 - 0.1 * i) * 1.15 with gaps of 8, so 87.0)
-   plus the last puff's rotated rx (4.4) and its stroke (0.8): 136.9.
-
-   This is the CAP across every recipe and seed, and it is used only where
-   a worst case is the right number: sizing `h` so the viewport clamps
-   below stay satisfiable whatever gets drawn. The clamps themselves, and
-   all of the placement against Gary, use the REAL reach of the drawing
-   being made (tailReach over the same buildBubbleShape call the bubble
-   will render), which tops out at this figure by construction. */
-const TAIL_BLEED = 138;
-/** The sticky nav is 54px tall. */
+/** The sticky nav is 54px tall. The painted drawing stays below it. */
 const NAV_H = 54;
-/** The box top stays below the nav by the lobes' reach, so the drawing
-    neither paints over the nav nor gets sliced under it. */
-const NAV_SAFE = NAV_H + LOBE_BLEED;
 /** How long he takes to rejoin the route if the reader scrolled while the
     chat was open. */
 const BLEND_MS = 450;
 
-type BubbleMode = "above" | "below" | "left" | "right" | "pinned";
-type TailSide = "up" | "down" | "left" | "right";
-
 /** His feet, in viewport coordinates, while he is stopped for a chat. */
 type Anchor = { gx: number; gy: number };
-
-/** The drawing being made this open: which recipe and which wobble seed.
-    Rolled once per open and held, so placement and rendering agree on one
-    shape and nothing re-rolls mid-conversation. */
-type Draw = { variant: number; wobble: number };
-
-/**
- * Where the bubble goes, given where he is frozen on screen.
- *
- * Deterministic, and sticky on purpose: `prev` is whatever was chosen last
- * time, and it is kept for as long as it still fits, so a reader scrolling
- * around the threshold does not get a bubble that flips back and forth on
- * every wheel tick. Preference order when a fresh choice is needed: above his
- * head, below his feet, beside him, and finally pinned inside the viewport
- * with the tail pointing at wherever he is.
- *
- * The trail is one drawn gesture everywhere: it leaves the box off the edge
- * that faces him, runs toward him, and its last puff stops MARGIN short of
- * his ink. The clearance is the measured reach of the trail actually being
- * drawn (tailReach over the same pure buildBubbleShape call the bubble
- * renders), never a worst-case constant, so the bubble stands as close to
- * him as this particular recipe allows. In the side modes the trail leaves
- * the side edge at his head height and points straight at his head; the old
- * behaviour, a top/bottom exit aimed at nothing, is what put puffs on his
- * face.
- *
- * The final clamp is unconditional, which is what guarantees the box is never
- * clipped by the viewport or hidden behind the nav even when he has been
- * scrolled clean off the screen.
- */
-function placeBubble(
-  a: Anchor,
-  garyH: number,
-  vw: number,
-  vh: number,
-  prev: BubbleMode | null,
-  draw: Draw,
-): {
-  left: number;
-  top: number;
-  w: number;
-  h: number;
-  tail: TailSide;
-  tailX: number;
-  mode: BubbleMode;
-} {
-  const w = Math.min(CHAT_W, vw - 2 * LOBE_BLEED);
-  /* The vertical budget reserves TAIL_BLEED, the cap across every recipe,
-     for whichever end the trail turns out to leave. Both cases cost the
-     same: nav + lobes above and tail below, or nav + tail above and lobes
-     below, both come to NAV_SAFE + TAIL_BLEED. Sizing by the cap rather
-     than the live reach keeps `h` stable across opens and keeps the
-     viewport clamps at the bottom satisfiable for any drawing. */
-  const hMax = Math.min(CHAT_H, vh - NAV_SAFE - TAIL_BLEED);
-  /* His half-width. The idle sprite's box is 114 x 144, so at height 66 he
-     measures 54 wide on screen, 27 a side; 0.42 rounds up a hair so the
-     side-mode margin is honest against his arms, not just his centre. */
-  const halfGary = garyH * 0.42;
-  const headTop = a.gy - garyH;
-  const headY = a.gy - garyH * HEAD_FRAC;
-
-  const reachOf = (along: number, side: TailSide, hh: number) =>
-    tailReach(buildBubbleShape(w, hh, draw.variant, draw.wobble, along, side));
-
-  /* The true painted reach of THIS drawing's trail, per exit edge. The
-     along-edge coordinate is settled before the perpendicular offset is
-     chosen, so there is no circularity: for the vertical modes, left (and
-     so tailX) depends only on his x; for the side modes, top (and so the
-     exit height) depends only on his head's y. */
-  const vLeft = Math.max(
-    LOBE_BLEED,
-    Math.min(a.gx - w / 2, vw - LOBE_BLEED - w),
-  );
-  const vTailX = Math.max(24, Math.min(a.gx - vLeft, w - 24));
-  const reachDown = reachOf(vTailX, "down", hMax);
-  const reachUp = reachOf(vTailX, "up", hMax);
-
-  const sTop = Math.max(
-    NAV_SAFE,
-    Math.min(headY - hMax / 2, vh - LOBE_BLEED - hMax),
-  );
-  const sTailY = Math.max(24, Math.min(headY - sTop, hMax - 24));
-  const reachRight = reachOf(sTailY, "right", hMax);
-  const reachLeft = reachOf(sTailY, "left", hMax);
-
-  /* The room above his head, and below his feet, that a box plus its own
-     trail plus MARGIN must fit into. */
-  const availAbove = headTop - MARGIN - NAV_SAFE;
-  const availBelow = vh - LOBE_BLEED - (a.gy + MARGIN);
-
-  /* The tallest box (full height first, then 20px steps down to H_MIN)
-     whose OWN trail still fits the available run: the reach is recomputed
-     at each candidate height because the scallop walk re-deals when the
-     box changes, so reach is not continuous in h and a smooth solve could
-     oscillate; a fixed ladder always settles, and the accepted pair is
-     self-consistent with what gets drawn. This is what keeps him visible
-     on short windows: a slightly shorter bubble above or below him instead
-     of a full-size one pinned over the top of him. */
-  const solveH = (avail: number, side: TailSide) => {
-    let hc = hMax;
-    for (;;) {
-      const r = reachOf(vTailX, side, hc);
-      if (avail >= r + hc) return { h: hc, r };
-      if (hc <= H_MIN) return null;
-      hc = Math.max(H_MIN, hc - 20);
-    }
-  };
-  const above = solveH(availAbove, "down");
-  const below = solveH(availBelow, "up");
-
-  const fits: Record<Exclude<BubbleMode, "pinned">, boolean> = {
-    above: above !== null,
-    below: below !== null,
-    left: a.gx - halfGary - MARGIN - reachRight - w >= LOBE_BLEED,
-    right: a.gx + halfGary + MARGIN + reachLeft + w <= vw - LOBE_BLEED,
-  };
-
-  /* Preference when a fresh choice is needed: a full-height box above,
-     then below, then beside him; only then a shrunken box (the taller of
-     the two), and pinned last of all. */
-  let mode: BubbleMode;
-  if (prev && prev !== "pinned" && fits[prev]) mode = prev;
-  else if (above && above.h === hMax) mode = "above";
-  else if (below && below.h === hMax) mode = "below";
-  else if (fits.left || fits.right) {
-    // The side with more room, so he is never squeezed against an edge.
-    mode =
-      a.gx > vw / 2 && fits.left ? "left" : fits.right ? "right" : "left";
-  } else if (above || below) {
-    mode = above && (!below || above.h >= below.h) ? "above" : "below";
-  } else mode = "pinned";
-
-  let left: number;
-  let top: number;
-  let h: number;
-  let tail: TailSide;
-  let tailX: number;
-  let reach: number;
-  switch (mode) {
-    case "above":
-      /* Trail off the bottom, straight down at his head: the last puff's
-         far edge lands MARGIN above the top of his figure. */
-      left = vLeft;
-      h = above ? above.h : hMax;
-      reach = above ? above.r : reachDown;
-      top = headTop - MARGIN - reach - h;
-      tail = "down";
-      tailX = vTailX;
-      break;
-    case "below":
-      /* Trail off the top, rising at him along his centre line. It stops
-         MARGIN below his feet: his body is in the way of his head from
-         down here, so short of the figure is as close as it can point. */
-      left = vLeft;
-      h = below ? below.h : hMax;
-      reach = below ? below.r : reachUp;
-      top = a.gy + MARGIN + reach;
-      tail = "up";
-      tailX = vTailX;
-      break;
-    case "left":
-      /* Beside him on his left, trail off the box's RIGHT edge at his head
-         height, running horizontally at his head. halfGary keeps the last
-         puff clear of his arms as well as his face. */
-      left = a.gx - halfGary - MARGIN - reachRight - w;
-      top = sTop;
-      h = hMax;
-      tail = "right";
-      tailX = sTailY;
-      reach = reachRight;
-      break;
-    case "right":
-      left = a.gx + halfGary + MARGIN + reachLeft;
-      top = sTop;
-      h = hMax;
-      tail = "left";
-      tailX = sTailY;
-      reach = reachLeft;
-      break;
-    case "pinned":
-      left = vLeft;
-      h = hMax;
-      top = headTop - MARGIN - reachDown - h;
-      tail = "down"; // settled properly after the clamps below
-      tailX = vTailX;
-      reach = reachDown;
-      break;
-  }
-
-  left = Math.max(LOBE_BLEED, Math.min(left, vw - LOBE_BLEED - w));
-  top = Math.max(NAV_SAFE, Math.min(top, vh - LOBE_BLEED - h));
-
-  if (mode === "pinned") {
-    /* Nothing fits, or he is off the screen. The trail still leaves the
-       edge that faces him and aims at his x. */
-    tail = headY >= top + h / 2 ? "down" : "up";
-    reach = tail === "down" ? reachDown : reachUp;
-
-    /* But pinned means the gap to him may be shorter than the trail, and
-       a trail that cannot stop short of him must not cross his face. If
-       he is on screen and too close, the trail dodges sideways: same
-       edge, still running his way, but down a column at least
-       PINNED_CLEAR_X off his centre line, so every puff passes beside
-       him. A trail landing next to his head still reads as his; one on
-       his face does not. Off screen there is no face, and the straight
-       aim is kept. */
-    const visible =
-      a.gx > -halfGary && a.gx < vw + halfGary && a.gy > 0 && headTop < vh;
-    const room = tail === "down" ? headTop - (top + h) : top - a.gy;
-    if (visible && room < reach + MARGIN) {
-      const c = a.gx - left;
-      const lo = c - PINNED_CLEAR_X;
-      const hi = c + PINNED_CLEAR_X;
-      /* The nearer allowed column that still exists inside the box. */
-      if (lo >= 24 && hi <= w - 24) tailX = c >= w / 2 ? lo : hi;
-      else if (lo >= 24) tailX = lo;
-      else if (hi <= w - 24) tailX = hi;
-      tailX = Math.max(24, Math.min(tailX, w - 24));
-      reach = reachOf(tailX, tail, h);
-    }
-  }
-
-  /* The painted trail must stay inside the viewport and clear of the nav,
-     by the reach of the drawing actually being made. Satisfiable by
-     construction: the sizing of `h` reserves TAIL_BLEED (the cap over
-     every recipe, >= any reach) on the trail side, and the side modes are
-     only chosen when the horizontal budget already covers their reach. */
-  if (tail === "down") top = Math.min(top, vh - reach - h);
-  else if (tail === "up") top = Math.max(top, NAV_H + reach);
-  else if (tail === "right") left = Math.min(left, vw - reach - w);
-  else left = Math.max(left, reach);
-
-  return { left, top, w, h, tail, tailX, mode };
-}
 
 export interface StoryGaryProps {
   /** The board the polaroids live in. He is appended to it. */
@@ -414,13 +130,12 @@ export default function StoryGary({
   anchorSet.current = setAnchor;
   const bubbleMode = useRef<BubbleMode | null>(null);
 
-  /* One drawing per open, rolled HERE rather than inside ThoughtBubble,
+  /* One drawing per open, rolled here rather than inside ThoughtBubble,
      because the placement needs the trail's true reach before the bubble
-     exists: variant and wobble go into buildBubbleShape for measuring and
-     are handed down so the bubble draws exactly the shape that was
-     measured. Cleared on close, so the next open is a fresh drawing and a
-     fresh placement. `?bubble=N` (0..3) pins the recipe and `?wobble=N`
-     the seed, for eyeballing every recipe deliberately. */
+     exists: variant and wobble go into the placement for measuring and are
+     handed down so the bubble draws exactly the shape that was measured.
+     Cleared on close, so the next open is a fresh drawing and a fresh
+     placement. rollDraw honours `?bubble=N` / `?wobble=N` for checking. */
   const [draw, setDraw] = useState<Draw | null>(null);
   useEffect(() => {
     if (!open) {
@@ -428,16 +143,7 @@ export default function StoryGary({
       bubbleMode.current = null;
       return;
     }
-    const q = new URLSearchParams(window.location.search);
-    const v = q.get("bubble") === null ? NaN : Number(q.get("bubble"));
-    const s = q.get("wobble") === null ? NaN : Number(q.get("wobble"));
-    setDraw({
-      variant:
-        Number.isInteger(v) && v >= 0 && v < VARIANT_COUNT
-          ? v
-          : Math.floor(Math.random() * VARIANT_COUNT),
-      wobble: Number.isInteger(s) ? s | 0 : (Math.random() * 0x7fffffff) | 0,
-    });
+    setDraw(rollDraw());
   }, [open]);
 
   useEffect(() => {
@@ -842,14 +548,30 @@ export default function StoryGary({
   if (!enabled || !open || !anchor || !draw || typeof document === "undefined")
     return null;
 
-  const placed = placeBubble(
-    anchor,
-    height,
-    window.innerWidth,
-    window.innerHeight,
-    bubbleMode.current,
+  /* The painted drawing may use the whole viewport below the nav. */
+  const bounds: Bounds = {
+    left: 0,
+    right: window.innerWidth,
+    top: NAV_H,
+    bottom: window.innerHeight,
+  };
+  const placed = placeBubble({
+    speaker: {
+      x: anchor.gx,
+      top: anchor.gy - height,
+      bottom: anchor.gy,
+      /* The idle sprite's box is 114 x 144, so at height 66 he measures 54
+         wide on screen, 27 a side; 0.42 rounds up a hair so the side-mode
+         margin is honest against his arms, not just his centre. */
+      halfW: height * 0.42,
+    },
     draw,
-  );
+    w: fitWidth(CHAT_W, bounds),
+    hMax: CHAT_H,
+    hMin: H_MIN,
+    bounds,
+    prev: bubbleMode.current,
+  });
   bubbleMode.current = placed.mode;
 
   return createPortal(

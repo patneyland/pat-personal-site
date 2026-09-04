@@ -52,8 +52,11 @@ the house follows.
    x = 328 or its roof stays below the bubble's underside, and on the
    narrowest cards the bubble flips below the card anyway. Screenshotted
    with the greeting up at 375 through 1440 and with the chat open. The 328
-   and 98 in `W_EXPR` encode GREET_W, GAP and Gary's height from
-   `GaryPacing.tsx`; change those there and these need re-deriving.
+   and 98 in `W_EXPR` encode GREET_W and Gary's height from `GaryPacing.tsx`
+   plus the shortest standoff the shared placement rule can give the
+   greeting (`src/lib/bubblePlacement.ts`, 2026-09-03: the rule only ever
+   stands the bubble higher than the old fixed gap did, so the floor holds);
+   change those and these need re-deriving.
 3. **The knockout is hard coded to `#0e0e0e`.** It is only invisible on `--bg`.
    Scenery on a page with a different ground needs the sheets regenerated, or
    the layer reworked as a CSS mask.
@@ -120,6 +123,80 @@ correctly refuses, the launcher correctly does not render.
 
 Full design and reasoning: [docs/gary-chat.md](docs/gary-chat.md).
 
+## The bubble's clearance is ONE rule, in one file (2026-09-03, later)
+
+Pat reported the smallest puffs of the greeting's trail landing on Gary's
+head on `/fun` (reproduced at 1440x900). The cause: `/story` had been fixed
+to measure the trail it actually draws, but `/fun` still carried its own
+fixed `GAP = 48`, and the four recipes reach 45 to 137px, so long trails
+overshot him. Two copies of one rule, one of them stale.
+
+**Now there is one.** `src/lib/bubblePlacement.ts` owns everything about
+where a bubble stands relative to whoever is speaking:
+
+- `standoff(w, h, draw, tailX, side)` is the clearance rule itself: the
+  painted reach of the trail THIS drawing makes (`tailReach` over the same
+  pure `buildBubbleShape` call the bubble renders) plus `SPEAKER_MARGIN`
+  (12px). The margin is defined once, there.
+- `placeBubble({ speaker, draw, w, hMax, hMin, bounds, modes, prev })` is
+  the whole anchor decision, lifted out of `StoryGary.tsx` and
+  parameterised: which side (above / below / left / right, then a shrunken
+  box, then pinned), where the trail exits, and how far off him it stands,
+  against the bounds the caller passes. Bounds are the PAINTED drawing's
+  clip edges; the solver keeps the layout box inside them by the bleeds.
+- `LOBE_BLEED` (44) and `TAIL_BLEED` (138) live there too, with their
+  derivations, plus `H_MIN`, `HEAD_FRAC`, `PINNED_CLEAR_X`.
+- `rollDraw()` picks the recipe and seed per open for both pages and
+  honours `?bubble=N` / `?wobble=N` on either page.
+
+`/story` passes the viewport below the nav as bounds and allows all four
+sides. `/fun` passes the card's track sideways and the viewport vertically
+(the section is overflow: hidden, so a lobe past the viewport top is
+sliced, not just off screen) and allows above / below only. Neither page
+carries a clearance, gap, margin or bleed number any more; a grep for one
+comes up empty, and the header comments in both say why.
+
+What is still page-specific, and why: the /fun greeting is auto height, so
+`ThoughtBubble` gained an optional `onSize` callback and `/fun` re-places
+off the real measured box (the outline is built from those same integers);
+the sprite half-widths (`WIDTH / 2` on /fun, `height * 0.42` on /story)
+are facts about each page's figure, not clearance; and the nav height
+(54) is /story's. One behaviour changed on purpose: the /fun chat no
+longer grows past 16:9 into a tall sky (it used to reach 420px above him
+on tall screens). Every surface now draws the same 480x270 conversation,
+shrinking in 20px steps to 160 when the sky is short, which is what
+"consistent across the site" means. On a 1080p screen the chat now hangs
+below him at full size where it used to sit above him with the trail on
+his head.
+
+Verified in an isolated served build: `/fun` all four recipes, greeting and
+chat, above and below him, at 1440x900 / 1280x900 / 1024x900 / 900x800
+(and 1440x1300 / 1024x1400 for chat-above), every crop looked at, no puff
+touching him; programmatic sweep 10 widths x 2 heights x 4 recipes,
+greeting + chat, 96 checks on the final build (plus 160 on the build
+before the last fix), zero hits, and after every open a keystroke re-render
+left the box exactly where it was; `/story` unchanged: 64 checks (768 at
+scroll 0.40 / 0.45 / 0.50 / 0.55, and 720 / 1024 / 1440 at 0 / 0.3 / 0.7 /
+1, all four recipes) with zero puffs on him, zero painted pixels outside
+x in [0, vw] / y in [nav, vh], frozen, head-on, resumed on close every
+time, and a further 273 checks across 6 widths x 13 scroll fractions on
+the previous build with the same zeros; 390px sheet, 390px corner panel
+and reduced-motion corner panel intact. `tsc` and `next build` clean.
+
+Two loose ends, on purpose. `House.tsx` was out of scope and is untouched,
+so its `W_EXPR` comment still names a `GAP` that no longer exists; the
+floor it derives (120px) is still valid because the shared rule can only
+stand the greeting higher, but the comment wants rewording next time that
+file is open. And `/fun` keeps its chosen side per box, not per open: the
+remembered side is keyed to whether it was chosen for the greeting or the
+chat, so the chat never inherits the greeting's side and a shrunken
+above-him chat cannot flip to a full-size below-him one on the next
+keystroke (that flip existed for one draft of this change and was caught
+by the keystroke re-render check above).
+
+**Do not add a second copy.** If a page needs the bubble somewhere new,
+add a mode or a bound to `placeBubble`; never write a gap in the page.
+
 ## /story now works like /fun: he stops, faces you, and the bubble is his (2026-09-03)
 
 The corner panel is gone from `/story` wherever Gary is on the board. Clicking
@@ -176,7 +253,10 @@ Gary, it dodges to a column at least 48px off his centre line so no puff can
 sit on his face; on very short windows the pinned box itself can still cover
 him, which the shrinking above/below modes now make rare. TAIL_BLEED (138)
 remains as the worst-case cap that sizes `h` and keeps the viewport clamps
-satisfiable; every per-open decision uses the real reach. Verified in a
+satisfiable; every per-open decision uses the real reach. (Later the same
+day this whole solver moved out of `StoryGary.tsx` into
+`src/lib/bubblePlacement.ts` so `/fun` runs the identical rule; see the
+section above.) Verified in a
 served build: all four recipes in all five placements screenshotted and
 looked at, no puff on his face anywhere, trail origin consistent (always the
 edge facing him, aimed at his head); painted-extent sweep 7 widths x 13
@@ -199,8 +279,8 @@ lab page knobs against the frozen state, and no real phone has seen any of it.
 The clamp works on the painted shape, not the box. The bubble's SVG is
 `overflow: visible` and the lobes are drawn outside their own layout box, so a
 first pass that kept the box 40px off the edge still had the lobes sliced flat
-at x = 0 around 720-800px wide, mid-board. `LOBE_BLEED` (44) in
-`StoryGary.tsx` is derived from the caps in `bubbleShape.ts` and cross-checked
+at x = 0 around 720-800px wide, mid-board. `LOBE_BLEED` (44), now in
+`src/lib/bubblePlacement.ts`, is derived from the caps in `bubbleShape.ts` and cross-checked
 against the generator; `TAIL_BLEED` (138) is the cap of the trail's reach over
 every recipe and seed, and since 2026-09-03 it is used only to size `h` so the
 clamps stay satisfiable, while the clamp on the trail's own side uses the real
