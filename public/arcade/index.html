@@ -3,19 +3,30 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Arcade mockup - Patrick Neyland</title>
+<title>Arcade - Patrick Neyland</title>
+<meta name="description" content="Snake, Minesweeper and Asteroids on a CRT. Insert a coin and put your name on the board." />
+<meta property="og:title" content="Arcade - Patrick Neyland" />
+<meta property="og:description" content="Snake, Minesweeper and Asteroids on a CRT. Insert a coin and put your name on the board." />
+<meta property="og:type" content="website" />
+<link rel="icon" href="/arcade/icon.svg" />
 
 <!--
-  STATIC MOCKUP. Not wired into the Next app.
-  Nothing in src/ was touched. This is a look-and-feel proposal only.
+  /arcade - a standalone document, served straight out of public/ and
+  reached through a rewrite in next.config.ts. It is deliberately NOT a
+  React route.
 
-  World: the arcade page keeps the site's warm near-black ground and gold
-  accent, and adds amber phosphor as a screen-only colour. The bezel is a
-  monitor, not a cabinet: no joystick, no buttons, no coin door on the frame.
-  The one coin detail lives under the scoreboard instead.
+  Two reasons. The CSS below opens with `* { margin: 0 }` and its own
+  html/body reset, which would flatten every other page on the site the
+  moment it went global. And the games are plain canvas and vanilla JS
+  that gain nothing from React. Keeping the page whole keeps both
+  problems from existing.
 
-  All visible words are placeholders in square brackets. Patrick writes the
-  copy. Leaderboard initials and scores are dummy data.
+  The cost is that this page does not inherit the site nav, the fonts
+  from layout.tsx, or Gary. The nav is meant to be hidden here anyway;
+  the fonts are loaded from Google below; the back link is bottom left.
+
+  Scripts live beside this file in public/arcade/. Scores go to the
+  public table site_arcade_scores - see net.js.
 -->
 
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -1203,10 +1214,35 @@ body {
   .overlay .insert { animation: none; opacity: 1; }
 }
 
+
+/* ─── Back to the rest of the site ───────────────────────
+   This page has no nav by design, so without this it is a dead end. Fixed
+   rather than in flow, because .wrap is sized to the viewport and an extra
+   child would steal height from the bezel. */
+.back-link {
+  position: fixed;
+  left: 18px;
+  bottom: 14px;
+  z-index: 50;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  color: var(--text-faint);
+  transition: color 0.18s ease;
+}
+.back-link:hover,
+.back-link:focus-visible { color: var(--accent); }
+
+@media (max-width: 720px) {
+  .back-link { position: static; display: block; text-align: center; padding: 10px 0 18px; }
+}
 </style>
 </head>
 
 <body>
+
+<a class="back-link" href="/">&lt; PATRICKNEYLAND.COM</a>
 
 <main class="wrap">
 
@@ -1263,25 +1299,25 @@ body {
     <aside class="rail">
 
       <div class="rail-head">
-        <h2>[leaderboard label]</h2>
+        <h2>HIGH SCORES</h2>
         <span data-slot-game>SNAKE</span>
       </div>
 
       <!-- The all-time high. Its own frame, its own scale, its own gap. -->
       <div class="champion">
-        <div class="champion-label">[all-time high label]</div>
+        <div class="champion-label">ALL-TIME HIGH</div>
         <div class="champion-body">
           <div class="champion-initials">PJN</div>
           <div class="champion-score">184,750</div>
         </div>
         <div class="champion-meta">
           <span data-slot-game>SNAKE</span>
-          <span>[date]</span>
+          <span class="champion-date"></span>
         </div>
       </div>
 
       <div class="break">
-        <i></i><span>[everyone else label]</span><i></i>
+        <i></i><span>THE REST</span><i></i>
       </div>
 
       <ol class="board">
@@ -1323,12 +1359,12 @@ body {
 
 
 
-<script src="arcade/sound.js"></script>
-<script src="arcade/net.js"></script>
-<script src="arcade/snake.js"></script>
-<script src="arcade/minesweeper.js"></script>
-<script src="arcade/asteroids.js"></script>
-<script src="arcade/cabinet.js"></script>
+<script src="/arcade/sound.js"></script>
+<script src="/arcade/net.js"></script>
+<script src="/arcade/snake.js"></script>
+<script src="/arcade/minesweeper.js"></script>
+<script src="/arcade/asteroids.js"></script>
+<script src="/arcade/cabinet.js"></script>
 
 </body>
 </html>

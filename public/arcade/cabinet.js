@@ -34,6 +34,7 @@
   var elGameLabels = document.querySelectorAll('[data-slot-game]');
   var champInitials = document.querySelector('.champion-initials');
   var champScore = document.querySelector('.champion-score');
+  var champDate = document.querySelector('.champion-date');
 
   var index = 0;
   var hasCredit = false;
@@ -231,6 +232,7 @@
       var top = rows[0];
       champInitials.textContent = top.player;
       champScore.textContent = net.rowValue(g.id, top);
+      if (champDate) champDate.textContent = monthYear(top.created_at);
 
       board.innerHTML = rows.slice(1).map(function (row, i) {
         return '<li><span class="b-rank">' + ('0' + (i + 2)).slice(-2) + '</span>' +
@@ -238,6 +240,17 @@
                '<span class="b-score">' + net.rowValue(g.id, row) + '</span></li>';
       }).join('');
     });
+  }
+
+  /* "MAR 2026" for the champion strip. Sample rows carry no date, so the
+     slot just empties rather than printing an Invalid Date. */
+  var MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN',
+                'JUL','AUG','SEP','OCT','NOV','DEC'];
+  function monthYear(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return MONTHS[d.getMonth()] + ' ' + d.getFullYear();
   }
 
   function esc(s) {

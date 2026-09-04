@@ -10,7 +10,10 @@ import { SITE } from "@/lib/site";
  * no page of its own, so neither shows up.
  */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const fixed = ["", "/fun", "/story", "/portfolio", "/portfolio/woodworking", "/garden"];
+  /* /arcade is a static document in public/, not an app route, so it has
+     no page.tsx to be discovered from. It still needs to be listed. */
+  const fixed = ["", "/fun", "/story", "/portfolio", "/portfolio/woodworking",
+                 "/garden", "/arcade"];
 
   const entries = await getEntries();
   const gardenPages = entries
