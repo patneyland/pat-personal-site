@@ -274,12 +274,23 @@ export default function GaryPacing() {
 
   /**
    * The card sits centred in the viewport, which on a laptop leaves only
-   * about 150px of sky above it. So the bubble flips the way a tooltip does:
-   * above his head when the drawing fits there, otherwise hanging below him
-   * over the card with the trail pointing back up at his feet. It is still
-   * him speaking, and it is only in the way while the chat is open. Which
-   * side, and how far off him, is the shared rule; this page only says the
-   * two sides it allows.
+   * about 150px of sky above it. So the chat box flips the way a tooltip
+   * does: above his head when the drawing fits there, otherwise hanging
+   * below him over the card with the trail pointing back up at his feet. It
+   * is a box the visitor opened, and it is only in the way while it is open.
+   *
+   * The greeting is not that. Nobody asked for it, it arrives on load, and
+   * hanging it below him laid it straight over the photo on the card. Worse,
+   * whether that happened was a matter of window height rather than anything
+   * a visitor could see or change: at 1280x800 and 1536x864 there is not
+   * enough sky for the box plus its own trail, so it fell to `below` every
+   * single time; at 1920x1080 it never did. So the greeting is allowed one
+   * side only. When it truly will not fit, the shared solver pins it inside
+   * the bounds, which puts it at the top of the sky with the trail dodged
+   * sideways past his head, and it is still above him and still off the card.
+   *
+   * Which side, and how far off him, is the shared rule; this page only says
+   * the sides it allows.
    */
   const placed =
     draw && trackW > 0
@@ -290,7 +301,7 @@ export default function GaryPacing() {
           hMax: bubbleH,
           hMin: open ? H_MIN : bubbleH,
           bounds,
-          modes: ["above", "below"],
+          modes: open ? ["above", "below"] : ["above"],
           prev:
             bubbleMode.current && bubbleMode.current.open === open
               ? bubbleMode.current.mode
@@ -299,8 +310,15 @@ export default function GaryPacing() {
       : null;
   if (placed) bubbleMode.current = { open, mode: placed.mode };
 
-  /** A phone: nothing sensible fits beside a 57px figure. */
-  const compact = open && trackW > 0 && trackW < MIN_TRACK_W;
+  /** A phone. Nothing sensible fits beside a 57px figure, and nothing fits
+      above him either: the card starts about 48px down the screen, so the sky
+      over his head is shorter than he is, against the ~150px a greeting and
+      its trail need. Every placement there lands on the photo or on Gary
+      himself, so on a narrow screen he simply does not draw a bubble. The
+      chat still opens, as the sheet below; the greeting is decoration and it
+      is better missing than painted over Patrick's family. */
+  const tooNarrow = trackW > 0 && trackW < MIN_TRACK_W;
+  const compact = open && tooNarrow;
 
   return (
     <>
@@ -405,7 +423,7 @@ export default function GaryPacing() {
           ThoughtBubble, which builds the outline from the measured size so the
           puffs stay round whether he is saying one line or holding a whole
           conversation. */}
-      {enabled && stopped && anchor !== null && placed && draw && !compact && (
+      {enabled && stopped && anchor !== null && placed && draw && !tooNarrow && (
         <ThoughtBubble
           role={open ? "dialog" : undefined}
           ariaLabel={open ? "Chat with Gary" : undefined}
