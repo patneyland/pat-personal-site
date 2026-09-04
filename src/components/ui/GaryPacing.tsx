@@ -59,6 +59,25 @@ const WIDTH = HEIGHT * ASPECT;
 const FACING_FRAMES = 2;
 const FACING_CYCLE = 1.6; // seconds for both poses
 
+/* Where his mouth is inside one cell, as a fraction of the cell.
+   
+   Measured off gary-facing.png rather than estimated: in the 114x144 cell his
+   head circle runs rows 17-95 and the smile spans rows 72-82 across columns
+   40-85, so its centre is (61, 77). Both sheets are drawn from the same source
+   at the same scale and baseline, so one pair of fractions covers him standing
+   and walking alike. If the drawing is redrawn, re-measure; do not nudge these
+   until the trail looks right. */
+const MOUTH_X = 61 / 114;
+const MOUTH_Y = 77 / 144;
+
+/* How far off his mouth the trail's column runs, so the puffs come down past
+   his cheek instead of over his face. His head reaches 21px either side of his
+   mouth at this size and the fattest puff in a trail measures 9px, so 36
+   leaves the widest one about 6px off his cheek and the small ones nearer. Set
+   wider than this and the trail reads as passing him rather than reaching him:
+   at 48 the last puff landed 46px out, beside his eyes. */
+const MOUTH_CLEAR_X = 36;
+
 /** Where he stands to say hello, before he has started pacing. */
 const GREET_X = 0.12;
 /** How long the greeting holds before it drifts away on its own, ms. */
@@ -295,7 +314,20 @@ export default function GaryPacing() {
   const placed =
     draw && trackW > 0
       ? placeBubble({
-          speaker: { x: centre, top: -HEIGHT, bottom: 0, halfW: WIDTH / 2 },
+          speaker: {
+            x: centre,
+            top: -HEIGHT,
+            bottom: 0,
+            halfW: WIDTH / 2,
+            /* His feet are at y = 0 and the cell's top edge at y = -HEIGHT,
+               so the mouth is that far down the cell from the top. The trail
+               lands level with it rather than stopping above his head. */
+            mouth: {
+              x: centre - WIDTH / 2 + WIDTH * MOUTH_X,
+              y: -HEIGHT + HEIGHT * MOUTH_Y,
+              clearX: MOUTH_CLEAR_X,
+            },
+          },
           draw,
           w: bubbleW,
           hMax: bubbleH,

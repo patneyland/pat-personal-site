@@ -137,9 +137,23 @@ export function standoff(
   return trailReach(w, h, draw, tailX, side) + SPEAKER_MARGIN;
 }
 
+/** Where on the figure the trail is trying to land, and how far the column
+    of puffs must stand off that point sideways to pass beside his head
+    rather than over his face. A page that knows where its character's mouth
+    is passes it; one that does not gets the old aim at the top and bottom of
+    his ink, straight down his centre line. */
+export type Mouth = { x: number; y: number; clearX: number };
+
 /** The figure being spoken from: centre x, top of his ink, his feet, and
-    half his drawn width, all in the caller's coordinates. */
-export type Speaker = { x: number; top: number; bottom: number; halfW: number };
+    half his drawn width, all in the caller's coordinates. Optionally the
+    mouth the words should come out of. */
+export type Speaker = {
+  x: number;
+  top: number;
+  bottom: number;
+  halfW: number;
+  mouth?: Mouth;
+};
 
 /** Where the PAINTED drawing may go: lobes, trail and all. The layout box is
     kept inside this by the bleeds above, so a caller passes the real clip
@@ -233,8 +247,54 @@ export function placeBubble({
   const headTop = sp.top;
   const headY = sp.bottom - (sp.bottom - sp.top) * HEAD_FRAC;
 
+  /* What the trail stops short of.
+     
+     Without a mouth this is the top of his ink going down and his feet going
+     up, which is where it has always aimed: a trail coming from above has his
+     head in the way of everything below it, and one coming from below has his
+     body in the way, so the near end of him is as close as either can point.
+     
+     With a mouth the trail steps sideways instead (see `column`), which frees
+     it to run past him and land level with where he is actually speaking. It
+     also drops the box closer to him, because the aim point is further down
+     his figure than the top of his head was. */
+  const mouth = sp.mouth ?? null;
+  const aimDown = mouth ? mouth.y : headTop;
+  const aimUp = mouth ? mouth.y : sp.bottom;
+  const aimX = mouth ? mouth.x : sp.x;
+  const sideAimY = mouth ? mouth.y : headY;
+
+  /* SPEAKER_MARGIN is the gap that keeps the last puff off his ink, and
+     without a mouth the trail comes straight at him, so it has to be spent
+     vertically. Aiming at a mouth spends it sideways instead: the column is
+     already clearX out from his face, so stopping short above him as well
+     would leave the puffs level with his eyes rather than his mouth. */
+  const aimMargin = mouth ? 0 : SPEAKER_MARGIN;
+
   const reachOf = (along: number, side: TailSide, hh: number) =>
     trailReach(w, hh, draw, along, side);
+
+  /**
+   * The column the vertical trail runs down, as an offset into the box.
+   *
+   * Straight at him when there is no mouth to aim at. With one, off to
+   * whichever side leaves the column inside the box, so the puffs pass beside
+   * his head and only the last one arrives, level with his mouth. Toward the
+   * box's roomier half when both sides fit, so the trail leans inward rather
+   * than hugging an edge.
+   */
+  const column = (boxLeft: number) => {
+    const c = aimX - boxLeft;
+    if (!mouth) return clamp(c, TAIL_INSET, w - TAIL_INSET);
+    const lo = c - mouth.clearX;
+    const hi = c + mouth.clearX;
+    const loOk = lo >= TAIL_INSET;
+    const hiOk = hi <= w - TAIL_INSET;
+    if (loOk && hiOk) return c >= w / 2 ? lo : hi;
+    if (loOk) return lo;
+    if (hiOk) return hi;
+    return clamp(c, TAIL_INSET, w - TAIL_INSET);
+  };
 
   /* The true painted reach of THIS drawing's trail, per exit edge. The
      along-edge coordinate is settled before the perpendicular offset is
@@ -242,19 +302,19 @@ export function placeBubble({
      so tailX) depends only on his x; for the side modes, top (and so the
      exit height) depends only on his head's y. */
   const vLeft = clamp(sp.x - w / 2, boxL, boxR - w);
-  const vTailX = clamp(sp.x - vLeft, TAIL_INSET, w - TAIL_INSET);
+  const vTailX = column(vLeft);
   const reachDown = reachOf(vTailX, "down", hMax);
   const reachUp = reachOf(vTailX, "up", hMax);
 
-  const sTop = clamp(headY - hMax / 2, boxT, boxB - hMax);
-  const sTailY = clamp(headY - sTop, TAIL_INSET, hMax - TAIL_INSET);
+  const sTop = clamp(sideAimY - hMax / 2, boxT, boxB - hMax);
+  const sTailY = clamp(sideAimY - sTop, TAIL_INSET, hMax - TAIL_INSET);
   const reachRight = reachOf(sTailY, "right", hMax);
   const reachLeft = reachOf(sTailY, "left", hMax);
 
   /* The room above his head, and below his feet, that a box plus its own
      standoff must fit into. */
-  const availAbove = headTop - boxT;
-  const availBelow = boxB - sp.bottom;
+  const availAbove = aimDown - boxT;
+  const availBelow = boxB - aimUp;
 
   /* The tallest box (full height first, then H_STEP rungs down to hMin)
      whose OWN trail still fits the available run: the reach is recomputed
@@ -266,7 +326,7 @@ export function placeBubble({
     let hc = hMax;
     for (;;) {
       const r = reachOf(vTailX, side, hc);
-      if (avail >= r + SPEAKER_MARGIN + hc) return { h: hc, r };
+      if (avail >= r + aimMargin + hc) return { h: hc, r };
       if (hc <= hMin) return null;
       hc = Math.max(hMin, hc - H_STEP);
     }
@@ -305,24 +365,26 @@ export function placeBubble({
   let reach: number;
   switch (mode) {
     case "above":
-      /* Trail off the bottom, straight down at his head: the last puff's
-         far edge lands SPEAKER_MARGIN above the top of his figure. */
+      /* Trail off the bottom, down at him: the last puff's far edge lands
+         SPEAKER_MARGIN short of the aim point, which is his mouth where the
+         page gave one and the top of his figure where it did not. */
       left = vLeft;
       h = above ? above.h : hMax;
       reach = above ? above.r : reachDown;
-      top = headTop - (reach + SPEAKER_MARGIN) - h;
+      top = aimDown - (reach + aimMargin) - h;
       tail = "down";
       tailX = vTailX;
       break;
     case "below":
-      /* Trail off the top, rising at him along his centre line. It stops
-         SPEAKER_MARGIN below his feet: his body is in the way of his head
-         from down here, so short of the figure is as close as it can
-         point. */
+      /* Trail off the top, rising at him. Without a mouth it stops
+         SPEAKER_MARGIN below his feet, because his body is in the way of his
+         head from down here and short of the figure is as close as it can
+         point. With one it runs up the column beside him instead and stops
+         level with his mouth. */
       left = vLeft;
       h = below ? below.h : hMax;
       reach = below ? below.r : reachUp;
-      top = sp.bottom + (reach + SPEAKER_MARGIN);
+      top = aimUp + (reach + aimMargin);
       tail = "up";
       tailX = vTailX;
       break;
@@ -348,7 +410,7 @@ export function placeBubble({
     case "pinned":
       left = vLeft;
       h = hMax;
-      top = headTop - (reachDown + SPEAKER_MARGIN) - h;
+      top = aimDown - (reachDown + aimMargin) - h;
       tail = "down"; // settled properly after the clamps below
       tailX = vTailX;
       reach = reachDown;
@@ -361,7 +423,7 @@ export function placeBubble({
   if (mode === "pinned") {
     /* Nothing fits, or he is off the screen. The trail still leaves the
        edge that faces him and aims at his x. */
-    tail = headY >= top + h / 2 ? "down" : "up";
+    tail = sideAimY >= top + h / 2 ? "down" : "up";
     reach = tail === "down" ? reachDown : reachUp;
 
     /* But pinned means the gap to him may be shorter than the trail, and
@@ -377,11 +439,12 @@ export function placeBubble({
       sp.x < b.right + sp.halfW &&
       sp.bottom > b.top &&
       headTop < b.bottom;
-    const room = tail === "down" ? headTop - (top + h) : top - sp.bottom;
-    if (visible && room < reach + SPEAKER_MARGIN) {
-      const c = sp.x - left;
-      const lo = c - PINNED_CLEAR_X;
-      const hi = c + PINNED_CLEAR_X;
+    const room = tail === "down" ? aimDown - (top + h) : top - aimUp;
+    if (visible && room < reach + aimMargin) {
+      const c = aimX - left;
+      const clearX = mouth ? mouth.clearX : PINNED_CLEAR_X;
+      const lo = c - clearX;
+      const hi = c + clearX;
       /* The nearer allowed column that still exists inside the box. */
       if (lo >= TAIL_INSET && hi <= w - TAIL_INSET)
         tailX = c >= w / 2 ? lo : hi;
