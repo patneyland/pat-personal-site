@@ -407,6 +407,20 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   );
 }
 
+/* The entrance. A plain block, so its width is the frame's width and a
+   translateX in percent is measured in frames: the component sets the starting
+   share, and the verse walks in from its first word. Duration comes from the
+   component too, worked out from the loop's speed so both stages move at one
+   pace. */
+.scripture-intro {
+  animation: scripture-enter var(--scripture-intro, 20s) linear both;
+}
+
+@keyframes scripture-enter {
+  from { transform: translateX(var(--scripture-from, 75%)); }
+  to   { transform: translateX(0); }
+}
+
 .scripture-track {
   font-family: var(--font-scripture), Georgia, "Times New Roman", serif;
   font-size: clamp(0.95rem, 1.55vw, 1.2rem);
@@ -415,7 +429,10 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   /* Pure white on near-black. Garamond is a light face and anything less than
      #fff at this size reads as grey rather than as quiet. */
   color: #ffffff;
-  animation: scripture-scroll 46s linear infinite;
+  /* Delayed by the entrance, so the loop takes over at the moment the line
+     lands rather than dragging it left while it is still walking in. */
+  animation: scripture-scroll var(--scripture-loop, 46s) linear
+    var(--scripture-intro, 20s) infinite;
   will-change: transform;
 }
 
@@ -424,9 +441,10 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   to   { transform: translateX(-50%); }
 }
 
-/* Hovering holds the line still. Without this the citation is a link that
-   walks away from the pointer, which is no link at all. */
-.scripture-marquee:hover .scripture-track {
+/* Hovering holds the line still, entrance included. Without this the citation
+   is a link that walks away from the pointer, which is no link at all. */
+.scripture-marquee:hover .scripture-track,
+.scripture-marquee:hover .scripture-intro {
   animation-play-state: paused;
 }
 
@@ -448,7 +466,10 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   text-decoration-thickness: 1px;
 }
 
-/* Standing still it is still a whole line of scripture, just not a moving one. */
+/* Standing still it is still a whole line of scripture, just not a moving one.
+   Killing the entrance too leaves it at its untransformed position, which is
+   the verse's first word against the left edge: the readable frame. */
 @media (prefers-reduced-motion: reduce) {
-  .scripture-track { animation: none; }
+  .scripture-track,
+  .scripture-intro { animation: none; }
 }
