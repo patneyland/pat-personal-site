@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arcade mockup - Patrick Neyland</title>
+
+<!--
+  STATIC MOCKUP. Not wired into the Next app.
+  Nothing in src/ was touched. This is a look-and-feel proposal only.
+
+  World: the arcade page keeps the site's warm near-black ground and gold
+  accent, and adds amber phosphor as a screen-only colour. The bezel is a
+  monitor, not a cabinet: no joystick, no buttons, no coin door on the frame.
+  The one coin detail lives under the scoreboard instead.
+
+  All visible words are placeholders in square brackets. Patrick writes the
+  copy. Leaderboard initials and scores are dummy data.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@600;700&family=Press+Start+2P&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+/* ─── Tokens ─────────────────────────────────────────── */
+:root {
+  /* Site skeleton, unchanged from design.md */
+  --bg:            #0e0e0e;
+  --bg-alt:        #161616;
+  --bg-card:       #1c1c1c;
+  --text:          #e8e2d9;
+  --text-muted:    #7a7570;
+  --text-faint:    #3d3a38;
+  --accent:        #c9a84c;
+  --accent-dim:    #7a6330;
+  --border:        #2a2826;
+  --border-subtle: #1e1c1a;
+
+  /* Arcade world: phosphor lives on the glass, gold stays the page accent */
+  --phosphor:      #ffb545;
+  --phosphor-soft: #d99433;
+  --phosphor-dim:  rgba(255, 181, 69, 0.14);
+  --glass-ground:  #0a0c08;
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body:    "DM Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+  /* The arcade face. Used for every score, name and screen line. */
+  --font-arcade:  "Press Start 2P", "JetBrains Mono", monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body { max-width: 100%; overflow-x: hidden; }
+
+body {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #050505;
+  background-image: none;
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+/* ─── Page frame ─────────────────────────────────────── */
+.wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 1680px;
+  margin: 0 auto;
+  padding: 1.5rem 1.75rem 1.75rem;
+  display: flex;
+}
+
+/* The page is one screenful. The CRT is sized by the height it is
+   given, not by the width, so the tube fills the viewport and the
+   rail runs the full height beside it. */
+.layout {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* Flex, not grid. A 1fr column left the tube floating with a gap before
+     the rail; an `auto` column collapsed it, because .crt-stage is a size
+     container and an indefinite width makes its own 100cqh resolve to
+     nothing; and fixed tracks overflowed the container, which killed
+     justify-content outright. Flex shrinks instead of overflowing, so the
+     pair always centres and the gap is just the gap.
+     .crt-stage still needs a definite width for its container queries, so
+     it gets one in the same viewport maths the bezel uses:
+     154px = .wrap's vertical padding (36) + the bezel's own (118). */
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 2.25rem;
+}
+
+.crt-stage-sizer,
+.crt-stage {
+  flex: 0 1 auto;
+  width: min(100%, calc((100vh - 154px) * 4 / 3 + 52px));
+}
+.rail { flex: 0 0 360px; }
+
+/* ═══ THE CRT ════════════════════════════════════════════
+   Built from stacked layers inside one rounded, clipped
+   box. Bottom to top: picture, scanlines, shadow mask,
+   roll bar, grain, chromatic fringe, vignette, glass
+   sheen, flicker. Nothing here is an image.
+   ═══════════════════════════════════════════════════════ */
+
+/* Fit a 4:3 tube inside whatever box the grid hands us, constrained
+   by BOTH dimensions. Container query height units do the work: the
+   bezel can never be taller than the stage, and never wider than the
+   column. */
+.crt-stage {
+  perspective: 1400px;
+  position: relative;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bezel {
+  position: relative;
+  /* 118px = the bezel's own vertical padding, 52px its horizontal */
+  width: min(100%, calc((100cqh - 118px) * 4 / 3 + 52px));
+  padding: 26px 26px 92px;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, #4e4a45 0%, #3a3733 38%, #282523 74%, #1c1a18 100%);
+  border: 1px solid #625d56;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.85),
+    inset 2px 0 0 rgba(255, 255, 255, 0.05),
+    inset -2px 0 0 rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.9),
+    0 46px 90px -26px rgba(0, 0, 0, 1),
+    0 10px 30px -12px rgba(0, 0, 0, 0.9);
+}
+
+/* Hairline inside the bezel where plastic meets glass */
+.bezel::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-radius: 26px;
+  border: 1px solid rgba(0, 0, 0, 0.9);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 6px 12px -8px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+.screen {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  /* Percentage radii pillow the corners the way real CRT glass does.
+     A uniform px radius reads as a flat panel. */
+  border-radius: 10% / 13%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 112% 112% at 50% 44%,
+      #47391d 0%,
+      #352a13 42%,
+      #221b0c 76%,
+      #161107 100%);
+  box-shadow:
+    inset 0 0 4px rgba(255, 240, 205, 0.3),
+    inset 0 0 60px rgba(0, 0, 0, 0.45);
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* --- The picture: attract mode. This block is the slot a real
+       game canvas or iframe drops into later. ---------------- */
+.picture {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  padding: 8% 12%;
+  text-align: center;
+}
+
+.game-title {
+  font-family: var(--font-arcade);
+  font-size: clamp(1.1rem, 3.1vw, 2.4rem);
+  line-height: 1.4;
+  letter-spacing: 0;
+  color: #fff3d6;
+  /* Chromatic split plus phosphor halo */
+  text-shadow:
+    -1px 0 rgba(255, 64, 64, 0.45),
+     1px 0 rgba(64, 190, 255, 0.4),
+     0 0 18px rgba(255, 200, 110, 0.9),
+     0 0 48px rgba(255, 181, 69, 0.55);
+}
+
+.game-sub {
+  font-family: var(--font-arcade);
+  font-size: clamp(0.5rem, 1vw, 0.72rem);
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: rgba(255, 205, 130, 0.95);
+}
+
+.rule-glow {
+  width: 42%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 205, 130, 0.85), transparent);
+}
+
+.insert {
+  margin-top: 0.35rem;
+  font-family: var(--font-arcade);
+  font-size: clamp(0.55rem, 1.1vw, 0.8rem);
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #ffdc9a;
+  text-shadow: 0 0 20px rgba(255, 181, 69, 0.7);
+  animation: blink 1.9s steps(1, end) infinite;
+}
+
+@keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.12; } }
+
+/* --- Scanlines: drift very slowly, fade toward the corners so
+       the raster looks like it is falling away over glass. --- */
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.34) 0px,
+    rgba(0, 0, 0, 0.34) 1px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  background-size: 100% 3px;
+  -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 55%, rgba(0, 0, 0, 0.45) 88%, rgba(0, 0, 0, 0.15) 100%);
+          mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 55%, rgba(0, 0, 0, 0.45) 88%, rgba(0, 0, 0, 0.15) 100%);
+  animation: drift 9s linear infinite;
+  opacity: 1;
+}
+@keyframes drift { to { background-position: 0 -3px; } }
+
+/* --- Shadow mask / screen door: RGB stripes at sub-pixel width --- */
+.mask {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 70, 70, 0.09) 0px, rgba(255, 70, 70, 0.09) 1px,
+    rgba(70, 255, 130, 0.07) 1px, rgba(70, 255, 130, 0.07) 2px,
+    rgba(70, 130, 255, 0.09) 2px, rgba(70, 130, 255, 0.09) 3px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.32;
+}
+
+/* --- The slow bright band that rolls down a real tube --------- */
+.roll {
+  height: 26%;
+  inset: auto 0 0 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 214, 150, 0.055) 45%,
+    rgba(255, 214, 150, 0.075) 55%,
+    transparent
+  );
+  animation: roll 7.5s linear infinite;
+}
+@keyframes roll { from { transform: translateY(-460%); } to { transform: translateY(100%); } }
+
+/* --- Grain: real feTurbulence, rendered as an inline SVG rect --- */
+.grain {
+  width: 100%;
+  height: 100%;
+  opacity: 0.10;
+  mix-blend-mode: overlay;
+}
+
+/* --- Chromatic aberration: red pulls left, cyan pulls right,
+       strongest at the edges where the glass bends most. ------- */
+.fringe {
+  box-shadow:
+    inset  3px 0 10px -8px rgba(255, 40, 40, 0.35),
+    inset -3px 0 10px -8px rgba(40, 190, 255, 0.32),
+    inset 0  3px 10px -9px rgba(255, 40, 40, 0.2),
+    inset 0 -3px 10px -9px rgba(40, 190, 255, 0.2);
+  mix-blend-mode: screen;
+}
+
+/* --- Vignette: corner darkening, the main curvature cue ------- */
+.vignette {
+  background:
+    radial-gradient(ellipse 86% 86% at 50% 48%,
+      transparent 46%,
+      rgba(0, 0, 0, 0.10) 72%,
+      rgba(0, 0, 0, 0.34) 90%,
+      rgba(0, 0, 0, 0.6) 100%);
+  box-shadow: inset 0 0 40px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Glass: one broad elliptical sheen across the top left,
+       one weak counter-sheen bottom right, plus an edge
+       highlight for the thickness of the tube face. ----------- */
+.glass {
+  background:
+    radial-gradient(ellipse 62% 40% at 26% 12%, rgba(255, 250, 235, 0.075), transparent 62%),
+    radial-gradient(ellipse 46% 26% at 78% 92%, rgba(255, 240, 210, 0.03), transparent 65%);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.09),
+    inset 0 -2px 1px rgba(255, 255, 255, 0.045);
+}
+
+.flicker {
+  background: rgba(255, 226, 180, 1);
+  opacity: 0.014;
+  mix-blend-mode: overlay;
+  animation: flicker 0.14s steps(2, end) infinite;
+}
+@keyframes flicker {
+  0%   { opacity: 0.012; }
+  50%  { opacity: 0.028; }
+  100% { opacity: 0.016; }
+}
+
+/* --- Bezel furniture. Still no arcade controls: the only thing
+       to touch is a channel dial, which is what a TV of this age
+       would have had anyway. ----------------------------------- */
+
+/* The dial. Click it and it turns to the other detent. */
+.dial-wrap {
+  position: absolute;
+  left: 30px;
+  bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+}
+
+.dial {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 1px solid #46433e;
+  border-radius: 50%;
+  cursor: pointer;
+  /* Knurled rim, then a domed cap */
+  background:
+    radial-gradient(circle at 38% 30%, #55524c 0%, #37343010 55%, transparent 60%),
+    conic-gradient(#3e3b36, #2a2825 3%, #46433d 6%, #2a2825 9%, #46433d 12%,
+                   #2a2825 15%, #46433d 18%, #2a2825 21%, #46433d 24%,
+                   #2a2825 27%, #46433d 30%, #2a2825 33%, #46433d 36%,
+                   #2a2825 39%, #46433d 42%, #2a2825 45%, #46433d 48%,
+                   #2a2825 51%, #46433d 54%, #2a2825 57%, #46433d 60%,
+                   #2a2825 63%, #46433d 66%, #2a2825 69%, #46433d 72%,
+                   #2a2825 75%, #46433d 78%, #2a2825 81%, #46433d 84%,
+                   #2a2825 87%, #46433d 90%, #2a2825 93%, #46433d 96%, #3e3b36 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.7),
+    0 3px 6px -2px rgba(0, 0, 0, 0.9);
+  transform: rotate(-40deg);
+  transition: transform 0.42s cubic-bezier(0.34, 1.42, 0.5, 1);
+}
+.dial:hover { border-color: #5c584f; }
+.dial:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 3px; }
+
+/* The cap, so the knurl only shows as a rim */
+.dial::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: linear-gradient(158deg, #4a4741 0%, #302d29 55%, #22201d 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+/* The pointer */
+.dial::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 9px;
+  width: 3px;
+  height: 16px;
+  margin-left: -1.5px;
+  border-radius: 1px;
+  background: var(--sc-score);
+  box-shadow: 0 0 6px var(--ink-glow);
+}
+
+/* Two detents, etched into the bezel either side of the knob */
+.dial-ticks {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-family: var(--font-arcade);
+  font-size: 0.55rem;
+  line-height: 1.5;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #4f4b45;
+  user-select: none;
+}
+.dial-ticks span { transition: color 0.25s ease; cursor: pointer; }
+.dial-ticks span[data-on="true"] { color: var(--sc-score); }
+
+.bezel-foot {
+  position: absolute;
+  right: 34px;
+  bottom: 22px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd48a, #d8892a 60%, #6c3f0e 100%);
+  box-shadow: 0 0 9px rgba(255, 168, 60, 0.75), inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Pool of light the tube throws on the floor beneath it */
+/* ═══ RIGHT RAIL: the scoreboard ═════════════════════════ */
+.rail { display: flex; flex-direction: column; gap: 1.75rem; min-height: 0; }
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.7rem;
+}
+.rail-head h2 {
+  font-family: var(--font-arcade);
+  font-size: 0.6rem;
+  line-height: 1.5;
+  text-transform: uppercase;
+  color: var(--text);
+  /* The double rule under the heading, straight off the cabinet */
+  border-bottom: 3px solid currentColor;
+  padding-bottom: 0.45rem;
+}
+.rail-head span {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --- The champion block. Own panel, own frame, own gap.
+       This is the loudest thing on the page after the tube. --- */
+/* No panel, no frame. A high score table separates its champion with a
+   rule and a change of scale, the way the cabinet does. */
+.champion {
+  position: relative;
+  padding: 0.2rem 0 1.6rem;
+  border-bottom: 3px solid var(--accent-dim);
+}
+
+.champion-label {
+  font-family: var(--font-arcade);
+  font-size: 0.55rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.35rem;
+}
+
+/* Handles run longer than three characters now, so the name sits
+   above the score instead of fighting it for the same line. */
+.champion-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.champion-initials {
+  font-family: var(--font-arcade);
+  text-transform: uppercase;
+  font-size: 1.15rem;
+  line-height: 1;
+  letter-spacing: 0;
+  color: var(--text);
+  text-shadow: 0 0 18px rgba(232, 226, 217, 0.45);
+}
+
+.champion-score {
+  font-family: var(--font-arcade);
+  font-size: 1.9rem;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #e5c163;
+  text-shadow: 0 0 20px rgba(201, 168, 76, 0.75);
+}
+
+.champion-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.3rem;
+  font-family: var(--font-arcade);
+  font-size: 0.5rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #9a938a;
+}
+
+/* --- The break. Reads as "everything below is a different
+       class of thing." ---------------------------------------- */
+.break {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.4rem 0 -0.2rem;
+}
+.break span {
+  font-family: var(--font-arcade);
+  font-size: 0.5rem;
+  line-height: 1.6;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.break i { display: none; }
+
+/* --- The table ------------------------------------------- */
+.board {
+  list-style: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.board li {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1.9rem 1fr auto;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 0.62rem 0.4rem;
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.board li:hover { background-color: rgba(255, 181, 69, 0.045); }
+.board li:hover .b-name { color: var(--text); }
+.board li:hover .b-score { color: var(--phosphor); }
+
+.b-rank {
+  font-family: var(--font-arcade);
+  font-size: 0.7rem;
+  color: var(--text-muted);
+}
+.b-name {
+  font-family: var(--font-arcade);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0;
+  color: var(--text);
+  text-shadow: 0 0 14px rgba(232, 226, 217, 0.3);
+  transition: color 0.18s ease;
+}
+.b-score {
+  justify-self: end;
+  font-family: var(--font-arcade);
+  font-size: 0.72rem;
+  letter-spacing: 0;
+  color: var(--accent);
+  text-shadow: 0 0 14px rgba(201, 168, 76, 0.4);
+  transition: color 0.18s ease;
+}
+
+/* ═══ COIN SLOT ══════════════════════════════════════════
+   Until a coin goes in, the machine is off. The click is also what
+   unlocks WebAudio, which browsers gate behind a real user gesture -
+   so the coin is doing two jobs at once.
+   ═══════════════════════════════════════════════════════════ */
+
+.coin-btn {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+}
+.coin-btn:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 6px; }
+[data-inserted="true"] .coin-btn { cursor: default; }
+
+.coin-btn.nudge { animation: nudge 0.45s ease; }
+@keyframes nudge {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  45% { transform: translateX(5px); }
+  70% { transform: translateX(-3px); }
+}
+
+.coin-hint {
+  margin-top: 0.9rem;
+  font-family: var(--font-arcade);
+  font-size: 0.5rem;
+  line-height: 1.7;
+  text-align: center;
+  color: var(--sc-score);
+  text-shadow: 0 0 14px var(--ink-glow);
+  animation: hintpulse 1.6s ease-in-out infinite;
+}
+[data-inserted="true"] .coin-hint { display: none; }
+@keyframes hintpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* The drop. The coin falls to the mouth of the slot, catches on the rim,
+   then goes in. "Goes in" is the trick: over the final phase the coin
+   travels down by exactly its own height while a clip eats it from the
+   bottom by the same amount, so the visible bottom edge stays pinned to the
+   slot line. The coin disappears INTO the cut instead of behind the plate.
+
+   The two halves live on different elements because the travel replaces the
+   bob on .coin-bob while the clip has to be on .coin itself.
+   --coin-fall is the gap from the coin's resting point to the slot mouth. */
+.coin-module { --coin-fall: 36px; --coin-h: 40px; }
+
+/* Both animations must interpolate IDENTICALLY or the pinned edge drifts
+   down the slot: the travel and the clip have to stay in lockstep. So both
+   run linear, and the weight of the fall is shaped by the spacing of the
+   keyframes instead of by an easing curve. */
+.coin-module.is-inserting .coin-bob {
+  animation: coinfall 0.78s linear forwards;
+}
+.coin-module.is-inserting .coin {
+  animation: coineat 0.78s linear forwards;
+}
+.coin-module.is-inserting .coin-shadow { animation: none; opacity: 0; }
+
+@keyframes coinfall {
+  /* gathering speed - the gaps widen */
+  0%   { transform: translateY(-10px); }
+  14%  { transform: translateY(-7px); }
+  26%  { transform: translateY(1px); }
+  34%  { transform: translateY(16px); }
+  40%  { transform: translateY(var(--coin-fall)); }              /* the mouth */
+  /* catches on the rim, settles */
+  48%  { transform: translateY(calc(var(--coin-fall) - 5px)); }
+  54%  { transform: translateY(calc(var(--coin-fall) - 1px)); }
+  58%  { transform: translateY(var(--coin-fall)); }
+  /* in: down by exactly its own height, matched by the clip below */
+  100% { transform: translateY(calc(var(--coin-fall) + var(--coin-h))); }
+}
+@keyframes coineat {
+  0%, 58% { clip-path: inset(0 0 0 0); }
+  100%    { clip-path: inset(0 0 100% 0); }
+}
+
+[data-inserted="true"] .coin-stage { visibility: hidden; }
+
+.coin-module {
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 0.25rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.coin-stage {
+  position: relative;
+  z-index: 5;
+  perspective: 420px;
+  height: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.coin-bob {
+  animation: bob 3.4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(-16px); }
+  50%      { transform: translateY(-4px); }
+}
+
+.coin {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  /* Milled edge: alternating light and dark facets around the rim */
+  background: conic-gradient(
+    from 205deg,
+    #f7e7b6, #a8801f 11%, #fbf1cf 23%, #8f6c22 37%,
+    #f2ddaa 51%, #a37c26 65%, #fdf4d6 79%, #b08a30 91%, #f7e7b6 100%
+  );
+  box-shadow:
+    0 0 16px rgba(201, 168, 76, 0.45),
+    0 6px 10px -4px rgba(0, 0, 0, 0.8);
+  animation: turn 7s ease-in-out infinite;
+}
+/* Coin face */
+.coin::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background:
+    linear-gradient(158deg, #f4e0a6 0%, #d7b263 38%, #c09437 62%, #e6cd8a 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 246, 214, 0.5),
+    inset 0 0 0 3px rgba(139, 106, 34, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+}
+/* Shine that sweeps as the coin turns */
+.coin::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.7) 48%, transparent 62%);
+  z-index: 2;
+  animation: shine 7s ease-in-out infinite;
+}
+
+/* Swings rather than spins. A full 360 turns the coin edge on and it
+   vanishes for a beat; +/- 58 degrees keeps a readable face throughout. */
+@keyframes turn {
+  0%, 100% { transform: rotateY(-58deg); }
+  50%      { transform: rotateY(58deg); }
+}
+@keyframes shine {
+  0%, 100% { opacity: 0.15; }
+  42%      { opacity: 0.75; }
+  70%      { opacity: 0.1; }
+}
+
+/* Shadow the coin casts on the plate, tied to the bob */
+.coin-shadow {
+  position: relative;
+  z-index: 3;
+  width: 34px;
+  height: 7px;
+  margin-top: 5px;
+  margin-bottom: -13px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.95), rgba(0,0,0,0.35) 55%, transparent 78%);
+  filter: blur(2.5px);
+  animation: shadow-bob 3.4s ease-in-out infinite;
+}
+@keyframes shadow-bob {
+  0%, 100% { transform: scale(0.82); opacity: 0.45; }
+  50%      { transform: scale(1.06); opacity: 0.7; }
+}
+
+/* The plate: brushed metal, screwed to the panel, one slot cut in it */
+.plate {
+  position: relative;
+  margin-top: 4px;
+  width: 62px;
+  padding: 16px 0 17px;
+  display: flex;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid #3b3936;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(255, 255, 255, 0.022) 0px, rgba(255, 255, 255, 0.022) 1px,
+      rgba(0, 0, 0, 0.05) 1px, rgba(0, 0, 0, 0.05) 3px),
+    linear-gradient(180deg, #35332f 0%, #211f1d 55%, #171614 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 8px 16px -9px rgba(255, 190, 92, 0.28),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.8),
+    0 8px 18px -8px rgba(0, 0, 0, 0.9);
+}
+/* Two countersunk screws */
+.plate::before,
+.plate::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a4844, #1a1917 75%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.plate::before { top: 6px; }
+.plate::after  { bottom: 6px; }
+
+.slot {
+  width: 9px;
+  height: 44px;
+  border-radius: 5px;
+  background: linear-gradient(90deg, #000 0%, #050505 60%, #0b0a09 100%);
+  box-shadow:
+    inset 3px 0 5px rgba(0, 0, 0, 1),
+    inset -1px 0 0 rgba(255, 255, 255, 0.13),
+    1px 0 0 rgba(255, 255, 255, 0.07);
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+@media (min-height: 841px) {
+  .crt-stage { width: min(100%, calc((100vh - 170px) * 4 / 3 + 52px)); }
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-height: 840px) {
+  .wrap { padding: 1rem 1.5rem 1.25rem; }
+  .crt-stage { width: min(100%, calc((100vh - 154px) * 4 / 3 + 52px)); }
+  .rail { gap: 1.1rem; }
+  .champion { padding: 0.2rem 0 1.15rem; }
+  .board li { padding: 0.42rem 0.4rem; }
+  .coin-module { padding: 1rem 1rem 0.25rem; }
+}
+
+@media (max-width: 1000px) {
+  body { height: auto; overflow: visible; }
+  .wrap { display: block; padding: 2.5rem 1.5rem 3.5rem; }
+  .layout { display: block; }
+  .crt-stage { display: block; container-type: normal; width: 100%; }
+  .bezel { width: 100%; }
+  .rail { flex: 0 1 auto; max-width: 520px; width: 100%; margin: 2.75rem auto 0; }
+  .coin-module { margin-top: 1.75rem; }
+}
+
+@media (max-width: 560px) {
+  .wrap { padding: 3rem 1.1rem 3.5rem; }
+  .bezel { padding: 14px 14px 80px; border-radius: 20px; }
+  .bezel::after { inset: 10px; border-radius: 16px; }
+  .champion-initials { font-size: 1rem; }
+  .champion-score { font-size: 1.5rem; }
+}
+
+/* ─── Reduced motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .scanlines, .roll, .flicker, .insert,
+  .coin-bob, .coin, .coin::before, .coin-shadow {
+    animation: none !important;
+  }
+  .coin-bob { transform: translateY(-10px); }
+  .flicker { opacity: 0.012; }
+  .roll { display: none; }
+  .insert { opacity: 1; }
+  * { transition: none !important; }
+}
+
+
+/* ═══════════════════════════════════════════════════════════
+   COLOUR PALETTE
+   Every colour that carries the arcade look is routed through
+   these tokens: a near-black tube and a four-colour sprite
+   palette, the way a Pac-Man or Galaga board split its columns.
+   One palette, no picker.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── GREEN: P1 phosphor, the classic high score table ── */
+:root {
+  --scr-1: #12121f;  --scr-2: #0c0c16;  --scr-3: #07070d;  --scr-4: #040407;
+  --ink-hot:   #ffe93d;
+  --ink-warm:  #00e0ff;
+  --ink-glow:  rgba(255, 233, 61, 0.7);
+  --sc-name:   #ffffff;
+  --sc-score:  #ffe93d;
+  --sc-rank:   #00d5ff;
+  --sc-label:  #ff5cf0;
+  --sc-meta:   #7b8fb5;
+  --sc-rule:   #00a8d8;
+  --lamp-a: #ffb3f5;  --lamp-b: #e03fcb;  --lamp-c: #5c0f52;
+  --lamp-glow: rgba(255, 92, 240, 0.7);
+}
+
+/* ── The tube ── */
+.screen {
+  background:
+    radial-gradient(ellipse 112% 112% at 50% 44%,
+      var(--scr-1) 0%,
+      var(--scr-2) 42%,
+      var(--scr-3) 76%,
+      var(--scr-4) 100%);
+}
+.game-title {
+  color: var(--ink-hot);
+  text-shadow:
+    -1px 0 rgba(255, 64, 64, 0.45),
+     1px 0 rgba(64, 190, 255, 0.4),
+     0 0 18px var(--ink-glow),
+     0 0 48px var(--ink-glow);
+}
+.game-sub  { color: var(--ink-warm); }
+.insert    { color: var(--ink-warm); text-shadow: 0 0 20px var(--ink-glow); }
+.rule-glow { background: linear-gradient(90deg, transparent, var(--ink-warm), transparent); }
+
+/* ── The power lamp ── */
+.lamp {
+  background: radial-gradient(circle at 35% 30%, var(--lamp-a), var(--lamp-b) 60%, var(--lamp-c) 100%);
+  box-shadow: 0 0 9px var(--lamp-glow), inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ── The score table ── */
+.rail-head h2      { color: var(--sc-name); }
+.champion          { border-bottom-color: var(--sc-rule); }
+.champion-label    { color: var(--sc-label); }
+.champion-initials { color: var(--sc-name);  text-shadow: 0 0 18px var(--ink-glow); }
+.champion-score    { color: var(--sc-score); text-shadow: 0 0 20px var(--ink-glow); }
+.champion-meta     { color: var(--sc-meta); }
+.break span        { color: var(--sc-label); }
+.b-rank            { color: var(--sc-rank); }
+.b-name            { color: var(--sc-name);  text-shadow: 0 0 14px var(--ink-glow); }
+.b-score           { color: var(--sc-score); text-shadow: 0 0 14px var(--ink-glow); }
+.board li:hover                 { background-color: rgba(255, 255, 255, 0.04); }
+.board li:hover .b-name         { color: var(--ink-hot); }
+.board li:hover .b-score        { color: var(--ink-hot); }
+
+/* ── The sprite palette, cycling down the rows the way Donkey Kong
+      and Track & Field coloured theirs. ── */
+.board li:nth-child(7n+1) .b-name,
+.board li:nth-child(7n+1) .b-rank { color: #ff5cf0; }
+.board li:nth-child(7n+2) .b-name,
+.board li:nth-child(7n+2) .b-rank { color: #00d5ff; }
+.board li:nth-child(7n+3) .b-name,
+.board li:nth-child(7n+3) .b-rank { color: #5cff8a; }
+.board li:nth-child(7n+4) .b-name,
+.board li:nth-child(7n+4) .b-rank { color: #ff9a3d; }
+.board li:nth-child(7n+5) .b-name,
+.board li:nth-child(7n+5) .b-rank { color: #c58bff; }
+.board li:nth-child(7n+6) .b-name,
+.board li:nth-child(7n+6) .b-rank { color: #ffffff; }
+.board li:nth-child(7n+7) .b-name,
+.board li:nth-child(7n+7) .b-rank { color: #ff5f5f; }
+/* The glow follows whatever colour the row landed on */
+.b-name { text-shadow: 0 0 14px currentColor; }
+.b-rank { opacity: 0.72; }
+/* Ranks stay a shade quieter than the name they belong to */
+
+
+
+
+/* The tube runs in attract mode before the coin, the way a real cabinet
+   does. The coin buys the right to press start, not the right to see the
+   screen. It brightens a touch on credit, which is the only tell. */
+[data-inserted="false"] .screen { filter: brightness(0.86) saturate(0.92); }
+.screen { transition: filter 0.6s ease; }
+
+/* ── Volume, sitting on the glass in the bottom right corner of the
+      tube. A speaker, and a speaker with a line through it. ── */
+.vol-btn {
+  all: unset;
+  position: absolute;
+  right: 3.5%;
+  bottom: 4%;
+  z-index: 6;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--sc-rank);
+  opacity: 0.55;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  filter: drop-shadow(0 0 6px var(--ink-glow));
+}
+.vol-btn:hover { opacity: 1; color: var(--sc-score); }
+.vol-btn:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 3px; }
+.vol-btn svg { width: 22px; height: 22px; display: block; }
+/* the slash only exists when muted */
+.vol-btn .slash { display: none; }
+.vol-btn[aria-pressed="true"] { color: #ff5f5f; opacity: 0.85; }
+.vol-btn[aria-pressed="true"] .wave { display: none; }
+.vol-btn[aria-pressed="true"] .slash { display: block; }
+
+/* ═══════════════════════════════════════════════════════════
+   INSIDE THE SCREEN
+   The cabinet builds this markup; the games mount into .stage.
+   Everything here sits under the glass layers, so it inherits
+   the scanlines, vignette and curvature for free.
+   ═══════════════════════════════════════════════════════════ */
+
+.screen-ui {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stage {
+  position: absolute;
+  /* clear of the status line at the top */
+  inset: 11% 5% 7%;
+}
+
+.game-canvas { display: block; }
+
+/* --- status line: score or clock, top of the tube --- */
+.status {
+  position: absolute;
+  top: 3.2%;
+  left: 6%;
+  right: 6%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: var(--font-arcade);
+  line-height: 1.6;
+  pointer-events: none;
+  filter: url(#phosphor-bloom);
+}
+.status[hidden] { display: none; }
+.status-value {
+  font-size: clamp(0.6rem, 1.4vw, 1rem);
+  color: var(--sc-score);
+  text-shadow: 0 0 14px var(--ink-glow);
+}
+.status-extra {
+  font-size: clamp(0.42rem, 0.85vw, 0.62rem);
+  color: var(--sc-rank);
+}
+
+/* --- overlays: attract and game over --- */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.1rem;
+  padding: 8% 10%;
+  text-align: center;
+  background: rgba(0, 0, 0, 0.55);
+  filter: url(#phosphor-bloom);
+}
+.overlay[hidden] { display: none; }
+
+.ov-title {
+  font-family: var(--font-arcade);
+  font-size: clamp(1.1rem, 3.1vw, 2.4rem);
+  line-height: 1.4;
+  color: var(--ink-hot);
+  text-shadow:
+    -1px 0 rgba(255, 64, 64, 0.45),
+     1px 0 rgba(64, 190, 255, 0.4),
+     0 0 18px var(--ink-glow),
+     0 0 48px var(--ink-glow);
+}
+.ov-title-sm { font-size: clamp(0.85rem, 2.1vw, 1.5rem); }
+
+.ov-sub, .ov-controls, .ov-again, .ov-label {
+  font-family: var(--font-arcade);
+  font-size: clamp(0.45rem, 0.95vw, 0.68rem);
+  line-height: 1.9;
+  color: var(--ink-warm);
+}
+.ov-controls, .ov-again { color: var(--sc-rank); }
+
+.ov-result {
+  font-family: var(--font-arcade);
+  font-size: clamp(1rem, 2.6vw, 1.9rem);
+  color: var(--sc-score);
+  text-shadow: 0 0 20px var(--ink-glow);
+}
+
+.ov-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+.ov-form[hidden] { display: none; }
+
+.ov-input {
+  width: min(260px, 60vw);
+  padding: 0.5rem 0.6rem;
+  text-align: center;
+  text-transform: uppercase;
+  font-family: var(--font-arcade);
+  font-size: clamp(0.6rem, 1.2vw, 0.85rem);
+  color: var(--sc-name);
+  background: rgba(0, 0, 0, 0.6);
+  border: 2px solid var(--sc-rule);
+  border-radius: 2px;
+  outline: none;
+}
+.ov-input:focus { border-color: var(--sc-score); }
+
+.ov-btn {
+  font-family: var(--font-arcade);
+  font-size: clamp(0.5rem, 1vw, 0.7rem);
+  color: #000;
+  background: var(--sc-score);
+  border: 0;
+  border-radius: 2px;
+  padding: 0.55rem 1.1rem;
+  cursor: pointer;
+}
+.ov-btn:disabled { opacity: 0.45; cursor: default; }
+
+.ov-msg {
+  font-family: var(--font-arcade);
+  font-size: clamp(0.42rem, 0.85vw, 0.6rem);
+  line-height: 1.8;
+  min-height: 1.2em;
+  color: var(--sc-rank);
+}
+.ov-msg.is-good { color: var(--sc-score); }
+.ov-msg.is-bad  { color: #ff5f5f; }
+
+/* --- Minesweeper board --- */
+.ms-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ms-board {
+  display: grid;
+  grid-template-columns: repeat(var(--ms-size, 10), 1fr);
+  gap: 2px;
+  height: 100%;
+  width: auto;
+  aspect-ratio: 1;
+  max-width: 100%;
+}
+.ms-cell {
+  all: unset;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  cursor: pointer;
+  font-family: var(--font-arcade);
+  font-size: clamp(0.3rem, 1.5vh, 0.78rem);
+  color: var(--sc-name);
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.16),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.5);
+}
+.ms-cell:hover { background: rgba(255, 255, 255, 0.13); }
+.ms-cell.revealed {
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: default;
+}
+.ms-cell.flagged { color: var(--sc-score); }
+.ms-cell.mine    { color: #ff5f5f; }
+.ms-cell.boom    { background: rgba(255, 60, 60, 0.5); }
+.ms-cell.wrong   { background: rgba(255, 60, 60, 0.22); }
+
+/* Number colours: the sprite palette again, so 1..8 read at a glance */
+.ms-cell.n1 { color: #00d5ff; }
+.ms-cell.n2 { color: #5cff8a; }
+.ms-cell.n3 { color: #ff5f5f; }
+.ms-cell.n4 { color: #c58bff; }
+.ms-cell.n5 { color: #ff9a3d; }
+.ms-cell.n6 { color: #00e0ff; }
+.ms-cell.n7 { color: #ffffff; }
+.ms-cell.n8 { color: #ff5cf0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay .insert { animation: none; opacity: 1; }
+}
+
+</style>
+</head>
+
+<body>
+
+<main class="wrap">
+
+  <div class="layout">
+
+    <!-- ───────────── CRT ───────────── -->
+    <section class="crt-stage">
+      <div class="bezel">
+        <div class="screen">
+
+          <!--
+            SLOT: everything inside .picture is placeholder attract mode.
+            A real game (canvas or an iframe of arcade-one-blue.vercel.app)
+            replaces this block and inherits every glass layer below it.
+          -->
+          <div class="picture"></div>
+
+          <div class="layer scanlines"></div>
+          <div class="layer mask"></div>
+          <div class="layer roll"></div>
+
+          <svg class="layer grain" aria-hidden="true">
+            <filter id="crt-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+              <feColorMatrix type="saturate" values="0" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#crt-grain)" />
+          </svg>
+
+          <div class="layer fringe"></div>
+          <div class="layer vignette"></div>
+          <div class="layer glass"></div>
+          <div class="layer flicker"></div>
+
+        </div>
+
+        <div class="dial-wrap">
+          <button type="button" class="dial" aria-label="Turn the dial to the other game"></button>
+          <div class="dial-ticks">
+            <span data-slot="snake"       data-on="true">Snake</span>
+            <span data-slot="minesweeper" data-on="false">Minesweeper</span>
+            <span data-slot="asteroids"   data-on="false">Asteroids</span>
+          </div>
+        </div>
+
+        <div class="bezel-foot">
+          <div class="lamp"></div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ───────────── Scoreboard ───────────── -->
+    <aside class="rail">
+
+      <div class="rail-head">
+        <h2>[leaderboard label]</h2>
+        <span data-slot-game>SNAKE</span>
+      </div>
+
+      <!-- The all-time high. Its own frame, its own scale, its own gap. -->
+      <div class="champion">
+        <div class="champion-label">[all-time high label]</div>
+        <div class="champion-body">
+          <div class="champion-initials">PJN</div>
+          <div class="champion-score">184,750</div>
+        </div>
+        <div class="champion-meta">
+          <span data-slot-game>SNAKE</span>
+          <span>[date]</span>
+        </div>
+      </div>
+
+      <div class="break">
+        <i></i><span>[everyone else label]</span><i></i>
+      </div>
+
+      <ol class="board">
+        <!-- rows written by the dial -->
+      </ol>
+
+      <!-- Coin slot: the one piece of cabinet hardware on the page -->
+      <div class="coin-module">
+        <button type="button" class="coin-btn" aria-label="Insert a coin to start the machine">
+          <div class="coin-stage">
+            <div class="coin-bob"><div class="coin"></div></div>
+            <div class="coin-shadow"></div>
+          </div>
+          <div class="plate"><div class="slot"></div></div>
+          <div class="coin-hint">INSERT<br>COIN</div>
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+</main>
+
+<!-- Real SVG filter: the phosphor bloom on the picture layer -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="phosphor-bloom" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="blur" />
+    <feColorMatrix in="blur" type="matrix"
+      values="1.2 0   0   0 0
+              0   1.0 0   0 0
+              0   0   0.7 0 0
+              0   0   0   0.85 0" result="warm" />
+    <feMerge>
+      <feMergeNode in="warm" />
+      <feMergeNode in="SourceGraphic" />
+    </feMerge>
+  </filter>
+</svg>
+
+
+
+<script src="arcade/sound.js"></script>
+<script src="arcade/net.js"></script>
+<script src="arcade/snake.js"></script>
+<script src="arcade/minesweeper.js"></script>
+<script src="arcade/asteroids.js"></script>
+<script src="arcade/cabinet.js"></script>
+
+</body>
+</html>
