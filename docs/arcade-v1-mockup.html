@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Arcade mockup - Patrick Neyland</title>
+
+<!--
+  STATIC MOCKUP. Not wired into the Next app.
+  Nothing in src/ was touched. This is a look-and-feel proposal only.
+
+  World: the arcade page keeps the site's warm near-black ground and gold
+  accent, and adds amber phosphor as a screen-only colour. The bezel is a
+  monitor, not a cabinet: no joystick, no buttons, no coin door on the frame.
+  The one coin detail lives under the scoreboard instead.
+
+  All visible words are placeholders in square brackets. Patrick writes the
+  copy. Leaderboard initials and scores are dummy data.
+-->
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&family=Playfair+Display:wght@600;700&display=swap"
+  rel="stylesheet"
+/>
+
+<style>
+/* ─── Tokens ─────────────────────────────────────────── */
+:root {
+  /* Site skeleton, unchanged from design.md */
+  --bg:            #0e0e0e;
+  --bg-alt:        #161616;
+  --bg-card:       #1c1c1c;
+  --text:          #e8e2d9;
+  --text-muted:    #7a7570;
+  --text-faint:    #3d3a38;
+  --accent:        #c9a84c;
+  --accent-dim:    #7a6330;
+  --border:        #2a2826;
+  --border-subtle: #1e1c1a;
+
+  /* Arcade world: phosphor lives on the glass, gold stays the page accent */
+  --phosphor:      #ffb545;
+  --phosphor-soft: #d99433;
+  --phosphor-dim:  rgba(255, 181, 69, 0.14);
+  --glass-ground:  #0a0c08;
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body:    "DM Sans", system-ui, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body { max-width: 100%; overflow-x: hidden; }
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 181, 69, 0.05), transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% 38%, rgba(201, 168, 76, 0.035), transparent 75%);
+  color: var(--text);
+  font-family: var(--font-body);
+  line-height: 1.6;
+}
+
+/* ─── Nav (matches src/components/ui/Nav.tsx) ────────── */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.75rem;
+  padding: 1.1rem 1.5rem;
+  background-color: rgba(14, 14, 14, 0.82);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.nav a {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text-muted);
+  transition: color 0.2s ease;
+}
+.nav a:hover { color: var(--text); }
+.nav a.is-active { color: var(--accent); }
+
+/* ─── Page frame ─────────────────────────────────────── */
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 4.5rem 1.5rem 5rem;
+}
+
+.page-head { max-width: 640px; margin-bottom: 3.25rem; }
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--phosphor-soft);
+  margin-bottom: 1rem;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(2.75rem, 7vw, 5rem);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.025em;
+  color: var(--text);
+}
+
+.lede {
+  margin-top: 1.15rem;
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+  max-width: 46ch;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 3rem;
+  align-items: start;
+}
+
+/* ═══ THE CRT ════════════════════════════════════════════
+   Built from stacked layers inside one rounded, clipped
+   box. Bottom to top: picture, scanlines, shadow mask,
+   roll bar, grain, chromatic fringe, vignette, glass
+   sheen, flicker. Nothing here is an image.
+   ═══════════════════════════════════════════════════════ */
+
+.crt-stage { perspective: 1400px; }
+
+.bezel {
+  position: relative;
+  padding: 26px 26px 34px;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, #262523 0%, #1a1917 42%, #121110 100%);
+  border: 1px solid #302e2b;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.7),
+    0 40px 80px -30px rgba(0, 0, 0, 0.95),
+    0 0 90px -30px rgba(255, 181, 69, 0.16);
+}
+
+/* Hairline inside the bezel where plastic meets glass */
+.bezel::after {
+  content: "";
+  position: absolute;
+  inset: 20px;
+  border-radius: 26px;
+  border: 1px solid rgba(0, 0, 0, 0.75);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
+  pointer-events: none;
+}
+
+.screen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  /* Percentage radii pillow the corners the way real CRT glass does.
+     A uniform px radius reads as a flat panel. */
+  border-radius: 7% / 9%;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 118% 118% at 50% 44%,
+      #14180f 0%,
+      #0d1009 52%,
+      #070804 82%,
+      #040502 100%);
+  box-shadow:
+    inset 0 0 3px rgba(255, 232, 190, 0.16),
+    inset 0 0 70px rgba(0, 0, 0, 0.85),
+    0 0 60px -12px rgba(255, 181, 69, 0.22);
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* --- The picture: attract mode. This block is the slot a real
+       game canvas or iframe drops into later. ---------------- */
+.picture {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  padding: 8% 12%;
+  text-align: center;
+  /* Real SVG filter: phosphor bloom, defined at the foot of the page */
+  filter: url(#phosphor-bloom);
+}
+
+.game-title {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: clamp(1.4rem, 4.2vw, 2.5rem);
+  letter-spacing: 0.16em;
+  color: #ffd79a;
+  /* Chromatic split plus phosphor halo */
+  text-shadow:
+    -1px 0 rgba(255, 64, 64, 0.4),
+     1px 0 rgba(64, 190, 255, 0.34),
+     0 0 24px rgba(255, 181, 69, 0.55);
+}
+
+.game-sub {
+  font-family: var(--font-mono);
+  font-size: clamp(0.6rem, 1.5vw, 0.72rem);
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 181, 69, 0.62);
+}
+
+.rule-glow {
+  width: 42%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 181, 69, 0.5), transparent);
+}
+
+.insert {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: clamp(0.62rem, 1.6vw, 0.78rem);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #ffc76b;
+  animation: blink 1.9s steps(1, end) infinite;
+}
+
+@keyframes blink { 0%, 55% { opacity: 1; } 56%, 100% { opacity: 0.12; } }
+
+/* --- Scanlines: drift very slowly, fade toward the corners so
+       the raster looks like it is falling away over glass. --- */
+.scanlines {
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.46) 0px,
+    rgba(0, 0, 0, 0.46) 1px,
+    rgba(0, 0, 0, 0) 1px,
+    rgba(0, 0, 0, 0) 3px
+  );
+  background-size: 100% 3px;
+  -webkit-mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 55%, rgba(0, 0, 0, 0.45) 88%, rgba(0, 0, 0, 0.15) 100%);
+          mask-image: radial-gradient(ellipse 92% 92% at 50% 50%, #000 55%, rgba(0, 0, 0, 0.45) 88%, rgba(0, 0, 0, 0.15) 100%);
+  animation: drift 9s linear infinite;
+  opacity: 0.85;
+}
+@keyframes drift { to { background-position: 0 -3px; } }
+
+/* --- Shadow mask / screen door: RGB stripes at sub-pixel width --- */
+.mask {
+  background-image: repeating-linear-gradient(
+    90deg,
+    rgba(255, 70, 70, 0.09) 0px, rgba(255, 70, 70, 0.09) 1px,
+    rgba(70, 255, 130, 0.07) 1px, rgba(70, 255, 130, 0.07) 2px,
+    rgba(70, 130, 255, 0.09) 2px, rgba(70, 130, 255, 0.09) 3px
+  );
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+/* --- The slow bright band that rolls down a real tube --------- */
+.roll {
+  height: 26%;
+  inset: auto 0 0 0;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(255, 214, 150, 0.055) 45%,
+    rgba(255, 214, 150, 0.075) 55%,
+    transparent
+  );
+  animation: roll 7.5s linear infinite;
+}
+@keyframes roll { from { transform: translateY(-460%); } to { transform: translateY(100%); } }
+
+/* --- Grain: real feTurbulence, rendered as an inline SVG rect --- */
+.grain {
+  width: 100%;
+  height: 100%;
+  opacity: 0.19;
+  mix-blend-mode: overlay;
+}
+
+/* --- Chromatic aberration: red pulls left, cyan pulls right,
+       strongest at the edges where the glass bends most. ------- */
+.fringe {
+  box-shadow:
+    inset  4px 0 14px -8px rgba(255, 40, 40, 0.75),
+    inset -4px 0 14px -8px rgba(40, 190, 255, 0.7),
+    inset 0  4px 14px -9px rgba(255, 40, 40, 0.45),
+    inset 0 -4px 14px -9px rgba(40, 190, 255, 0.45);
+  mix-blend-mode: screen;
+}
+
+/* --- Vignette: corner darkening, the main curvature cue ------- */
+.vignette {
+  background:
+    radial-gradient(ellipse 78% 78% at 50% 50%,
+      transparent 40%,
+      rgba(0, 0, 0, 0.28) 72%,
+      rgba(0, 0, 0, 0.62) 88%,
+      rgba(0, 0, 0, 0.88) 100%);
+  box-shadow: inset 0 0 40px 12px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Glass: one broad elliptical sheen across the top left,
+       one weak counter-sheen bottom right, plus an edge
+       highlight for the thickness of the tube face. ----------- */
+.glass {
+  background:
+    radial-gradient(ellipse 62% 40% at 26% 12%, rgba(255, 250, 235, 0.075), transparent 62%),
+    radial-gradient(ellipse 46% 26% at 78% 92%, rgba(255, 240, 210, 0.03), transparent 65%);
+  box-shadow:
+    inset 0 2px 1px rgba(255, 255, 255, 0.09),
+    inset 0 -2px 1px rgba(255, 255, 255, 0.045);
+}
+
+.flicker {
+  background: rgba(255, 226, 180, 1);
+  opacity: 0.014;
+  mix-blend-mode: overlay;
+  animation: flicker 0.14s steps(2, end) infinite;
+}
+@keyframes flicker {
+  0%   { opacity: 0.012; }
+  50%  { opacity: 0.028; }
+  100% { opacity: 0.016; }
+}
+
+/* --- Bezel furniture: a power lamp and a moulded vent line.
+       No controls of any kind. --------------------------------- */
+.bezel-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+.vent {
+  width: 54px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.8), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.9);
+}
+.lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ffd48a, #d8892a 60%, #6c3f0e 100%);
+  box-shadow: 0 0 9px rgba(255, 168, 60, 0.75), inset 0 0 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Pool of light the tube throws on the floor beneath it */
+.crt-glow {
+  height: 60px;
+  margin: -6px auto 0;
+  max-width: 78%;
+  background: radial-gradient(ellipse 50% 100% at 50% 0%, rgba(255, 181, 69, 0.16), transparent 72%);
+  filter: blur(6px);
+}
+
+.crt-caption {
+  margin-top: 0.5rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ═══ RIGHT RAIL: the scoreboard ═════════════════════════ */
+.rail { display: flex; flex-direction: column; gap: 1.75rem; }
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--border);
+}
+.rail-head h2 {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.rail-head span {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* --- The champion block. Own panel, own frame, own gap.
+       This is the loudest thing on the page after the tube. --- */
+.champion {
+  position: relative;
+  padding: 1.4rem 1.35rem 1.25rem;
+  border: 1px solid var(--accent-dim);
+  border-radius: 4px;
+  background:
+    linear-gradient(180deg, rgba(201, 168, 76, 0.07), rgba(201, 168, 76, 0.015) 55%, transparent),
+    var(--bg-card);
+  box-shadow:
+    inset 0 1px 0 rgba(201, 168, 76, 0.18),
+    0 0 44px -18px rgba(201, 168, 76, 0.6);
+}
+/* Thick gold spine on the left edge */
+.champion::before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: -1px;
+  bottom: -1px;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), var(--accent-dim));
+  border-radius: 4px 0 0 4px;
+}
+
+.champion-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1rem;
+}
+
+.champion-body {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.champion-initials {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 2.6rem;
+  line-height: 0.85;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  text-shadow: 0 0 26px rgba(201, 168, 76, 0.35);
+}
+
+.champion-score {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.75rem;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  text-shadow: 0 0 22px rgba(201, 168, 76, 0.45);
+}
+
+.champion-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.05rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(201, 168, 76, 0.16);
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* --- The break. Reads as "everything below is a different
+       class of thing." ---------------------------------------- */
+.break {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 0.25rem 0 -0.35rem;
+}
+.break span {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.break i {
+  flex: 1;
+  height: 0;
+  border-top: 1px dashed var(--border);
+}
+
+/* --- The table ------------------------------------------- */
+.board { list-style: none; }
+
+.board li {
+  display: grid;
+  grid-template-columns: 2.1rem auto 1fr auto;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.62rem 0.4rem;
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.18s ease, color 0.18s ease;
+}
+.board li:hover { background-color: rgba(255, 181, 69, 0.045); }
+.board li:hover .b-name { color: var(--text); }
+.board li:hover .b-score { color: var(--phosphor); }
+
+.b-rank {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+.b-name {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  color: var(--text-muted);
+  transition: color 0.18s ease;
+}
+.b-dots {
+  border-bottom: 1px dotted var(--text-faint);
+  transform: translateY(-0.28em);
+  min-width: 1rem;
+}
+.b-score {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: right;
+  transition: color 0.18s ease;
+}
+
+.board-note {
+  margin-top: 0.9rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ═══ COIN SLOT ══════════════════════════════════════════ */
+.coin-module {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.6rem 1rem 1.35rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.coin-stage {
+  perspective: 420px;
+  height: 74px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.coin-bob {
+  animation: bob 3.4s ease-in-out infinite;
+  transform-style: preserve-3d;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(-16px); }
+  50%      { transform: translateY(-4px); }
+}
+
+.coin {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  /* Milled edge: alternating light and dark facets around the rim */
+  background: conic-gradient(
+    from 205deg,
+    #f7e7b6, #a8801f 11%, #fbf1cf 23%, #8f6c22 37%,
+    #f2ddaa 51%, #a37c26 65%, #fdf4d6 79%, #b08a30 91%, #f7e7b6 100%
+  );
+  box-shadow:
+    0 0 16px rgba(201, 168, 76, 0.45),
+    0 6px 10px -4px rgba(0, 0, 0, 0.8);
+  animation: turn 7s linear infinite;
+}
+/* Coin face */
+.coin::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #fff7dd 0%, #e3c274 42%, #b8912f 78%, #8a6a22 100%);
+  box-shadow:
+    inset 0 1px 2px rgba(255, 255, 255, 0.55),
+    inset 0 -2px 3px rgba(0, 0, 0, 0.4);
+}
+/* Shine that sweeps as the coin turns */
+.coin::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.7) 48%, transparent 62%);
+  z-index: 2;
+  animation: shine 7s linear infinite;
+}
+
+@keyframes turn {
+  from { transform: rotateY(0deg); }
+  to   { transform: rotateY(360deg); }
+}
+@keyframes shine {
+  0%, 100% { opacity: 0.15; }
+  42%      { opacity: 0.75; }
+  70%      { opacity: 0.1; }
+}
+
+/* Shadow the coin casts on the plate, tied to the bob */
+.coin-shadow {
+  width: 30px;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75), transparent 72%);
+  filter: blur(2px);
+  animation: shadow-bob 3.4s ease-in-out infinite;
+}
+@keyframes shadow-bob {
+  0%, 100% { transform: scale(0.82); opacity: 0.45; }
+  50%      { transform: scale(1.06); opacity: 0.7; }
+}
+
+/* The plate: brushed metal, screwed to the panel, one slot cut in it */
+.plate {
+  position: relative;
+  margin-top: 4px;
+  width: 104px;
+  padding: 11px 0 12px;
+  display: flex;
+  justify-content: center;
+  border-radius: 5px;
+  border: 1px solid #3b3936;
+  background:
+    repeating-linear-gradient(90deg,
+      rgba(255, 255, 255, 0.022) 0px, rgba(255, 255, 255, 0.022) 1px,
+      rgba(0, 0, 0, 0.05) 1px, rgba(0, 0, 0, 0.05) 3px),
+    linear-gradient(180deg, #35332f 0%, #211f1d 55%, #171614 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.8),
+    0 8px 18px -8px rgba(0, 0, 0, 0.9);
+}
+/* Two countersunk screws */
+.plate::before,
+.plate::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  margin-top: -2.5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a4844, #1a1917 75%);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.6), 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+.plate::before { left: 9px; }
+.plate::after  { right: 9px; }
+
+.slot {
+  width: 40px;
+  height: 9px;
+  border-radius: 5px;
+  background: linear-gradient(180deg, #000 0%, #050505 60%, #0b0a09 100%);
+  box-shadow:
+    inset 0 3px 5px rgba(0, 0, 0, 1),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.13),
+    0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.coin-caption {
+  margin-top: 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  text-align: center;
+}
+
+/* ─── Footer ─────────────────────────────────────────── */
+.foot {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 4rem;
+  padding: 2rem 1.5rem 3rem;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr); gap: 2.75rem; }
+  .rail { max-width: 520px; width: 100%; margin: 0 auto; }
+}
+
+@media (max-width: 560px) {
+  .wrap { padding: 3rem 1.1rem 3.5rem; }
+  .bezel { padding: 14px 14px 24px; border-radius: 20px; }
+  .bezel::after { inset: 10px; border-radius: 16px; }
+  .champion-initials { font-size: 2.1rem; }
+  .champion-score { font-size: 1.4rem; }
+  .champion-body { flex-direction: column; align-items: flex-start; gap: 0.6rem; }
+  .nav { gap: 1.1rem; }
+}
+
+/* ─── Reduced motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .scanlines, .roll, .flicker, .insert,
+  .coin-bob, .coin, .coin::before, .coin-shadow {
+    animation: none !important;
+  }
+  .coin-bob { transform: translateY(-10px); }
+  .flicker { opacity: 0.012; }
+  .roll { display: none; }
+  .insert { opacity: 1; }
+  * { transition: none !important; }
+}
+</style>
+</head>
+
+<body>
+
+<nav class="nav">
+  <a href="#">Home</a>
+  <a href="#">Story</a>
+  <a href="#">Portfolio</a>
+  <a href="#">Garden</a>
+  <a href="#" class="is-active">Arcade</a>
+</nav>
+
+<main class="wrap">
+
+  <header class="page-head">
+    <p class="eyebrow">[section label]</p>
+    <h1 class="title">[page title]</h1>
+    <p class="lede">[one line about the arcade]</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ───────────── CRT ───────────── -->
+    <section class="crt-stage">
+      <div class="bezel">
+        <div class="screen">
+
+          <!--
+            SLOT: everything inside .picture is placeholder attract mode.
+            A real game (canvas or an iframe of arcade-one-blue.vercel.app)
+            replaces this block and inherits every glass layer below it.
+          -->
+          <div class="picture">
+            <div class="game-title">[game title]</div>
+            <div class="rule-glow"></div>
+            <div class="game-sub">[attract mode line]</div>
+            <div class="insert">[insert coin]</div>
+          </div>
+
+          <div class="layer scanlines"></div>
+          <div class="layer mask"></div>
+          <div class="layer roll"></div>
+
+          <svg class="layer grain" aria-hidden="true">
+            <filter id="crt-grain">
+              <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" stitchTiles="stitch" />
+              <feColorMatrix type="saturate" values="0" />
+            </filter>
+            <rect width="100%" height="100%" filter="url(#crt-grain)" />
+          </svg>
+
+          <div class="layer fringe"></div>
+          <div class="layer vignette"></div>
+          <div class="layer glass"></div>
+          <div class="layer flicker"></div>
+
+        </div>
+
+        <div class="bezel-foot">
+          <div class="vent"></div>
+          <div class="lamp"></div>
+          <div class="vent"></div>
+        </div>
+      </div>
+
+      <div class="crt-glow"></div>
+      <p class="crt-caption">[caption under the screen]</p>
+    </section>
+
+    <!-- ───────────── Scoreboard ───────────── -->
+    <aside class="rail">
+
+      <div class="rail-head">
+        <h2>[leaderboard label]</h2>
+        <span>[game]</span>
+      </div>
+
+      <!-- The all-time high. Its own frame, its own scale, its own gap. -->
+      <div class="champion">
+        <div class="champion-label">[all-time high label]</div>
+        <div class="champion-body">
+          <div class="champion-initials">PJN</div>
+          <div class="champion-score">184,750</div>
+        </div>
+        <div class="champion-meta">
+          <span>[game]</span>
+          <span>[date]</span>
+        </div>
+      </div>
+
+      <div class="break">
+        <i></i><span>[everyone else label]</span><i></i>
+      </div>
+
+      <ol class="board">
+        <li><span class="b-rank">02</span><span class="b-name">RKO</span><span class="b-dots"></span><span class="b-score">96,410</span></li>
+        <li><span class="b-rank">03</span><span class="b-name">AVA</span><span class="b-dots"></span><span class="b-score">88,205</span></li>
+        <li><span class="b-rank">04</span><span class="b-name">DTM</span><span class="b-dots"></span><span class="b-score">71,940</span></li>
+        <li><span class="b-rank">05</span><span class="b-name">JLW</span><span class="b-dots"></span><span class="b-score">64,330</span></li>
+        <li><span class="b-rank">06</span><span class="b-name">ZEK</span><span class="b-dots"></span><span class="b-score">52,875</span></li>
+        <li><span class="b-rank">07</span><span class="b-name">MRB</span><span class="b-dots"></span><span class="b-score">41,600</span></li>
+        <li><span class="b-rank">08</span><span class="b-name">CAS</span><span class="b-dots"></span><span class="b-score">33,215</span></li>
+        <li><span class="b-rank">09</span><span class="b-name">GRY</span><span class="b-dots"></span><span class="b-score">27,480</span></li>
+        <li><span class="b-rank">10</span><span class="b-name">NEO</span><span class="b-dots"></span><span class="b-score">19,055</span></li>
+      </ol>
+
+      <p class="board-note">[note under the table]</p>
+
+      <!-- Coin slot: the one piece of cabinet hardware on the page -->
+      <div class="coin-module">
+        <div class="coin-stage">
+          <div class="coin-bob"><div class="coin"></div></div>
+          <div class="coin-shadow"></div>
+        </div>
+        <div class="plate"><div class="slot"></div></div>
+        <p class="coin-caption">[coin slot line]</p>
+      </div>
+
+    </aside>
+
+  </div>
+</main>
+
+<footer class="foot">[footer line]</footer>
+
+<!-- Real SVG filter: the phosphor bloom on the picture layer -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="phosphor-bloom" x="-40%" y="-40%" width="180%" height="180%">
+    <feGaussianBlur in="SourceGraphic" stdDeviation="2.6" result="blur" />
+    <feColorMatrix in="blur" type="matrix"
+      values="1.2 0   0   0 0
+              0   1.0 0   0 0
+              0   0   0.7 0 0
+              0   0   0   0.85 0" result="warm" />
+    <feMerge>
+      <feMergeNode in="warm" />
+      <feMergeNode in="SourceGraphic" />
+    </feMerge>
+  </filter>
+</svg>
+
+</body>
+</html>
