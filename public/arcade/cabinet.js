@@ -227,7 +227,16 @@
     var g = game;
     return net.fetchScores(g.id, g.mode, 8).then(function (rows) {
       if (game !== g) return;                 // dial moved while we waited
-      if (!rows.length) { board.innerHTML = ''; return; }
+      // Nobody has played this one yet. Say so, rather than leaving the
+      // previous game's champion sitting there looking like this game's.
+      if (!rows.length) {
+        champInitials.textContent = '---';
+        champScore.textContent = '---';
+        if (champDate) champDate.textContent = '';
+        board.innerHTML = '<li class="b-empty">' +
+          (net.isOffline() ? 'BOARD UNREACHABLE' : 'BE THE FIRST') + '</li>';
+        return;
+      }
 
       var top = rows[0];
       champInitials.textContent = top.player;

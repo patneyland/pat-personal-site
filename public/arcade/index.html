@@ -590,6 +590,20 @@ body {
   transition: background-color 0.18s ease, color 0.18s ease;
 }
 .board li:hover { background-color: rgba(255, 181, 69, 0.045); }
+
+/* Nobody on the board yet. One centred line where the rows would be, so the
+   rail keeps its shape instead of collapsing to a gap. */
+/* Selector has to out-specify `.board li`, which sets display:grid. As a bare
+   .b-empty it loses the tie and the text wraps inside the 1.9rem rank column. */
+.board li.b-empty {
+  display: block;
+  text-align: center;
+  padding-top: 1.2rem;
+  color: var(--text-faint);
+  letter-spacing: 0.16em;
+  pointer-events: none;
+}
+.board li.b-empty:hover { background-color: transparent; }
 .board li:hover .b-name { color: var(--text); }
 .board li:hover .b-score { color: var(--phosphor); }
 

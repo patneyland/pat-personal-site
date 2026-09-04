@@ -22,9 +22,11 @@
    time, minesweeper the reverse. There is no UPDATE or DELETE policy, so a
    score cannot be taken back once it is posted.
 
-   FALLBACK: the board starts empty, and opened from file:// the origin is
-   null and Supabase may refuse the request. Either way a read degrades to
-   local sample rows so the page never looks broken.
+   There is no sample data and no fallback board. This page is public, so a
+   made-up score under a name that reads like a real person is worse than an
+   empty rail. A read that fails reports itself through isOffline() and the
+   cabinet says the board is unreachable; a read that succeeds with no rows
+   renders as the empty board it is.
    ========================================================================== */
 'use strict';
 
@@ -35,30 +37,6 @@ window.ArcadeNet = (function () {
   var PLAYER_KEY = 'arcade_player';
 
   var HEADERS = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-
-  /* Sample boards, used when the network is unreachable (file://, offline,
-     RLS refusal). The page must never look broken just because it is being
-     previewed from disk. */
-  var FALLBACK = {
-    snake: [
-      { player: 'NEYLAND',  score: 184750 }, { player: 'ROOKIE',  score: 96410 },
-      { player: 'AVALON',   score: 88205 },  { player: 'DIGDUG',  score: 71940 },
-      { player: 'JLWATTS',  score: 64330 },  { player: 'ZEKE',    score: 52875 },
-      { player: 'HOTBOX',   score: 41600 },  { player: 'CASSIDY', score: 33215 }
-    ],
-    minesweeper: [
-      { player: 'NEYLAND',  time_ms: 41200 },  { player: 'SWEEPER', time_ms: 53800 },
-      { player: 'ROOKIE',   time_ms: 62400 },  { player: 'HOTBOX',  time_ms: 74100 },
-      { player: 'AVALON',   time_ms: 81600 },  { player: 'DIGDUG',  time_ms: 97300 },
-      { player: 'ZEKE',     time_ms: 108900 }, { player: 'JLWATTS', time_ms: 125400 }
-    ],
-    asteroids: [
-      { player: 'NEYLAND',  score: 42780 }, { player: 'VECTOR',  score: 31150 },
-      { player: 'ROCKHTR',  score: 27600 }, { player: 'AVALON',  score: 22940 },
-      { player: 'DRIFTER',  score: 18320 }, { player: 'ZEKE',    score: 14775 },
-      { player: 'ROOKIE',   score: 11040 }, { player: 'CASSIDY', score: 8615 }
-    ]
-  };
 
   /* Which column each game ranks on, and which way. */
   var METRIC = {
@@ -81,7 +59,7 @@ window.ArcadeNet = (function () {
     var m = METRIC[game];
     if (!m) return Promise.resolve([]);
 
-    if (offline) return Promise.resolve(sample(game, limit));
+    if (offline) return Promise.resolve([]);
 
     var url = URL + '/rest/v1/' + TABLE + ''
       + '?game=eq.' + encodeURIComponent(game)
@@ -96,20 +74,16 @@ window.ArcadeNet = (function () {
         return res.json();
       })
       .then(function (rows) {
-        // An empty live board is still a live board, but it looks broken on a
-        // mockup, so only real rows win.
-        return (rows && rows.length) ? rows : sample(game, limit);
+        // An empty board is a real answer and it gets shown as one. Samples
+        // are for a request that never arrived, nothing else. The page is
+        // public now, and inventing scores under names that read like real
+        // people is worse than an honest empty board.
+        return rows || [];
       })
       .catch(function () {
         offline = true;
-        return sample(game, limit);
+        return [];
       });
-  }
-
-  function sample(game, limit) {
-    return (FALLBACK[game] || []).slice(0, limit).map(function (r) {
-      return { id: null, player: r.player, score: r.score, time_ms: r.time_ms, sample: true };
-    });
   }
 
   /** Insert one row. Rejects with a human-readable Error on failure. */
