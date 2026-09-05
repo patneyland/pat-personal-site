@@ -1,17 +1,22 @@
-/* The garden world. Shared by the plot and the reading pages.
+/* The garden world.
  *
- * A hue, not a place. Patrick ruled out a depicted garden on 2026-09-04: no
- * moss, no soil, no shafts of overhead light. The green is here so that moving
- * from the portfolio to the garden is an unmistakable edge, and so the nav can
- * use it as this district's colour. It is never asked to represent a plant.
+ * A hue, and nothing else. Patrick ruled out a depicted garden on 2026-09-04:
+ * no moss, no soil, no shafts of overhead light. He then cut the green itself
+ * later the same day, so the ground is now the site's own dark and only the
+ * accent tells the district apart.
  *
- * The garden idea shows up in exactly one visual place now, the marks in
- * PenMark.tsx. See docs/refinement.md section 4. */
+ * Periwinkle sits next to the portfolio's blue on purpose. The two pages are
+ * laid out identically and are meant to read as siblings, with the colour
+ * carrying the difference. See docs/refinement.md section 0.
+ */
 export const G = {
-  ground: "#101a13",
-  ink: "#e0e9d9",
-  inkSoft: "#8fa286",
-  accent: "#9ecb7e",
-  edge: "rgba(158,203,126,0.2)",
-  edgeHot: "rgba(158,203,126,0.55)",
+  ground: "var(--bg)",
+  ink: "var(--text)",
+  inkSoft: "var(--text-muted)",
+  accent: "#a9a3ec",
+  accentDim: "#4f4a86",
+  edge: "var(--border)",
+  edgeHot: "rgba(169,163,236,0.45)",
+  surface: "rgba(255,255,255,0.015)",
+  surfaceHot: "rgba(169,163,236,0.05)",
 };

@@ -19,4 +19,6 @@ export const P = {
   accentDim: "#3a6a86",
   edge: "var(--border)",
   edgeHot: "rgba(127,192,232,0.45)",
+  surface: "var(--bg-card)",
+  surfaceHot: "rgba(127,192,232,0.05)",
 };

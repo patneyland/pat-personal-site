@@ -1,5 +1,6 @@
 ---
 draft: true
+weight: minor
 order: 1
 tag: Web App
 year: 2025

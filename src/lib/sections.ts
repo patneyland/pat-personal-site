@@ -34,7 +34,7 @@ export const SECTIONS: Section[] = [
   /* See portfolioTheme.ts. The one district that did not have its own colour. */
   { href: "/portfolio", label: "Portfolio", hue: "#7fc0e8" },
   /* See gardenTheme.ts. */
-  { href: "/garden", label: "Garden", hue: "#9ecb7e" },
+  { href: "/garden", label: "Garden", hue: "#a9a3ec" },
 ];
 
 /** The district a path is inside, or null for the front door and anything unlisted. */

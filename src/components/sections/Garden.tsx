@@ -1,39 +1,70 @@
 import BlurFade from "@/components/ui/BlurFade";
-import { GardenNote, GardenLine } from "@/components/sections/GardenBed";
+import CardLayout, { type Card } from "@/components/sections/CardLayout";
+import PenMark from "@/components/ui/PenMark";
 import { G } from "@/components/sections/gardenTheme";
 import { getEntries } from "@/lib/garden";
 
 /**
  * The plot.
  *
- * Simplified 2026-09-04. What went: the four growth stages, the emoji that
- * labelled them, the legend that explained them, and the three-across grid.
- * What stayed: the green, the eyebrow, and the entries.
+ * Laid out by the same component the portfolio uses, at Patrick's direction on
+ * 2026-09-04: the two pages differ in colour and nothing else. The one
+ * exception he asked for is the mark before each title, which is the only
+ * garden-ish thing left after the green and the depicted greenhouse were cut.
  *
- * The eyebrow is doing the work the stages were failing to do. It says the
- * honest thing once, at the top, in Patrick's words, which is worth more than
- * four gradations nobody could fill in truthfully.
+ * The weight tiers are derived here rather than authored, because a garden
+ * entry has nothing to author them from. The most recently tended note leads,
+ * the rest sit in the grid, and a title with nothing written behind it drops
+ * to the index.
  */
 export default async function Garden() {
   const entries = await getEntries();
   const notes = entries.filter((e) => e.kind === "note");
   const lines = entries.filter((e) => e.kind === "line");
 
+  const cards: Card[] = [
+    ...notes.map((entry, i) => ({
+      key: entry.slug,
+      weight: (i === 0 ? "lead" : "standard") as Card["weight"],
+      eyebrow: entry.tags.length ? entry.tags.join(" · ") : null,
+      meta: entry.tended || entry.planted || null,
+      title: entry.title,
+      blurbHtml: null,
+      blurbText: entry.excerpt,
+      href: entry.external ?? `/garden/${entry.slug}`,
+      internal: !entry.external,
+      cta: entry.external ? "Read it elsewhere" : "Read it",
+      image: null,
+      mark: <PenMark mark="note" size={i === 0 ? 26 : 16} />,
+    })),
+    ...lines.map((entry) => ({
+      key: entry.slug,
+      weight: "minor" as Card["weight"],
+      eyebrow: entry.tags.length ? entry.tags.join(" · ") : null,
+      meta: entry.tended || entry.planted || null,
+      title: entry.title,
+      blurbHtml: null,
+      blurbText: null,
+      href: null,
+      internal: false,
+      cta: null,
+      image: null,
+      mark: <PenMark mark="line" size={14} />,
+    })),
+  ];
+
   return (
     <section
       style={{
         position: "relative",
         backgroundColor: G.ground,
-        padding: "3.5rem 0 7rem",
-        /* Fill what is left under the sticky nav, so a short plot does not
-           show the page background below it and does not add a scrollbar. */
-        minHeight: "calc(100svh - 3.35rem)",
-        overflow: "hidden",
+        padding: "3.5rem 0 6rem",
+        minHeight: "100vh",
       }}
     >
       <div
-        className="relative mx-auto"
-        style={{ maxWidth: "44rem", padding: "0 1.5rem", zIndex: 1 }}
+        className="mx-auto"
+        style={{ maxWidth: "1000px", padding: "0 1.5rem" }}
       >
         <BlurFade delay={0.05}>
           <p
@@ -82,53 +113,12 @@ export default async function Garden() {
           </p>
         </BlurFade>
 
-        {notes.length > 0 && (
-          <div
-            style={{
-              marginTop: "2.75rem",
-              display: "flex",
-              flexDirection: "column",
-              gap: "0.9rem",
-            }}
-          >
-            {notes.map((entry, i) => (
-              <GardenNote
-                key={entry.slug}
-                entry={entry}
-                delay={0.24 + i * 0.06}
-              />
-            ))}
-          </div>
-        )}
-
-        {/* Titles with nothing written yet, gathered under the notes rather
-            than mixed in among them. */}
-        {lines.length > 0 && (
-          <div style={{ marginTop: notes.length > 0 ? "3rem" : "2.75rem" }}>
-            <BlurFade delay={0.24 + notes.length * 0.06}>
-              <p
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.62rem",
-                  letterSpacing: "0.16em",
-                  textTransform: "uppercase",
-                  color: G.inkSoft,
-                  opacity: 0.7,
-                  marginBottom: "0.6rem",
-                }}
-              >
-                Planted, not written
-              </p>
-            </BlurFade>
-            {lines.map((entry, i) => (
-              <GardenLine
-                key={entry.slug}
-                entry={entry}
-                delay={0.3 + notes.length * 0.06 + i * 0.05}
-              />
-            ))}
-          </div>
-        )}
+        {/* "Planted, not written" is a placeholder label, not Patrick's copy. */}
+        <CardLayout
+          cards={cards}
+          theme={G}
+          indexLabel={lines.length > 0 ? "Planted, not written" : undefined}
+        />
 
         {entries.length === 0 && (
           <BlurFade delay={0.24}>

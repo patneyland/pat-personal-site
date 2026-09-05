@@ -157,48 +157,50 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
 
 /* ─── Garden reading pages ───────────────────────────────────── */
+/* Neutrals plus the district's periwinkle. Was hardcoded green until
+   2026-09-04; keep colours pointed at gardenTheme.ts values, not new ones. */
 .garden-prose {
   font-size: 1.0625rem;
   line-height: 1.85;
-  color: #c3d2b8;
+  color: #c7ced6;
 }
 .garden-prose > * + * { margin-top: 1.35rem; }
 .garden-prose h2,
 .garden-prose h3 {
   font-family: var(--font-display), Georgia, serif;
-  color: #e0e9d9;
+  color: var(--text);
   line-height: 1.25;
   margin-top: 2.5rem;
 }
 .garden-prose h2 { font-size: 1.5rem; }
 .garden-prose h3 { font-size: 1.2rem; }
 .garden-prose a {
-  color: #9ecb7e;
+  color: #a9a3ec;
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
 }
-.garden-prose a:hover { color: #e0e9d9; }
+.garden-prose a:hover { color: var(--text); }
 .garden-prose ul,
 .garden-prose ol { padding-left: 1.4rem; }
 .garden-prose li + li { margin-top: 0.5rem; }
 .garden-prose blockquote {
-  border-left: 2px solid rgba(158,203,126,0.4);
+  border-left: 2px solid rgba(169,163,236,0.4);
   padding-left: 1.1rem;
-  color: #8fa286;
+  color: var(--text-muted);
   font-style: italic;
 }
 .garden-prose code {
   font-family: var(--font-mono), monospace;
   font-size: 0.9em;
-  background: rgba(158,203,126,0.1);
+  background: rgba(169,163,236,0.1);
   padding: 0.1em 0.35em;
   border-radius: 3px;
 }
 .garden-prose pre {
   overflow-x: auto;
   background: rgba(0,0,0,0.35);
-  border: 1px solid rgba(158,203,126,0.2);
+  border: 1px solid rgba(169,163,236,0.2);
   border-radius: 6px;
   padding: 1rem 1.1rem;
 }
@@ -210,7 +212,7 @@ body {
   max-width: 100%;
   height: auto;
   border-radius: 6px;
-  border: 1px solid rgba(158,203,126,0.18);
+  border: 1px solid rgba(169,163,236,0.18);
 }
 /* Browsers give figure a 40px side margin by default, which breaks the column.
    Zero the sides, keep a little more air than a paragraph gets. */
@@ -219,9 +221,23 @@ body {
   font-family: var(--font-mono), monospace;
   font-size: 0.68rem;
   letter-spacing: 0.04em;
-  color: #8fa286;
+  color: var(--text-muted);
   margin-top: 0.6rem;
   text-align: center;
+}
+
+/* The standard tier of CardLayout. Two columns, one on a narrow screen.
+   In CSS rather than inline so it can carry the media query. */
+.card-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+  /* start, not stretch. A card with no image should be short, not padded out
+     to match a taller neighbour with an empty middle. */
+  align-items: start;
+}
+@media (min-width: 44rem) {
+  .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
 }
 
 /* Markdown blurbs inside portfolio tiles stay tight and inherit tile colour. */

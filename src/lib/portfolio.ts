@@ -4,9 +4,26 @@ import matter from "gray-matter";
 import { remark } from "remark";
 import html from "remark-html";
 
+/**
+ * How much room an entry gets.
+ *
+ * Set in frontmatter, so the page's argument is Patrick's to make in markdown
+ * rather than mine to make in code. Eight entries all drawn at the same size
+ * says they are all equally important, which was never true and left the page
+ * with nothing to say.
+ *
+ *   lead     - one at a time. Full width, large image, blurb shown
+ *   standard - the two-column grid
+ *   minor    - a line in an index. For a link with no writing behind it,
+ *              which is not a card, it is an entry in a list
+ */
+export type Weight = "lead" | "standard" | "minor";
+const WEIGHTS: Weight[] = ["lead", "standard", "minor"];
+
 export type Item = {
   slug: string;
   order: number;
+  weight: Weight;
   tag: string;
   year: string;
   title: string;
@@ -48,10 +65,15 @@ export async function getItems(): Promise<Item[]> {
 
       const href = data.href ? String(data.href) : null;
 
+      const weight: Weight = WEIGHTS.includes(data.weight as Weight)
+        ? (data.weight as Weight)
+        : "standard";
+
       return {
         draft: data.draft === true,
         slug,
         order: Number.isFinite(Number(data.order)) ? Number(data.order) : 999,
+        weight,
         tag: String(data.tag ?? ""),
         year: data.year ? String(data.year) : "",
         title: String(data.title ?? slug),
