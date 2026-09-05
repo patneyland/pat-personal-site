@@ -95,7 +95,7 @@ Live at https://www.patrickneyland.com.
 |---|---|
 | `/` | **Boring mode.** A plain resume: Times, black on white, ruled section heads, no nav, no animation. The whole page is `content/resume.md`. It opens with a note inviting you to the designed version. **The plainness is the point. Do not style this page.** |
 | `/fun` | The designed home. Photo left, bio and three links right. Sized to fit one screen. |
-| `/story` | The polaroid collage. Patrick likes it: **do not restyle it.** Gary crosses it, running the top edges of the cards and leaping between them as you scroll, and finishing on the torn note. That layer is `StoryGary`; the collage itself is unchanged apart from the `data-surface` hooks it reads. |
+| `/story` | The polaroid collage. Patrick likes it: **do not restyle it.** The one sanctioned change, 2026-09-04, was taking the handwriting off it: the page name and the torn note are Playfair now and the captions are italic DM Sans, because `--font-hand` is Gary's alone (see design.md). The collage itself, the polaroids, tape, shadows and drawn arrows, stays. Gary crosses it, running the top edges of the cards and leaping between them as you scroll, and finishing on the torn note. That layer is `StoryGary`; the collage itself is unchanged apart from the `data-surface` hooks it reads. |
 | `/portfolio` | Tiles from `content/portfolio/`. |
 | `/portfolio/woodworking` | Live but has no photos yet. |
 | `/garden` | Works in progress from `content/garden/`, marked seed / sprout / growing / ripe. |

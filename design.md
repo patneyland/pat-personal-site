@@ -265,3 +265,20 @@ site has to keep working as a portfolio.
 
 Still undecided: how much wobble, whether Patrick draws on paper or iPad, and whether to replace
 Caveat with his own handwriting via Calligraphr.
+
+### The handwriting belongs to Gary
+
+Set 2026-09-04. `--font-hand` is Gary's voice and nothing else's. He is the only
+one on this site who writes by hand, so handwriting on the page means he is
+speaking.
+
+It used to also set the story's page name, the polaroid captions and the torn
+note's heading. Those moved to Playfair and to italic DM Sans, the same
+photo-caption treatment `/fun` already uses. Do not reach for `--font-hand` for
+a heading, a label or a caption again; if it is not Gary talking, it is not the
+hand.
+
+This also holds the font count down. The site loads five faces already
+(Playfair, DM Sans, JetBrains Mono, Caveat, EB Garamond), and `/fun` alone uses
+four of them. The next typographic decision here should subtract, not add. When
+Patrick's own handwriting arrives it replaces Caveat rather than joining it.

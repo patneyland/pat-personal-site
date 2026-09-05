@@ -118,11 +118,15 @@ const Polaroid = forwardRef<
       <div
         className="text-center"
         style={{
-          fontFamily: "var(--font-hand)",
-          fontSize: "1.55rem",
-          lineHeight: 1.1,
-          padding: "0.6rem 0.3rem 0.8rem",
-          color: INK,
+          /* Italic DM Sans, the same treatment the family photo on /fun uses.
+             Was Caveat until 2026-09-04, when Patrick reserved the handwriting
+             for Gary alone: he is the only one on this site who writes by
+             hand. */
+          fontStyle: "italic",
+          fontSize: "0.95rem",
+          lineHeight: 1.3,
+          padding: "0.7rem 0.5rem 0.9rem",
+          color: INK_SOFT,
         }}
       >
         {hand}
@@ -500,10 +504,16 @@ export default function Story({
         <BlurFade delay={0.05}>
           <p
             style={{
-              fontFamily: "var(--font-hand)",
-              fontSize: "2.4rem",
+              /* The page-name slot, set the way every other page sets it.
+                 The rotation went with the handwriting: a tilted serif reads
+                 as a mistake rather than as a pinned note. */
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(2.4rem, 7vw, 4.25rem)",
+              fontWeight: 700,
+              lineHeight: 1,
+              letterSpacing: "-0.025em",
               color: "var(--accent)",
-              transform: "rotate(-2deg)",
+              textWrap: "balance",
             }}
           >
             my story
@@ -683,8 +693,10 @@ export default function Story({
           >
             <h4
               style={{
-                fontFamily: "var(--font-hand)",
-                fontSize: "2rem",
+                fontFamily: "var(--font-display)",
+                fontSize: "1.6rem",
+                fontWeight: 700,
+                letterSpacing: "-0.015em",
                 color: INK,
               }}
             >

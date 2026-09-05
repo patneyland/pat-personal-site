@@ -126,8 +126,7 @@ export default async function Garden() {
               style={{
                 marginTop: "2.5rem",
                 maxWidth: "36rem",
-                fontFamily: "var(--font-hand)",
-                fontSize: "1.6rem",
+                fontSize: "1.1rem",
                 lineHeight: 1.4,
                 color: G.accent,
               }}
