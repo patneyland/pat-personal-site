@@ -994,6 +994,31 @@ body {
 /* The glow follows whatever colour the row landed on */
 .b-name { text-shadow: 0 0 14px currentColor; }
 .b-rank { opacity: 0.72; }
+
+/* ── Pat's own rows ──────────────────────────────────────
+   The crown is the indicator. These rules sit after the nth-child rainbow
+   above on purpose: same specificity, so source order is what wins. */
+.board li.is-owner .b-name,
+.board li.is-owner .b-rank { color: var(--sc-score); opacity: 1; }
+.b-crown {
+  display: inline-block;
+  margin-left: 7px;
+  color: var(--sc-score);
+  filter: drop-shadow(0 0 5px var(--ink-glow));
+  vertical-align: baseline;
+}
+.b-crown svg { width: 10px; height: 10px; display: block; }
+/* His best, pinned back on when the top ten has pushed it off. */
+.board li.b-gap {
+  display: block;
+  padding: 3px 0;
+  text-align: center;
+  letter-spacing: 0.35em;
+  color: var(--sc-rule);
+  opacity: 0.45;
+}
+.board li.b-gap:hover { background-color: transparent; }
+.board li.is-pinned { background-color: rgba(255, 233, 61, 0.05); }
 /* Ranks stay a shade quieter than the name they belong to */
 
 
@@ -1026,12 +1051,17 @@ body {
 }
 .vol-btn:hover { opacity: 1; color: var(--sc-score); }
 .vol-btn:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 3px; }
-.vol-btn svg { width: 22px; height: 22px; display: block; }
-/* the slash only exists when muted */
+.vol-btn svg { width: 22px; height: 22px; display: block; overflow: visible; }
+/* Muted swaps the sound waves for a cross in the same place. A full diagonal
+   through the icon was tried first and it does not survive 22px: the cone's
+   own edge runs parallel to it, so the line eats the speaker and the whole
+   mark turns to mush. This is Feather's volume-x, which is what most players
+   ship at this size. */
 .vol-btn .slash { display: none; }
-.vol-btn[aria-pressed="true"] { color: #ff5f5f; opacity: 0.85; }
-.vol-btn[aria-pressed="true"] .wave { display: none; }
+.vol-btn[aria-pressed="true"] { color: #ff6b6b; opacity: 0.95; }
+.vol-btn[aria-pressed="true"] .wave  { display: none; }
 .vol-btn[aria-pressed="true"] .slash { display: block; }
+
 
 /* ═══════════════════════════════════════════════════════════
    INSIDE THE SCREEN
@@ -1204,6 +1234,43 @@ body {
     inset -1px -1px 0 rgba(0, 0, 0, 0.5);
 }
 .ms-cell:hover { background: rgba(255, 255, 255, 0.13); }
+
+/* Flag mode. Sits bottom left of the glass, opposite the volume button. */
+.ms-flag-btn {
+  all: unset;
+  position: absolute;
+  left: 3.5%;
+  bottom: 4%;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid #3f4a55;
+  border-radius: 6px;
+  background: rgba(8, 10, 14, 0.72);
+  cursor: pointer;
+  font-family: var(--font-arcade);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--sc-rank);
+  opacity: 0.62;
+  transition: opacity 0.2s ease, color 0.2s ease,
+              border-color 0.2s ease, background 0.2s ease;
+}
+.ms-flag-btn:hover { opacity: 1; }
+.ms-flag-btn:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 3px; }
+.ms-flag-glyph { font-family: inherit; font-size: 11px; line-height: 1; }
+.ms-flag-btn[aria-pressed="true"] {
+  opacity: 1;
+  color: var(--sc-score);
+  border-color: var(--sc-score);
+  background: rgba(28, 24, 6, 0.85);
+  box-shadow: 0 0 14px rgba(255, 233, 61, 0.22);
+}
+/* While flagging, the board should say so under the cursor. */
+.ms-wrap.flagging .ms-cell { cursor: cell; }
+.ms-wrap.flagging .ms-cell.revealed { cursor: default; }
 .ms-cell.revealed {
   background: rgba(0, 0, 0, 0.35);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
@@ -1235,28 +1302,49 @@ body {
    child would steal height from the bezel. */
 .back-link {
   position: fixed;
-  left: 18px;
-  bottom: 14px;
+  left: 20px;
+  bottom: 16px;
   z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 13px;
   font-family: var(--font-arcade);
-  font-size: 8px;
-  letter-spacing: 0.14em;
+  font-size: 9px;
+  letter-spacing: 0.12em;
   text-decoration: none;
-  color: var(--text-faint);
-  transition: color 0.18s ease;
+  /* It was --text-faint (#3d3a38) on a #0e0e0e ground, which is a contrast
+     ratio of about 1.6:1 - technically painted, practically invisible. */
+  color: #a8a096;
+  background: rgba(10, 10, 12, 0.82);
+  border: 1px solid #43403a;
+  border-radius: 7px;
+  transition: color 0.18s ease, border-color 0.18s ease,
+              background 0.18s ease, box-shadow 0.18s ease;
 }
+.back-link .back-arrow { color: var(--sc-score); font-size: 11px; line-height: 1; }
 .back-link:hover,
-.back-link:focus-visible { color: var(--accent); }
+.back-link:focus-visible {
+  color: #fff;
+  border-color: var(--sc-score);
+  background: rgba(24, 21, 8, 0.9);
+  box-shadow: 0 0 16px rgba(255, 233, 61, 0.2);
+}
 
 @media (max-width: 720px) {
-  .back-link { position: static; display: block; text-align: center; padding: 10px 0 18px; }
+  .back-link {
+    position: static;
+    display: inline-flex;
+    margin: 10px auto 18px;
+  }
+  .back-wrap { display: flex; justify-content: center; }
 }
 </style>
 </head>
 
 <body>
 
-<a class="back-link" href="/">&lt; PATRICKNEYLAND.COM</a>
+<div class="back-wrap"><a class="back-link" href="/"><span class="back-arrow" aria-hidden="true">&#8592;</span>PATRICKNEYLAND.COM</a></div>
 
 <main class="wrap">
 

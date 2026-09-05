@@ -31,7 +31,36 @@ window.ArcadeGames.minesweeper = (function () {
     var boardEl = document.createElement('div');
     boardEl.className = 'ms-board';
     wrap.appendChild(boardEl);
+
+    /* Right-click flags, but nobody discovers that and a touch screen has no
+       right button at all. This is the visible way in. It sits bottom left,
+       opposite the volume button, so it reads as another piece of cabinet
+       furniture rather than part of the board. */
+    var flagBtn = document.createElement('button');
+    flagBtn.type = 'button';
+    flagBtn.className = 'ms-flag-btn';
+    flagBtn.setAttribute('aria-pressed', 'false');
+    flagBtn.setAttribute('aria-label', 'Flag mode: click cells to flag them');
+    flagBtn.innerHTML = '<span class="ms-flag-glyph">⚑</span>' +
+                        '<span class="ms-flag-text">FLAG</span>';
+    wrap.appendChild(flagBtn);
     host.appendChild(wrap);
+
+    var flagMode = false;
+
+    function setFlagMode(on) {
+      flagMode = !!on;
+      flagBtn.setAttribute('aria-pressed', flagMode ? 'true' : 'false');
+      wrap.classList.toggle('flagging', flagMode);
+    }
+
+    flagBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      setFlagMode(!flagMode);
+      S.flag();
+      // Give the keyboard back, or the next R/F lands on this button.
+      if (e.detail > 0) flagBtn.blur();
+    });
 
     var grid, minesPlaced, revealedCount, flagCount;
     var state = 'idle';          // idle | ready | playing | won | lost
@@ -85,6 +114,7 @@ window.ArcadeGames.minesweeper = (function () {
         }
         grid.push(row);
       }
+      setFlagMode(false);
       api.setState('playing');   // the board is live the moment it is drawn
       report();
     }
@@ -175,6 +205,7 @@ window.ArcadeGames.minesweeper = (function () {
     }
 
     function toggleFlag(r, c) {
+      if (!minesPlaced && !api.canStart()) return;
       if (state !== 'playing' && state !== 'ready') return;
       var cell = grid[r][c];
       if (cell.revealed) return;
@@ -290,6 +321,13 @@ window.ArcadeGames.minesweeper = (function () {
       if (!rc) return;
       if (longPressed) { longPressed = false; return; }
       if (e.button === 2) return;         // handled by contextmenu
+      // In flag mode a plain click plants a flag. Clicking an already
+      // revealed cell still chords, because that is never destructive and
+      // it is what you want when you are mid-sweep.
+      if (flagMode && !grid[rc.r][rc.c].revealed) {
+        toggleFlag(rc.r, rc.c);
+        return;
+      }
       handleReveal(rc.r, rc.c);
     }
 
@@ -303,6 +341,7 @@ window.ArcadeGames.minesweeper = (function () {
       var tag = e.target && e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'r' || e.key === 'R') { e.preventDefault(); newGame(); }
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setFlagMode(!flagMode); }
     }
 
     boardEl.addEventListener('pointerdown', onPointerDown);
@@ -334,7 +373,7 @@ window.ArcadeGames.minesweeper = (function () {
     mode: '10x10',
     metric: 'time',
     attract: '10 BY 10. FIFTEEN MINES. FASTEST WINS.',
-    controls: 'CLICK REVEALS  /  RIGHT CLICK FLAGS',
+    controls: 'CLICK REVEALS  /  RIGHT CLICK OR F FLAGS',
     mount: mount
   };
 })();

@@ -35,6 +35,7 @@
   var champInitials = document.querySelector('.champion-initials');
   var champScore = document.querySelector('.champion-score');
   var champDate = document.querySelector('.champion-date');
+  var champLabel = document.querySelector('.champion-label');
 
   var index = 0;
   var hasCredit = false;
@@ -78,13 +79,16 @@
       'aria-label="Mute or unmute the arcade">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
         'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-        '<polygon points="4,9 8,9 13,5 13,19 8,15 4,15" fill="currentColor" ' +
-          'stroke="currentColor"></polygon>' +
+        '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" ' +
+          'fill="currentColor" stroke="currentColor" stroke-width="1.6"></polygon>' +
         '<g class="wave">' +
-          '<path d="M16.5 8.8a4.5 4.5 0 0 1 0 6.4"></path>' +
-          '<path d="M19.2 6.2a8 8 0 0 1 0 11.6"></path>' +
+          '<path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>' +
+          '<path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>' +
         '</g>' +
-        '<line class="slash" x1="16" y1="8" x2="22" y2="16"></line>' +
+        '<g class="slash">' +
+          '<line x1="22.2" y1="9" x2="16.2" y2="15"></line>' +
+          '<line x1="16.2" y1="9" x2="22.2" y2="15"></line>' +
+        '</g>' +
       '</svg>' +
     '</button>' +
     '<div class="overlay" data-ov="over" hidden>' +
@@ -196,13 +200,22 @@
     net.submitScore({
       game: pending.game, mode: pending.mode, player: name,
       score: pending.score, time_ms: pending.time_ms
-    }).then(function () {
+    }).then(function (row) {
       net.savePlayer(name);
       S.submit();
-      ovMsg.textContent = 'ON THE BOARD';
-      ovMsg.className = 'ov-msg is-good';
       ovForm.hidden = true;
       pending = null;
+      // In owner mode, claim the row we just wrote. The insert cannot set
+      // is_owner itself; this is the only door, and it needs the secret.
+      if (net.isOwnerMode() && row && row.id) {
+        return net.claimScore(row.id).then(function (ok) {
+          ovMsg.textContent = ok ? 'ON THE BOARD — CLAIMED' : 'ON THE BOARD';
+          ovMsg.className = 'ov-msg is-good';
+          loadBoard();
+        });
+      }
+      ovMsg.textContent = 'ON THE BOARD';
+      ovMsg.className = 'ov-msg is-good';
       loadBoard();
     }).catch(function (err) {
       ovBtn.disabled = false;
@@ -223,13 +236,44 @@
 
   /* ------------------------------ the rail ------------------------------ */
 
+  /* The marker beside Pat's name. Drawn rather than typed: Press Start 2P
+     has no crown or star glyph, so a character falls back to a system font
+     and turns to mush at 9px. An SVG stays crisp at any size. */
+  var CROWN =
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M12 2.5l2.7 5.9 6.4.7-4.8 4.3 1.35 6.3L12 16.5l-5.65 3.2 1.35-6.3' +
+        'L2.9 9.1l6.4-.7z" fill="currentColor"/>' +
+    '</svg>';
+
+  function rowHtml(g, row, rank, extraClass) {
+    var cls = (row.is_owner ? ' is-owner' : '') + (extraClass ? ' ' + extraClass : '');
+    return '<li class="' + cls.trim() + '">' +
+             '<span class="b-rank">' + ('0' + rank).slice(-2) + '</span>' +
+             '<span class="b-name">' + esc(row.player) +
+               (row.is_owner ? '<i class="b-crown" title="Pat’s own score">' +
+                                 CROWN + '</i>' : '') +
+             '</span>' +
+             '<span class="b-score">' + net.rowValue(g.id, row) + '</span>' +
+           '</li>';
+  }
+
+  /* The champion strip is Pat's own all-time high, not the world's. Others
+     can outrank him on the board below - they cannot take that box, and his
+     row is pinned onto the list even when it has been knocked out of the
+     top ten. If he has never played this game, the box falls back to whoever
+     is top and says so. */
   function loadBoard() {
     var g = game;
-    return net.fetchScores(g.id, g.mode, 8).then(function (rows) {
+    return Promise.all([
+      net.fetchScores(g.id, g.mode, 10),
+      net.fetchOwnerBest(g.id, g.mode)
+    ]).then(function (res) {
       if (game !== g) return;                 // dial moved while we waited
-      // Nobody has played this one yet. Say so, rather than leaving the
-      // previous game's champion sitting there looking like this game's.
+      var rows = res[0] || [];
+      var mine = res[1];
+
       if (!rows.length) {
+        champLabel.textContent = 'ALL-TIME HIGH';
         champInitials.textContent = '---';
         champScore.textContent = '---';
         if (champDate) champDate.textContent = '';
@@ -238,16 +282,27 @@
         return;
       }
 
-      var top = rows[0];
-      champInitials.textContent = top.player;
-      champScore.textContent = net.rowValue(g.id, top);
-      if (champDate) champDate.textContent = monthYear(top.created_at);
+      var head = mine || rows[0];
+      champLabel.textContent = mine ? "PAT'S ALL-TIME HIGH" : 'ALL-TIME HIGH';
+      champInitials.textContent = head.player;
+      champScore.textContent = net.rowValue(g.id, head);
+      if (champDate) champDate.textContent = monthYear(head.created_at);
 
-      board.innerHTML = rows.slice(1).map(function (row, i) {
-        return '<li><span class="b-rank">' + ('0' + (i + 2)).slice(-2) + '</span>' +
-               '<span class="b-name">' + esc(row.player) + '</span>' +
-               '<span class="b-score">' + net.rowValue(g.id, row) + '</span></li>';
+      var html = rows.map(function (row, i) {
+        return rowHtml(g, row, i + 1);
       }).join('');
+
+      // Knocked out of the top ten? Pin him underneath at his real rank.
+      var inTop = mine && rows.some(function (r) { return r.id === mine.id; });
+      board.innerHTML = html;
+      if (mine && !inTop) {
+        net.fetchRank(g.id, g.mode, mine[net.metricCol(g.id)]).then(function (rank) {
+          if (game !== g) return;
+          board.insertAdjacentHTML('beforeend',
+            '<li class="b-gap" aria-hidden="true">&middot;&middot;&middot;</li>' +
+            rowHtml(g, mine, rank || 99, 'is-pinned'));
+        });
+      }
     });
   }
 
@@ -268,9 +323,31 @@
     });
   }
 
+  /* ------------------------------ owner mode ---------------------------- */
+  /* Pat turns his own browser into the owner by visiting the page once with
+     ?owner=<secret>. The secret is kept in localStorage and the query string
+     is scrubbed from the URL immediately, so it never sits in history or in
+     a screenshot. ?owner=off forgets it again. Nothing about owner mode
+     ships in the page: without the secret these calls just return false. */
+  (function initOwnerMode() {
+    var m = /[?&]owner=([^&]+)/.exec(window.location.search);
+    if (!m) return;
+    var value = decodeURIComponent(m[1]);
+    if (value === 'off') {
+      net.setOwnerSecret('');
+    } else {
+      net.setOwnerSecret(value);
+    }
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+    root.setAttribute('data-owner', net.isOwnerMode() ? 'true' : 'false');
+  })();
+  root.setAttribute('data-owner', net.isOwnerMode() ? 'true' : 'false');
+
   /* ------------------------------- the dial ----------------------------- */
 
-  function select(i, isFirst) {
+  function select(i) {
     index = ((i % ORDER.length) + ORDER.length) % ORDER.length;
     var next = games[ORDER[index]];
     if (!next) return;
@@ -296,20 +373,30 @@
     instance = game.mount(stage, api);
     loadBoard();
 
-    if (!isFirst && dial) dial.focus({ preventScroll: true });
+  }
+
+  /* e.detail is 0 when a click came from the keyboard (Enter/Space on a
+     focused button) and >0 when it came from a real pointer. Only the
+     pointer case gives the keyboard back to the game; someone who tabbed
+     here on purpose keeps focus and can keep arrowing through the games. */
+  function turn(to, e) {
+    S.dial();
+    select(to);
+    if (dial && e && e.detail > 0) dial.blur();
   }
 
   if (dial) {
-    dial.addEventListener('click', function () { S.dial(); select(index + 1); });
+    dial.addEventListener('click', function (e) { turn(index + 1, e); });
     dial.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); S.dial(); select(index + 1); }
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); S.dial(); select(index - 1); }
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); turn(index + 1); }
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); turn(index - 1); }
     });
   }
   ticks.forEach(function (t) {
-    t.addEventListener('click', function () {
+    t.addEventListener('click', function (e) {
       var i = ORDER.indexOf(t.dataset.slot);
-      if (i >= 0 && i !== index) { S.dial(); select(i); }
+      if (i >= 0 && i !== index) turn(i, e);
+      if (dial && e && e.detail > 0) dial.blur();
     });
   });
 
@@ -354,7 +441,16 @@
     setTimeout(powerUp, 620);
   }
 
-  if (coinBtn) coinBtn.addEventListener('click', insertCoin);
+  /* Same rule as the dial: a clicked button must not keep the keyboard, or
+     the next Space pauses nothing and re-presses this instead. */
+  function releaseKeys(btn, e) {
+    if (btn && e && e.detail > 0) btn.blur();
+  }
+
+  if (coinBtn) coinBtn.addEventListener('click', function (e) {
+    insertCoin();
+    releaseKeys(coinBtn, e);
+  });
 
   if (muteBtn) {
     var paintMute = function () {
@@ -367,6 +463,7 @@
       S.toggle();
       paintMute();
       if (!S.isMuted()) S.tick();   // a blip so you know it came back
+      releaseKeys(muteBtn, e);
     });
   }
 
@@ -375,5 +472,5 @@
   hasCredit = credited();
   root.setAttribute('data-inserted', hasCredit ? 'true' : 'false');
   if (hasCredit && coinModule) coinModule.classList.add('is-inserting');
-  select(0, true);
+  select(0);
 })();

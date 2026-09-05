@@ -16,7 +16,14 @@
      player    text      1-16 chars (CHECK constraint)
      score     integer   score games only, NULL for minesweeper
      time_ms   integer   minesweeper only, NULL for the others
+     is_owner  boolean   true only on Pat's own rows
      created_at timestamptz
+
+   is_owner cannot be set by anyone holding this key. The INSERT policy is
+   WITH CHECK (is_owner = false), and the only way to flip it is
+   claim_arcade_score(id, secret), a SECURITY DEFINER function that compares
+   the secret against a table the anon role cannot read. So a visitor typing
+   "Pat" gets the name and nothing else - no marker, no pinned row.
 
    A CHECK keeps the metric honest: score games must carry a score and no
    time, minesweeper the reverse. There is no UPDATE or DELETE policy, so a
@@ -40,10 +47,25 @@ window.ArcadeNet = (function () {
 
   /* Which column each game ranks on, and which way. */
   var METRIC = {
-    snake:       { col: 'score',   order: 'score.desc,created_at.asc' },
-    asteroids:   { col: 'score',   order: 'score.desc,created_at.asc' },
-    minesweeper: { col: 'time_ms', order: 'time_ms.asc,created_at.asc' }
+    /* `beats` is the PostgREST operator for "strictly better than", which is
+       how a rank is counted: rank = (rows that beat you) + 1. */
+    snake:       { col: 'score',   order: 'score.desc,created_at.asc',   beats: 'gt' },
+    asteroids:   { col: 'score',   order: 'score.desc,created_at.asc',   beats: 'gt' },
+    minesweeper: { col: 'time_ms', order: 'time_ms.asc,created_at.asc',  beats: 'lt' }
   };
+
+  var OWNER_KEY = 'arcade_owner_secret';
+
+  function getOwnerSecret() {
+    try { return localStorage.getItem(OWNER_KEY) || ''; } catch (e) { return ''; }
+  }
+  function setOwnerSecret(v) {
+    try {
+      if (v) localStorage.setItem(OWNER_KEY, v);
+      else localStorage.removeItem(OWNER_KEY);
+    } catch (e) { /* ignore */ }
+  }
+  function isOwnerMode() { return !!getOwnerSecret(); }
 
   var offline = false;   // set true after the first failed request
 
@@ -64,7 +86,7 @@ window.ArcadeNet = (function () {
     var url = URL + '/rest/v1/' + TABLE + ''
       + '?game=eq.' + encodeURIComponent(game)
       + '&mode=eq.' + encodeURIComponent(mode)
-      + '&select=id,player,' + m.col + ',created_at'
+      + '&select=id,player,' + m.col + ',is_owner,created_at'
       + '&order=' + m.order
       + '&limit=' + limit;
 
@@ -119,6 +141,57 @@ window.ArcadeNet = (function () {
     });
   }
 
+  /** Pat's best row for this game, or null. Never falls back to samples:
+      an invented owner row would be a lie about who holds the score. */
+  function fetchOwnerBest(game, mode) {
+    var m = METRIC[game];
+    if (!m || offline) return Promise.resolve(null);
+    var url = URL + '/rest/v1/' + TABLE
+      + '?game=eq.' + encodeURIComponent(game)
+      + '&mode=eq.' + encodeURIComponent(mode)
+      + '&is_owner=is.true'
+      + '&select=id,player,' + m.col + ',is_owner,created_at'
+      + '&order=' + m.order
+      + '&limit=1';
+    return fetch(url, { headers: HEADERS })
+      .then(function (res) { return res.ok ? res.json() : []; })
+      .then(function (rows) { return (rows && rows[0]) || null; })
+      .catch(function () { return null; });
+  }
+
+  /** Where a value sits on the board: one plus however many rows beat it. */
+  function fetchRank(game, mode, value) {
+    var m = METRIC[game];
+    if (!m || offline || value == null) return Promise.resolve(null);
+    var url = URL + '/rest/v1/' + TABLE
+      + '?game=eq.' + encodeURIComponent(game)
+      + '&mode=eq.' + encodeURIComponent(mode)
+      + '&' + m.col + '=' + m.beats + '.' + encodeURIComponent(value)
+      + '&select=id';
+    return fetch(url, { headers: Object.assign({}, HEADERS, { Prefer: 'count=exact' }) })
+      .then(function (res) {
+        // PostgREST reports the total in Content-Range as "0-24/1234".
+        var cr = res.headers.get('content-range') || '';
+        var total = parseInt(cr.split('/')[1], 10);
+        return isNaN(total) ? null : total + 1;
+      })
+      .catch(function () { return null; });
+  }
+
+  /** Flip is_owner on a row. Returns true only if the secret was right. */
+  function claimScore(id) {
+    var secret = getOwnerSecret();
+    if (!id || !secret) return Promise.resolve(false);
+    return fetch(URL + '/rest/v1/rpc/claim_arcade_score', {
+      method: 'POST',
+      headers: Object.assign({}, HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ p_id: id, p_secret: secret })
+    })
+      .then(function (res) { return res.ok ? res.json() : false; })
+      .then(function (ok) { return ok === true; })
+      .catch(function () { return false; });
+  }
+
   /* ------------------------------ formatting ------------------------------ */
 
   /** 41200 -> "0:41.2". The rail is narrow, so one decimal, not three. */
@@ -154,8 +227,20 @@ window.ArcadeNet = (function () {
     try { localStorage.setItem(PLAYER_KEY, clean); } catch (e) { /* ignore */ }
   }
 
+  /** Which column this game ranks on: 'score' or 'time_ms'. */
+  function metricCol(game) {
+    return METRIC[game] ? METRIC[game].col : 'score';
+  }
+
   return {
+    metricCol: metricCol,
     fetchScores: fetchScores,
+    fetchOwnerBest: fetchOwnerBest,
+    fetchRank: fetchRank,
+    claimScore: claimScore,
+    getOwnerSecret: getOwnerSecret,
+    setOwnerSecret: setOwnerSecret,
+    isOwnerMode: isOwnerMode,
     submitScore: submitScore,
     cleanPlayerName: cleanPlayerName,
     formatTime: formatTime,
