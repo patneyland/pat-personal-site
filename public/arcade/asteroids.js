@@ -53,6 +53,17 @@ window.ArcadeGames.asteroids = (function () {
   var WAVE_SPEED_STEP = 0.09;
   var WAVE_SPEED_MAX = 1.8;
 
+  /* Hyperspace: the cabinet's fourth control. You vanish and come back
+     somewhere random, which is the only way out of a corner - but the drive
+     can fail on re-entry and kill you, and the odds get worse the more you
+     lean on it. That gamble is the whole point; a safe teleport would be a
+     different game. */
+  var HYPER_GONE = 0.32;        // seconds off the screen
+  var HYPER_RISK_BASE = 0.12;   // chance the drive fails, first jump of a life
+  var HYPER_RISK_STEP = 0.06;   // ... and how much worse each jump makes it
+  var HYPER_RISK_MAX = 0.42;
+  var HYPER_COOLDOWN = 0.6;
+
   /* A free ship every 10,000, as the cabinet gave you. It matters more now
      that the saucer shoots back. */
   var EXTRA_LIFE_EVERY = 10000;
@@ -98,6 +109,7 @@ window.ArcadeGames.asteroids = (function () {
     var saucer = null, foeBullets = [], saucerTimer = 0;
     var waveStartRocks = 1, thrustTimer = 0, waveSpeed = 1;
     var score, lives, wave, invuln, cooldown, nextExtraLife;
+    var hyperTimer = 0, hyperJumps = 0, hyperCool = 0;
     var state = 'idle';
     var keys = {};
     var last = 0, raf = null;
@@ -187,6 +199,7 @@ window.ArcadeGames.asteroids = (function () {
       wave = 1;
       invuln = INVULN_TIME;
       cooldown = 0;
+      hyperTimer = 0; hyperJumps = 0; hyperCool = 0;
       nextExtraLife = EXTRA_LIFE_EVERY;
       S.saucer.stop();
       saucer = null;
@@ -228,6 +241,7 @@ window.ArcadeGames.asteroids = (function () {
       if (lives <= 0) { gameOver(); return; }
       ship = makeShip();
       invuln = INVULN_TIME;
+      hyperTimer = 0; hyperJumps = 0; hyperCool = 0;
     }
 
     /* ------------------------------- input ------------------------------ */
@@ -248,6 +262,9 @@ window.ArcadeGames.asteroids = (function () {
            what makes the four-bullet cap bite. e.repeat is the OS key-repeat
            coming through, and it is exactly what we do not want. */
         if (!e.repeat) fire();
+      } else if (k === 'ArrowDown' || k === 's' || k === 'S' || k === 'Shift') {
+        e.preventDefault();
+        if (state === 'playing' && !e.repeat) hyperspace();
       } else if (k === 'Enter') {
         if (state === 'idle') { e.preventDefault(); start(); }
       } else if (k === 'r' || k === 'R') { e.preventDefault(); start(); }
@@ -356,6 +373,30 @@ window.ArcadeGames.asteroids = (function () {
       S.saucerFire();
     }
 
+    /* Off the screen for a moment, then back somewhere else. The risk is
+       resolved on arrival, not departure, so you always see where you landed
+       before it goes wrong. */
+    function hyperspace() {
+      if (state !== 'playing' || hyperTimer > 0 || hyperCool > 0) return;
+      hyperTimer = HYPER_GONE;
+      hyperCool = HYPER_GONE + HYPER_COOLDOWN;
+      hyperJumps++;
+      S.hyperspace();
+    }
+
+    function hyperArrive() {
+      ship.x = 40 + Math.random() * (W - 80);
+      ship.y = 40 + Math.random() * (H - 80);
+      ship.vx = 0; ship.vy = 0;          // you come out dead in the water
+      var risk = Math.min(HYPER_RISK_MAX,
+                          HYPER_RISK_BASE + (hyperJumps - 1) * HYPER_RISK_STEP);
+      if (Math.random() < risk) {
+        loseLife();                       // the drive failed
+      } else {
+        invuln = Math.max(invuln, 0.35);  // a breath, not a shield
+      }
+    }
+
     function checkExtraLife() {
       while (score >= nextExtraLife) {
         lives++;
@@ -388,9 +429,18 @@ window.ArcadeGames.asteroids = (function () {
 
     function update(dt) {
       cooldown = Math.max(0, cooldown - dt);
+      hyperCool = Math.max(0, hyperCool - dt);
       if (invuln > 0) invuln -= dt;
 
+      /* In hyperspace: the ship is not on the board at all, so nothing can
+         hit it and it cannot steer. Everything else carries on without you. */
+      if (hyperTimer > 0) {
+        hyperTimer -= dt;
+        if (hyperTimer <= 0) { hyperTimer = 0; hyperArrive(); }
+      }
+
       /* ship */
+      if (hyperTimer > 0) { ship.thrusting = false; } else {
       if (keys.left) ship.a -= TURN_RATE * dt;
       if (keys.right) ship.a += TURN_RATE * dt;
       ship.thrusting = !!keys.thrust;
@@ -408,6 +458,7 @@ window.ArcadeGames.asteroids = (function () {
       if (sp > MAX_SPEED) { ship.vx = ship.vx / sp * MAX_SPEED; ship.vy = ship.vy / sp * MAX_SPEED; }
       ship.x += ship.vx * dt; ship.y += ship.vy * dt;
       wrap(ship);
+      }
 
       /* bullets */
       for (var i = bullets.length - 1; i >= 0; i--) {
@@ -531,7 +582,7 @@ window.ArcadeGames.asteroids = (function () {
       }
 
       /* rock -> ship */
-      if (invuln <= 0) {
+      if (invuln <= 0 && hyperTimer <= 0) {
         for (var k = 0; k < rocks.length; k++) {
           var rad = rocks[k].r + SHIP_R * 0.7;
           if (dist2(ship, rocks[k]) < rad * rad) { loseLife(); break; }
@@ -539,7 +590,7 @@ window.ArcadeGames.asteroids = (function () {
       }
 
       /* saucer and its shots -> ship */
-      if (invuln <= 0 && state === 'playing') {
+      if (invuln <= 0 && hyperTimer <= 0 && state === 'playing') {
         for (var fs2 = foeBullets.length - 1; fs2 >= 0; fs2--) {
           if (dist2(ship, foeBullets[fs2]) < (SHIP_R * 0.8) * (SHIP_R * 0.8)) {
             foeBullets.splice(fs2, 1);
@@ -548,7 +599,7 @@ window.ArcadeGames.asteroids = (function () {
           }
         }
       }
-      if (saucer && invuln <= 0 && state === 'playing') {
+      if (saucer && invuln <= 0 && hyperTimer <= 0 && state === 'playing') {
         var crad = saucer.r + SHIP_R * 0.7;
         if (dist2(ship, saucer) < crad * crad) {
           burst(saucer.x, saucer.y, 14, 120);
@@ -681,7 +732,7 @@ window.ArcadeGames.asteroids = (function () {
 
       /* ship - blinks while invulnerable */
       var showShip = invuln <= 0 || Math.floor(invuln * 10) % 2 === 0;
-      if (showShip && state !== 'over') {
+      if (showShip && state !== 'over' && hyperTimer <= 0) {
         ctx.save();
         ctx.translate(ship.x, ship.y);
         ctx.rotate(ship.a);
@@ -741,7 +792,7 @@ window.ArcadeGames.asteroids = (function () {
     mode: 'classic',
     metric: 'score',
     attract: 'SPLIT THE ROCKS. MIND THE SAUCER.',
-    controls: 'ARROWS TURN AND THRUST  /  SPACE FIRES',
+    controls: 'ARROWS TURN AND THRUST  /  SPACE FIRES  /  DOWN IS HYPERSPACE',
     mount: mount
   };
 })();

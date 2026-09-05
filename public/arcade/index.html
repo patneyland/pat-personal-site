@@ -1292,6 +1292,9 @@ body {
   cursor: default;
 }
 .ms-cell.flagged { color: var(--sc-score); }
+/* A question mark is a maybe, not a claim: it does not count against the
+   mine total and it does not stop you clicking the cell. */
+.ms-cell.guess   { color: var(--sc-rank); opacity: 0.8; }
 .ms-cell.mine    { color: #ff5f5f; }
 .ms-cell.boom    { background: rgba(255, 60, 60, 0.5); }
 .ms-cell.wrong   { background: rgba(255, 60, 60, 0.22); }

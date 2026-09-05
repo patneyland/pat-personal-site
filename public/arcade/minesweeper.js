@@ -113,7 +113,10 @@ window.ArcadeGames.minesweeper = (function () {
           el.dataset.r = r;
           el.dataset.c = c;
           boardEl.appendChild(el);
-          row.push({ el: el, mine: false, adj: 0, revealed: false, flagged: false });
+          // mark: 0 none, 1 flag, 2 question. Windows cycled through all
+          // three on right click, and only the flag counted against the
+          // mine total or blocked a reveal.
+          row.push({ el: el, mine: false, adj: 0, revealed: false, mark: 0 });
         }
         grid.push(row);
       }
@@ -185,7 +188,7 @@ window.ArcadeGames.minesweeper = (function () {
         var rc = stack.pop();
         var r = rc[0], c = rc[1];
         var cell = grid[r][c];
-        if (cell.revealed || cell.flagged) continue;
+        if (cell.revealed || cell.mark === 1) continue;   // a question mark does not protect a cell
         cell.revealed = true;
 
         if (cell.mine) { lose(r, c); return; }
@@ -198,7 +201,7 @@ window.ArcadeGames.minesweeper = (function () {
           // a zero cell's neighbours are mine-free by definition, spread out
           neighbors(r, c).forEach(function (nrc) {
             var nc = grid[nrc[0]][nrc[1]];
-            if (!nc.revealed && !nc.flagged) stack.push(nrc);
+            if (!nc.revealed && nc.mark !== 1) stack.push(nrc);
           });
         }
       }
@@ -207,17 +210,24 @@ window.ArcadeGames.minesweeper = (function () {
       checkWin();
     }
 
-    function toggleFlag(r, c) {
+    /** none -> flag -> question -> none, as Windows did it. */
+    function cycleMark(r, c) {
       if (!minesPlaced && !api.canStart()) return;
       if (state !== 'playing' && state !== 'ready') return;
       var cell = grid[r][c];
       if (cell.revealed) return;
-      cell.flagged = !cell.flagged;
-      flagCount += cell.flagged ? 1 : -1;
-      cell.el.textContent = cell.flagged ? '⚑' : '';
-      cell.el.classList.toggle('flagged', cell.flagged);
+      setMark(cell, (cell.mark + 1) % 3);
       S.flag();
       report();
+    }
+
+    function setMark(cell, mark) {
+      if (cell.mark === 1) flagCount--;
+      cell.mark = mark;
+      if (mark === 1) flagCount++;
+      cell.el.textContent = mark === 1 ? '⚑' : mark === 2 ? '?' : '';
+      cell.el.classList.toggle('flagged', mark === 1);
+      cell.el.classList.toggle('guess', mark === 2);
     }
 
     /** Click a revealed number with the right count of flags around it. */
@@ -226,11 +236,11 @@ window.ArcadeGames.minesweeper = (function () {
       if (!cell.revealed || cell.adj === 0) return;
       var around = neighbors(r, c);
       var flags = 0;
-      around.forEach(function (rc) { if (grid[rc[0]][rc[1]].flagged) flags++; });
+      around.forEach(function (rc) { if (grid[rc[0]][rc[1]].mark === 1) flags++; });
       if (flags !== cell.adj) return;
       for (var i = 0; i < around.length; i++) {
         var nc = grid[around[i][0]][around[i][1]];
-        if (!nc.revealed && !nc.flagged) {
+        if (!nc.revealed && nc.mark !== 1) {
           reveal(around[i][0], around[i][1]);
           if (state === 'lost' || state === 'won') return;
         }
@@ -242,7 +252,7 @@ window.ArcadeGames.minesweeper = (function () {
       if (state === 'won' || state === 'lost') return;
       var cell = grid[r][c];
       if (cell.revealed) { chord(r, c); return; }
-      if (cell.flagged) return;
+      if (cell.mark === 1) return;      // flagged cells are protected; questioned ones are not
 
       if (!minesPlaced) {
         placeMines(r, c);
@@ -264,10 +274,11 @@ window.ArcadeGames.minesweeper = (function () {
       for (var rr = 0; rr < SIZE; rr++) {
         for (var cc = 0; cc < SIZE; cc++) {
           var cell = grid[rr][cc];
-          if (cell.mine && !cell.flagged) {
+          if (cell.mine && cell.mark !== 1) {
+            cell.el.classList.remove('guess');
             cell.el.classList.add('revealed', 'mine');
             cell.el.textContent = '✹';
-          } else if (!cell.mine && cell.flagged) {
+          } else if (!cell.mine && cell.mark === 1) {
             cell.el.classList.add('wrong');
           }
         }
@@ -285,11 +296,7 @@ window.ArcadeGames.minesweeper = (function () {
       for (var r = 0; r < SIZE; r++) {
         for (var c = 0; c < SIZE; c++) {
           var cell = grid[r][c];
-          if (cell.mine && !cell.flagged) {
-            cell.flagged = true;
-            cell.el.classList.add('flagged');
-            cell.el.textContent = '⚑';
-          }
+          if (cell.mine && cell.mark !== 1) setMark(cell, 1);
         }
       }
       api.gameOver({
@@ -313,7 +320,7 @@ window.ArcadeGames.minesweeper = (function () {
       if (e.pointerType === 'touch') {
         pressTimer = setTimeout(function () {
           longPressed = true;
-          toggleFlag(rc.r, rc.c);
+          cycleMark(rc.r, rc.c);
         }, LONG_PRESS_MS);
       }
     }
@@ -328,7 +335,7 @@ window.ArcadeGames.minesweeper = (function () {
       // revealed cell still chords, because that is never destructive and
       // it is what you want when you are mid-sweep.
       if (flagMode && !grid[rc.r][rc.c].revealed) {
-        toggleFlag(rc.r, rc.c);
+        cycleMark(rc.r, rc.c);
         return;
       }
       handleReveal(rc.r, rc.c);
@@ -337,7 +344,7 @@ window.ArcadeGames.minesweeper = (function () {
     function onContext(e) {
       e.preventDefault();
       var rc = cellFrom(e);
-      if (rc) toggleFlag(rc.r, rc.c);
+      if (rc) cycleMark(rc.r, rc.c);
     }
 
     function onKey(e) {
@@ -376,7 +383,7 @@ window.ArcadeGames.minesweeper = (function () {
     mode: '10x10',
     metric: 'time',
     attract: '10 BY 10. FIFTEEN MINES. FASTEST WINS.',
-    controls: 'CLICK REVEALS  /  RIGHT CLICK OR F FLAGS',
+    controls: 'CLICK REVEALS  /  RIGHT CLICK OR F CYCLES FLAG AND ?',
     mount: mount
   };
 })();

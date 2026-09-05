@@ -163,6 +163,12 @@ window.ArcadeSound = (function () {
       });
     },
 
+    /* Hyperspace: the bottom drops out and you are gone. */
+    hyperspace: function () {
+      tone({ type: 'square', from: 1200, to: 90, dur: 0.26, gain: 0.18 });
+      noise({ dur: 0.3, from: 2600, to: 200, filter: 'bandpass', q: 3, gain: 0.12 });
+    },
+
     /* The saucer's shot, so you can tell it from your own. */
     saucerFire: function () {
       tone({ type: 'square', from: 900, to: 220, dur: 0.11, gain: 0.15 });
