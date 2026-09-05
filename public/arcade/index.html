@@ -1374,15 +1374,23 @@ body {
 
 /* ─── Gary ───────────────────────────────────────────────
    The same drawings as the Gary on /fun, off the same sheets in /assets. He
-   walks the bottom edge of the page: coin slot first, then over to the dial.
+   stands in front of the cabinet's chin, the band of bezel under the glass:
+   centre stage first, then over beside the dial. gary.js mounts him inside
+   .bezel and owns HEIGHT, FOOT and every x; the numbers here are the same
+   values as defaults so the box is right before the script runs.
    gary-step is redefined here because this page does not load globals.css. */
 .gary {
-  position: fixed;
+  /* Absolute inside the bezel, not fixed to the viewport: his feet sit on
+     the cabinet's bottom border, level with the base of the dial knob, and
+     that edge lands 20-30px above the page bottom depending on the screen
+     height. Fixed-to-bottom put his feet below the cabinet with its border
+     through his chest. */
+  position: absolute;
   left: 0;
-  bottom: 10px;
+  bottom: 3px;
   z-index: 60;
-  width: 49px;
-  height: 62px;
+  width: 57px;
+  height: 72px;
   pointer-events: none;
   will-change: transform;
 }
@@ -1391,9 +1399,9 @@ body {
 .gary-sprite {
   all: unset;
   display: block;
-  width: 49px;
-  height: 62px;
-  --gary-w: 49px;
+  width: 57px;
+  height: 72px;
+  --gary-w: 57px;
   background-repeat: no-repeat, no-repeat;
   background-position: 0 0;
   cursor: pointer;
@@ -1401,10 +1409,15 @@ body {
 }
 .gary-sprite:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 4px; }
 
+/* Beside him, level with his middle, so it stays inside the 92px chin
+   rather than climbing onto the glass the way an over-the-head bubble
+   would from a 72px figure. Reads as a plaque on the plastic, like the
+   game list next to the dial. */
 .gary-bubble {
   position: absolute;
-  bottom: calc(100% + 10px);
-  left: 0;                 /* JS sets this: see placeBubble in gary.js */
+  top: 50%;
+  left: calc(100% + 14px);
+  transform: translateY(-50%);
   width: max-content;
   max-width: 210px;
   padding: 9px 11px;
@@ -1420,23 +1433,38 @@ body {
   pointer-events: none;
 }
 .gary-bubble[hidden] { display: none; }
-/* The tail, a rotated corner of the same box so the borders line up. */
+/* The tail, a rotated corner of the same box so the borders line up. On
+   the edge nearest him, pointing at him. */
 .gary-bubble::after {
   content: "";
   position: absolute;
-  top: 100%;
-  left: var(--tail, 50%);
+  top: 50%;
+  left: 0;
   width: 9px;
   height: 9px;
   margin: -5px 0 0 -5px;
   background: rgba(10, 10, 12, 0.96);
-  border-right: 1px solid #45423c;
+  border-left: 1px solid #45423c;
   border-bottom: 1px solid #45423c;
   transform: rotate(45deg);
 }
+/* Flipped to his left when the right side would run off the viewport. */
+.gary-bubble.is-left {
+  left: auto;
+  right: calc(100% + 14px);
+}
+.gary-bubble.is-left::after {
+  left: auto;
+  right: 0;
+  margin: -5px -5px 0 0;
+  border-left: 0;
+  border-bottom: 0;
+  border-right: 1px solid #45423c;
+  border-top: 1px solid #45423c;
+}
 
 @keyframes gary-step {
-  to { background-position: calc(var(--gary-w, 49px) * var(--gary-cells, -8)) 0; }
+  to { background-position: calc(var(--gary-w, 57px) * var(--gary-cells, -8)) 0; }
 }
 
 @media (max-width: 760px) { .gary { display: none; } }

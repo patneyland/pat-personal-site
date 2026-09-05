@@ -189,13 +189,34 @@ He starts beside the coin and says to put one in. The coin dropping is his
 cue: he walks across to the dial and explains it. Clicking him does not open a
 panel; he tells you to get back to the game.
 
+His pace and his size are `/fun`'s exactly - `FPS = 12`, `HEIGHT = 72` - so
+his stride and cadence match the Gary on the other page rather than merely
+looking similar. **Never raise the translate duration on its own.** Speed is
+stride over cycle; change one without the other and his feet slide.
+
+That pace is what dictates where he stands. At 12fps he covers ~60px a
+second, so an earlier version that had him crossing the whole page took
+eighteen seconds. His two stations were pulled together until the walk was
+sensible: about 320px and 5.3s at 1600x1000, 360px and 6.0s at 1920x1080,
+200px and 3.3s at 1366x768. The distance is snapped to a whole number of
+strides, so he finishes on a planted foot rather than mid-air.
+
 Two things that look like mistakes and are not:
 
-- He steps at **24fps**, double the 12 he paces at on `/fun`. Speed is stride
-  over cycle, so crossing the page at 12 took fifteen seconds. Never raise the
-  translate duration on its own or his feet slide.
-- He stands clear of the back link rather than beside the coin plate, because
-  the link sits directly under the coin and he was standing on it.
+- **He does not stand next to the coin, he calls across to it** from centre
+  stage under the screen. Standing beside it would put the walk back over
+  fifteen seconds. The coin glows and is labelled; the dial is the control
+  that actually needs someone next to it, which is where he ends up.
+- **He is mounted inside `.bezel`, not fixed to the viewport.** Fixed to the
+  bottom of the window he hung below the cabinet with the bezel's border
+  cutting through his torso, and on short viewports where the bezel floats
+  mid-column he ended up ~100px beneath it. Absolute inside the bezel, his
+  feet sit on its bottom edge at any size, and his x is in bezel coordinates.
+
+His bubble sits beside him rather than above. A 72px figure standing in the
+92px chin of the bezel leaves no room overhead without the bubble landing on
+the glass. It flips to his other side when it would otherwise run off the
+viewport.
 
 ---
 

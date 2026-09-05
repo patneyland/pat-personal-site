@@ -8,9 +8,19 @@
    the constants match it exactly.
 
    What he does here:
-     - starts beside the coin slot and tells you to put a coin in
-     - once a coin drops, walks across to the dial and explains it
+     - starts centre stage under the screen and tells you to put a coin in
+     - once a coin drops, walks over to the dial and explains it
      - if you click him, he tells you to get back to the game
+
+   Where he stands: in front of the cabinet's chin, the 92px band of bezel
+   under the glass that holds the dial on the left and the lamp on the right.
+   He is mounted inside .bezel, so his feet sit on its bottom border by plain
+   CSS and every x below is measured from the bezel's left edge. He used to
+   be fixed to the viewport floor, which put his feet 20-30px below the bezel
+   (its bottom edge lands short of the page bottom by an amount that depends
+   on the screen height) with the border and hairline cutting through his
+   torso, and at the coin station the bezel's rounded corner ran through his
+   shoulder with the pilot lamp at his ear.
 
    The one rule that matters: his speed is derived, not chosen. The sprite
    advances a fixed distance per walk cycle, so travel-per-second has to equal
@@ -20,16 +30,19 @@
 
 window.ArcadeGary = (function () {
   var FRAMES = 8;            // cells in gary-pace.png
-  /* 24, not the 12 he paces at on /fun. Speed is stride over cycle, so the
-     only way to cross the page in a sensible time without his feet sliding is
-     to step faster. At 12 the walk from the coin to the dial took 15 seconds;
-     at 24 it is under eight and reads as him hustling, which suits an arcade
-     floor. Do not raise the translate duration on its own. */
-  var FPS = 24;
+  /* 12, the same as /fun. It was 24 for a while, because the walk used to run
+     from the back link to the dial, ~900px, which takes eighteen seconds at
+     12. The fix was to shorten the walk (see coinSpot), not to hurry him. */
+  var FPS = 12;
   var FACING_FRAMES = 2;     // cells in gary-facing.png
   var FACING_CYCLE = 1.6;    // seconds for both standing poses
 
-  var HEIGHT = 62;                       // display height, px
+  /* 72, the same as /fun, and half the 144px sheet cell so he stays crisp.
+     With FPS matched too, SPEED below comes out identical to /fun's: same
+     stride, same cadence, same pace. He is also then about the height of
+     the dial knob he stands beside (79px) and clears the glass above the
+     chin by 17px. */
+  var HEIGHT = 72;                       // display height, px
   var ASPECT = 114 / 144;                // one cell in the sheet
   var WIDTH = Math.round(HEIGHT * ASPECT);
 
@@ -41,6 +54,11 @@ window.ArcadeGary = (function () {
   var SPEED = STRIDE / CYCLE;            // px per second. Do not round.
 
   var GAP = 14;              // how far he stands off the thing he points at
+  /* His feet sit this far above the bezel's bottom edge. 3px is where the
+     base of the dial knob lands (measured: knob bottom 965 on a bezel
+     bottom of 968), so the two share a floor line. */
+  var FOOT = 3;
+  var EDGE = 8;              // never nearer than this to either end of the bezel
   var MIN_WIDTH = 760;       // below this the layout stacks and he is in the way
 
   var LINES = {
@@ -49,8 +67,8 @@ window.ArcadeGary = (function () {
     shush: "Stay focused on the game, this isn't a time for talk."
   };
 
-  var sprite, bubble, root;
-  var x = 0;                 // his left edge, in px from the viewport left
+  var sprite, bubble, root, bezel;
+  var x = 0;                 // his left edge, in px from the bezel's left edge
   var facing = 1;            // 1 right, -1 left
   var walking = false;
   var walkTimer = null, bubbleTimer = null;
@@ -63,14 +81,25 @@ window.ArcadeGary = (function () {
   /* ------------------------------- build -------------------------------- */
 
   function build() {
+    bezel = document.querySelector('.bezel');
+    if (!bezel) return false;
+
     root = document.createElement('div');
     root.className = 'gary';
     root.setAttribute('aria-hidden', 'false');
+    // Size and seat from the constants here, so they live in one place.
+    // The CSS carries the same numbers as defaults.
+    root.style.width = WIDTH + 'px';
+    root.style.height = HEIGHT + 'px';
+    root.style.bottom = FOOT + 'px';
 
     sprite = document.createElement('button');
     sprite.type = 'button';
     sprite.className = 'gary-sprite';
     sprite.setAttribute('aria-label', 'Gary');
+    sprite.style.width = WIDTH + 'px';
+    sprite.style.height = HEIGHT + 'px';
+    sprite.style.setProperty('--gary-w', WIDTH + 'px');
 
     bubble = document.createElement('div');
     bubble.className = 'gary-bubble';
@@ -78,7 +107,11 @@ window.ArcadeGary = (function () {
 
     root.appendChild(bubble);
     root.appendChild(sprite);
-    document.body.appendChild(root);
+    /* Into the bezel, not the body. His vertical seat is then a CSS bottom
+       against the cabinet itself, so a relayout - the bezel is sized by the
+       viewport height - can never leave him floating above the chin, and
+       the stacking is simple: nothing in the CRT stack goes above 6. */
+    bezel.appendChild(root);
 
     stand();
     sprite.addEventListener('click', function (e) {
@@ -86,7 +119,7 @@ window.ArcadeGary = (function () {
       say(LINES.shush, 4200);
       if (e.detail > 0) sprite.blur();   // hand the keyboard back to the game
     });
-
+    return true;
   }
 
   /* ------------------------------ drawing ------------------------------- */
@@ -130,32 +163,55 @@ window.ArcadeGary = (function () {
     if (ms) bubbleTimer = setTimeout(hush, ms);
   }
 
-  /* Centre the bubble on him, then pull it back inside the viewport if that
-     would hang it off an edge - he stands near both edges by design. The tail
-     stays on him rather than on the bubble's middle, so a shifted bubble
-     still points at the right person. */
+  /* The bubble sits beside him, not over his head: the chin is 92px tall
+     and he is 72 of it, so anything above him lands on the glass. Beside
+     him it stays on the plastic, level with the game list next to the dial.
+     It goes on his right, towards the rail and the coin, and flips to his
+     left only if the right side would run off the viewport - which it
+     cannot from either station today, but the rule costs nothing. */
   function placeBubble() {
-    bubble.style.left = '0px';
     var bw = bubble.offsetWidth;
-    var centre = x + WIDTH / 2;
-    var left = Math.max(8, Math.min(centre - bw / 2, window.innerWidth - bw - 8));
-    bubble.style.left = (left - x) + 'px';
-    bubble.style.setProperty('--tail', (centre - left) + 'px');
+    var left = bezel.getBoundingClientRect().left + x + WIDTH;
+    bubble.classList.toggle('is-left', left + bw + 24 > window.innerWidth);
   }
 
   function hush() { bubble.hidden = true; }
 
   /* ------------------------------- moving ------------------------------- */
 
-  /** Left edge for standing beside a target element, on the given side. */
+  /** Left edge for standing beside a target element, on the given side,
+      in bezel coordinates. */
   function spotBeside(selector, side) {
     var t = document.querySelector(selector);
     if (!t) return null;
     var r = t.getBoundingClientRect();
     if (!r.width) return null;
-    var left = side === 'left' ? r.left - WIDTH - GAP : r.right + GAP;
-    // Never let him walk off the page.
-    return Math.max(8, Math.min(left, window.innerWidth - WIDTH - 8));
+    var b = bezel.getBoundingClientRect();
+    var left = (side === 'left' ? r.left - WIDTH - GAP : r.right + GAP) - b.left;
+    // Never let him walk off the cabinet.
+    return Math.max(EDGE, Math.min(left, b.width - WIDTH - EDGE));
+  }
+
+  /** Where he stands to talk about the dial: just right of its game list. */
+  function dialSpot() { return spotBeside('.dial-wrap', 'right'); }
+
+  /* Where he stands to talk about the coin: centre stage, under the screen
+     that is itself saying INSERT COIN. The coin is across the page in the
+     rail, but it glows and is labelled, so he can call across to it; the
+     dial is the control that needs someone standing next to it.
+
+     Snapped to a whole number of strides from the dial spot. The walk is a
+     CSS transition over exactly cycles*CYCLE seconds, so a distance that is
+     exactly cycles*STRIDE is the only one his feet agree with all the way,
+     and it lands him exactly on the dial spot with a foot planted. Nobody
+     can see that centre stage is up to 20px off true centre. Between the
+     layouts this page takes that is 4 to 9 strides, 2.7 to 6 seconds. */
+  function coinSpot() {
+    var from = dialSpot();
+    if (from == null) return null;
+    var centre = bezel.getBoundingClientRect().width / 2 - WIDTH / 2;
+    var cycles = Math.max(1, Math.round((centre - from) / STRIDE));
+    return from + cycles * STRIDE;
   }
 
   function placeAt(px) {
@@ -175,7 +231,9 @@ window.ArcadeGary = (function () {
 
     var seconds = dist / SPEED;
     // Round the travel to a whole number of cycles so he finishes on a
-    // planted foot instead of mid-air.
+    // planted foot instead of mid-air. The stations are already a whole
+    // number of strides apart (see coinSpot), so this is a no-op in
+    // practice and a safety net if a caller hands in some other distance.
     var cycles = Math.max(1, Math.round(seconds / CYCLE));
     seconds = cycles * CYCLE;
 
@@ -200,7 +258,7 @@ window.ArcadeGary = (function () {
   var atDial = false;
 
   function toCoin() {
-    var spot = spotBeside('.back-wrap', 'left');
+    var spot = coinSpot();
     if (spot == null) return;
     placeAt(spot);
     say(LINES.coin, 0);          // stays up until the coin goes in
@@ -210,16 +268,16 @@ window.ArcadeGary = (function () {
     if (atDial) return;
     atDial = true;
     hush();
-    var spot = spotBeside('.dial-wrap', 'right');
+    var spot = dialSpot();
     if (spot == null) return;
     walkTo(spot, function () { say(LINES.dial, 9000); });
   }
 
-  /** Re-seat him when the layout moves under him. */
+  /** Re-seat him when the layout moves under him. Only x needs redoing:
+      the bezel's width changes with the viewport, his seat does not. */
   function reseat() {
     if (walking) return;
-    var spot = atDial ? spotBeside('.dial-wrap', 'right')
-                      : spotBeside('.back-wrap', 'left');
+    var spot = atDial ? dialSpot() : coinSpot();
     if (spot != null) placeAt(spot);
   }
 
@@ -227,7 +285,7 @@ window.ArcadeGary = (function () {
 
   function start() {
     if (tooNarrow()) return;
-    build();
+    if (!build()) return;
     toCoin();
 
     // The coin is his cue to move on. data-inserted flips on documentElement
@@ -257,5 +315,5 @@ window.ArcadeGary = (function () {
   if (document.readyState === 'complete') start();
   else window.addEventListener('load', start);
 
-  return { say: say, toDial: toDial };
+  return { say: say, toDial: toDial, reseat: reseat };
 })();
