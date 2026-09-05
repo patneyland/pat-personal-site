@@ -1,6 +1,18 @@
 # Refining /portfolio and /garden, and the language that runs across both
 
-Written 2026-09-04. A spec, not a change. Nothing here is built yet.
+Written 2026-09-04, and largely built the same day. See CURRENT-PLATE.md for
+what actually shipped.
+
+**Status, so this file is not read as current instruction:**
+
+- Section 0 (districts, landmarks, paths) is the governing idea and still holds.
+  Read it first.
+- Section 2's shared elements are built, except the pen (2.2), which is the next
+  job, and view transitions (2.4), which are not started.
+- Section 3 (the portfolio hierarchy) was built and then REVERSED. Pat wants the
+  tiles all one size. Do not rebuild it from this section without asking him.
+- Section 4 (the garden) is built, except the topography in 4.3, with one change:
+  the stacked layout became the same uniform grid the portfolio uses.
 
 Pat's read is that both pages feel AI generated. That read is correct, and the
 reason is specific enough to fix. This file says what is actually causing it,
@@ -375,6 +387,10 @@ Pick one spacing scale and use it. Then take the three free typographic wins:
 
 ## 3. Portfolio: the moves
 
+> **REVERSED 2026-09-04.** Built, then undone the same day: Pat wants every tile
+> the same size. This section is kept for the reasoning, not as instruction.
+> Ask before acting on it.
+
 **Model it on a newspaper front page, not a gallery.** One lead story, several
 smaller ones below, sizes set by importance. That is the standard editorial
 answer to "many items, unequal weight," and it gives the page an argument.
@@ -469,8 +485,8 @@ These replace the emoji everywhere: the plot, the entry pages, and the legend
 
 ### 4.3 The rest
 
-1. **Stack, do not grid, at this size.** Three entries in a three-across grid is
-   the exact tell. Revisit at a dozen.
+1. ~~**Stack, do not grid, at this size.**~~ Superseded 2026-09-04: the garden
+   uses the same uniform grid as the portfolio, at Pat's direction.
 2. **Turn on topography.** Surface the wiki-links `expandWikiLinks` already
    resolves: a backlinks block on an entry page, and tags as navigation on the
    plot. Date sort stops being the primary organization. This is the first and

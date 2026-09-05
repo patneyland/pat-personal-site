@@ -4,7 +4,99 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-09-03.
+Last touched: 2026-09-04.
+
+---
+
+# SHIPPED: the four pages made into one site (2026-09-04)
+
+**All live and verified in production.** A long session on cohesion: the
+portfolio and the garden were two recolours of one generic template, and
+`/fun` and `/story` felt like a different website from both.
+
+The governing idea and the research behind it are in
+[docs/refinement.md](docs/refinement.md). Read that before touching any of this.
+Short version: you do not harmonise districts by making them alike, you
+harmonise them with landmarks and paths that never change while the districts
+stay different.
+
+## What shipped
+
+- **The nav is a legend.** Every section wears its own hue all the time, dimmed
+  at rest and full strength for the one you are in. It used to mark the current
+  page in gold on every page, so standing in the garden told you that you were
+  somewhere gold. One row per district in `src/lib/sections.ts`, and adding a
+  section means adding a row there and nowhere else.
+- **Cool neutrals, warm accent.** The ground and the text were warm together and
+  the whole site read as one brown. `--accent` gold is untouched and is now
+  explicitly shared furniture: `/story`'s arrows, the scripture on `/fun` and the
+  resume links all use it. Do not repoint it at a section colour.
+- **Portfolio blue, garden periwinkle.** Portfolio had no colour of its own and
+  wore the same gold as `/fun`. The garden's green was cut at Pat's request,
+  along with any depicted garden: no moss, no soil, no overhead light.
+- **The garden's four growth stages are gone.** Seed, sprout, growing and ripe
+  were a taxonomy its own author could not fill in honestly. What replaced them
+  is derived rather than authored: whether anything is written yet.
+- **One layout component for both pages.** `CardLayout.tsx`. The two districts
+  differ in colour and nothing else.
+- **The handwriting belongs to Gary.** `--font-hand` was also setting the
+  story's page name, its captions and the torn note. It is his voice only now.
+  This is the one sanctioned exception to the do-not-restyle rule on `/story`.
+- **Gary stands on the portfolio and the garden**, clicks open his chat, and the
+  bubble arrives with his greeting in it.
+
+## The reversal, so nobody re-does it by accident
+
+The portfolio and garden went to a newspaper hierarchy mid-session (one lead at
+full width, two-column standards, an index line for anything with no writing
+behind it) and came back to a uniform grid the same day, because Pat wants the
+tiles all one size. The `weight` frontmatter field went with it.
+
+Flagged once and overruled, which makes it a decision rather than drift: a
+uniform card grid is the pattern the research names as the clearest single tell
+of a generated page. The costs he accepted are that a tile with no image is
+padded out to match a taller neighbour, and that the page cannot say which
+project matters most. The hierarchy is in the history if it is ever wanted back
+(commit `8c3e33a`'s parent).
+
+## Blocked on Pat
+
+1. **Arcade-bench has no blurb.** With every tile padded to equal height it is
+   now the emptiest thing on the site. One or two sentences fixes it.
+2. **The garden's two marks are Claude's bezier curves, not Pat's hand.**
+   `src/components/ui/PenMark.tsx` is the whole seam: two path strings.
+3. **Gary's greeting says "glad you made it to the fun website"** and now shows
+   on all four pages. `content/gary.md`.
+
+## Next, and the order matters
+
+1. **Unify the pen before drawing anything else.** There are at least four
+   stroke weights that do not know about each other: `House.tsx` `PEN * 10`,
+   `PenMark.tsx` `1.6`, `Story.tsx` connectors at `2` and `2.5`, and
+   `ThoughtBubble.tsx` variable with a `max(1.6, ...)` floor. The site's
+   strongest asset does not exist as one thing. A shared constant first, then
+   the four call sites.
+2. **Then carry the drawn stroke to the portfolio and garden**, as the rule
+   under the heading and the arrows on links, replacing CSS hairlines and lucide
+   icons. Both review agents ranked this; it costs no new fonts.
+
+## Lessons worth keeping
+
+- **A screenshot is not a check.** Claude looked at the opened chat bubble and
+  reported it working twice: it was empty, and its trail pointed at nothing.
+  Both were plainly visible in the image.
+- **A deploy probe must not match the old build.** `grep card-grid` matched the
+  previous build's `card-grid-2` and reported a deploy that had not happened.
+  Probe for a string only the new build can contain.
+- **`whileInView` breaks full-page screenshots.** Anything below the fold
+  captures at opacity 0 and looks broken. `scripts/dev/shot-review.mjs` scrolls
+  the page first.
+- **`h-full` on a grid item defeats `align-items: start`**, because the height
+  resolves against the row rather than the content.
+- **Two sessions in this repo at once is a real hazard.** Work in progress got
+  swept into another session's commits repeatedly, and once in the other
+  direction: two of its debug files nearly shipped to `public/`. Check
+  `git status` before committing, and read what you are about to stage.
 
 ---
 
