@@ -163,6 +163,11 @@ window.ArcadeSound = (function () {
       });
     },
 
+    /* The saucer's shot, so you can tell it from your own. */
+    saucerFire: function () {
+      tone({ type: 'square', from: 900, to: 220, dur: 0.11, gain: 0.15 });
+    },
+
     /* -------------------------------- ui ------------------------------- */
     dial: function () {
       noise({ dur: 0.045, from: 3000, to: 1000, filter: 'bandpass', q: 9, gain: 0.20 });
@@ -201,6 +206,39 @@ window.ArcadeSound = (function () {
     }
     beat.hi = !beat.hi;
     beat.timer = setTimeout(tickBeat, beat.interval);
+  }
+
+  /* --------------------------- the saucer warble -----------------------
+     The cabinet's other signature loop, after the heartbeat: a two-note
+     warble that runs the whole time a saucer is on screen. The small saucer
+     sits higher and faster, which is the only warning you get that the
+     dangerous one has arrived.
+     -------------------------------------------------------------------- */
+  var ufo = { timer: null, hi: false, size: 2 };
+
+  S.saucer = {
+    /** size 2 large, 1 small */
+    start: function (size) {
+      S.saucer.stop();
+      ufo.size = size === 1 ? 1 : 2;
+      ufo.hi = false;
+      ufoTick();
+    },
+    stop: function () {
+      if (ufo.timer) { clearTimeout(ufo.timer); ufo.timer = null; }
+    }
+  };
+
+  function ufoTick() {
+    if (!muted) {
+      var base = ufo.size === 1 ? 610 : 372;
+      tone({ type: 'square',
+             from: ufo.hi ? base : base * 0.8,
+             to:   ufo.hi ? base * 0.9 : base * 0.72,
+             dur: 0.1, gain: 0.1 });
+    }
+    ufo.hi = !ufo.hi;
+    ufo.timer = setTimeout(ufoTick, ufo.size === 1 ? 148 : 192);
   }
 
   /* ------------------------------- mute -------------------------------- */
