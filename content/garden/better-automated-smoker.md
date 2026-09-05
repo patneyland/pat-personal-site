@@ -1,6 +1,5 @@
 ---
 title: The better automated smoker
-stage: sprout
 planted: 2026-09
 tended: 2026-09
 tags: [bbq, projects]

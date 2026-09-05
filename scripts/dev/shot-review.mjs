@@ -1,19 +1,16 @@
+/* Screenshot a running local build for design review.
+   Usage: npx next start -p <port>, then
+          node scripts/dev/shot-review.mjs <outDir> <port> <route>... */
 import { chromium } from "playwright";
-const out = process.argv[2];
+const [out, port = "3578", ...routes] = process.argv.slice(2);
+const list = routes.length ? routes : ["/portfolio", "/garden", "/story"];
 const b = await chromium.launch();
 const p = await b.newPage({ viewport: { width: 1280, height: 900 }, deviceScaleFactor: 2 });
-for (const [route, name] of [["/portfolio","portfolio"],["/garden","garden"],["/story","story"]]) {
-  await p.goto("http://localhost:3577" + route, { waitUntil: "networkidle" });
+for (const route of list) {
+  await p.goto(`http://localhost:${port}${route}`, { waitUntil: "networkidle" });
   await p.waitForTimeout(1400);
-  await p.screenshot({ path: `${out}/${name}.png` });
+  const name = route.replace(/\//g, "_").replace(/^_/, "") || "home";
+  await p.screenshot({ path: `${out}/${name}.png`, fullPage: true });
   console.log("shot", name);
 }
-// nav close-up, to read the legend
-await p.goto("http://localhost:3577/garden", { waitUntil: "networkidle" });
-await p.waitForTimeout(800);
-await p.locator("nav").screenshot({ path: `${out}/nav-in-garden.png` });
-await p.goto("http://localhost:3577/portfolio", { waitUntil: "networkidle" });
-await p.waitForTimeout(800);
-await p.locator("nav").screenshot({ path: `${out}/nav-in-portfolio.png` });
-console.log("shot navs");
 await b.close();

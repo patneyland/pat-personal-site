@@ -4,27 +4,73 @@ import matter from "gray-matter";
 import { remark } from "remark";
 import html from "remark-html";
 
-export const STAGES = ["seed", "sprout", "growing", "ripe"] as const;
-export type Stage = (typeof STAGES)[number];
+/**
+ * What a garden entry is.
+ *
+ * There used to be a `stage` field with four values: seed, sprout, growing,
+ * ripe. It was cut on 2026-09-04. Nobody could fill it in honestly, including
+ * its author, so it was a taxonomy that looked like information and was not.
+ * All four values rendered an identical card with a different word in it.
+ *
+ * What replaced it is the rule that a signal has to be true without anyone
+ * making a judgment call. Exactly one thing about an entry qualifies, and it
+ * was already being computed here: whether there is anything to read yet.
+ *
+ *   note - something is written, or it points somewhere that has writing.
+ *          It links.
+ *   line - a title and a date so far. It does not link.
+ *
+ * Neither is labelled on the page, because the difference is already visible:
+ * one is a block you can click and the other is a line you cannot. The honesty
+ * the stages were reaching for is carried by the page's own eyebrow instead,
+ * once, at the top, in Patrick's words.
+ *
+ * See docs/refinement.md section 4.
+ */
+export type Kind = "note" | "line";
 
 export type Entry = {
   slug: string;
   title: string;
-  stage: Stage;
+  kind: Kind;
   planted: string;
   tended: string;
   tags: string[];
-  /** Set to point the card off-site, at a Substack post for example. */
+  /** Set to point the entry off-site, at a Substack post for example. */
   external: string | null;
   /** Rendered markdown body, or null when the file is frontmatter only. */
   body: string | null;
+  /**
+   * The entry's own opening line, as plain text, for the plot.
+   *
+   * Lifted from what Patrick already wrote rather than authored separately, so
+   * there is no second place to keep in sync and no copy on this site that he
+   * did not write. Null when nothing is written yet.
+   */
+  excerpt: string | null;
 };
 
-const DIR = path.join(process.cwd(), "content", "garden");
-
-function isStage(value: unknown): value is Stage {
-  return STAGES.includes(value as Stage);
+/** First paragraph of rendered markdown, as plain text, trimmed to fit a card. */
+function firstParagraph(rendered: string | null): string | null {
+  if (!rendered) return null;
+  const m = rendered.match(/<p>([\s\S]*?)<\/p>/);
+  if (!m) return null;
+  const text = m[1]
+    .replace(/<[^>]+>/g, "")
+    .replace(/&#x26;|&amp;/g, "&")
+    .replace(/&#x27;|&apos;/g, "'")
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return null;
+  if (text.length <= 165) return text;
+  const cut = text.slice(0, 165);
+  return cut.slice(0, cut.lastIndexOf(" ")) + "...";
 }
+
+const DIR = path.join(process.cwd(), "content", "garden");
 
 /**
  * Rewrite [[some-slug]] into a link to that entry.
@@ -76,15 +122,20 @@ export async function getEntries(): Promise<Entry[]> {
           )
         : null;
 
+      const external = data.external ? String(data.external) : null;
+
       return {
         slug,
         title: String(data.title ?? slug),
-        stage: isStage(data.stage) ? data.stage : "seed",
+        // Derived, never authored. This is the whole point: no field for
+        // Patrick to get wrong, and it cannot drift out of date.
+        kind: (body || external ? "note" : "line") as Kind,
         planted: data.planted ? String(data.planted) : "",
         tended: data.tended ? String(data.tended) : "",
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
-        external: data.external ? String(data.external) : null,
+        external,
         body,
+        excerpt: firstParagraph(body),
       } satisfies Entry;
     }),
   );

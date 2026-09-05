@@ -2,7 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import BlurFade from "@/components/ui/BlurFade";
-import { G, STAGE_META } from "@/components/sections/gardenTheme";
+import { G } from "@/components/sections/gardenTheme";
+import PenMark from "@/components/ui/PenMark";
 import { getEntries, getEntry } from "@/lib/garden";
 
 export async function generateStaticParams() {
@@ -21,7 +22,7 @@ export async function generateMetadata({
 
   return {
     title: `${entry.title} | Patrick Neyland`,
-    description: `A ${STAGE_META[entry.stage].label.toLowerCase()} in Patrick Neyland's garden.`,
+    description: `An unfinished note in Patrick Neyland's garden.`,
   };
 }
 
@@ -34,8 +35,6 @@ export default async function GardenEntryPage({
   const entry = await getEntry(slug);
 
   if (!entry || !entry.body) notFound();
-
-  const stage = STAGE_META[entry.stage];
 
   return (
     <main>
@@ -65,24 +64,10 @@ export default async function GardenEntryPage({
             <div
               style={{
                 marginTop: "2.5rem",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.55rem",
+                color: G.accent,
               }}
             >
-              <span style={{ fontSize: "1.05rem", lineHeight: 1 }}>
-                {stage.glyph}
-              </span>
-              <span
-                style={{
-                  fontFamily: "var(--font-hand)",
-                  fontSize: "1.4rem",
-                  lineHeight: 1,
-                  color: G.accent,
-                }}
-              >
-                {stage.label}
-              </span>
+              <PenMark mark="note" size={18} />
             </div>
           </BlurFade>
 

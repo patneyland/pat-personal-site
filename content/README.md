@@ -62,7 +62,6 @@ screenshot is almost always better.
 ```markdown
 ---
 title: What institutions get wrong about AI
-stage: sprout              # seed | sprout | growing | ripe
 planted: 2025-03
 tended: 2026-06            # sorts the plot. most recently tended first
 tags: [ai, government]
@@ -72,12 +71,15 @@ external:                  # optional. a Substack URL sends the card off-site
 Body is optional.
 ```
 
-Three kinds of entry, and the difference is just whether you wrote a body:
+There is no growth stage to set. There used to be four (seed, sprout, growing,
+ripe) and they were cut on 2026-09-04, because nobody could fill them in
+honestly. The only thing the plot asks is whether you have written anything
+yet, and it works that out on its own:
 
 | What you wrote | What happens |
 |---|---|
-| Frontmatter only | A note on the plot. The card does not link anywhere |
-| Frontmatter and a body | The card links to `/garden/<slug>`, which is a reading page |
+| Frontmatter only | A quiet line under the notes, no link. Nothing is claimed |
+| Frontmatter and a body | A note on the plot, linking to `/garden/<slug>` |
 | `external:` set | The card links off-site |
 
 **A seed with one sentence is a finished entry.** Nothing in the design implies an entry is

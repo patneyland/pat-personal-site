@@ -108,7 +108,7 @@ export async function buildCorpus(): Promise<Corpus> {
           ? `internal link: /garden/${entry.slug}`
           : "no page of its own";
       const body = entry.body ? ` ${stripHtml(entry.body)}` : "";
-      return `- ${entry.title} (stage: ${entry.stage}; ${where}).${body}`;
+      return `- ${entry.title} (last tended ${entry.tended || entry.planted}; ${where}).${body}`;
     })
     .join("\n");
 

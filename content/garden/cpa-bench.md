@@ -1,6 +1,5 @@
 ---
 title: CPA-bench
-stage: growing
 planted: 2026-01
 tended: 2026-06
 tags: [ai, accounting, benchmarks]

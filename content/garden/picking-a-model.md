@@ -1,6 +1,5 @@
 ---
 title: Choosing the right model for the job
-stage: ripe
 planted: 2026-09
 tended: 2026-09
 tags: [ai, llms, projects]

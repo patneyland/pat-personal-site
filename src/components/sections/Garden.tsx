@@ -1,10 +1,23 @@
 import BlurFade from "@/components/ui/BlurFade";
-import GardenBed from "@/components/sections/GardenBed";
-import { G, STAGE_META } from "@/components/sections/gardenTheme";
-import { getEntries, STAGES } from "@/lib/garden";
+import { GardenNote, GardenLine } from "@/components/sections/GardenBed";
+import { G } from "@/components/sections/gardenTheme";
+import { getEntries } from "@/lib/garden";
 
+/**
+ * The plot.
+ *
+ * Simplified 2026-09-04. What went: the four growth stages, the emoji that
+ * labelled them, the legend that explained them, and the three-across grid.
+ * What stayed: the green, the eyebrow, and the entries.
+ *
+ * The eyebrow is doing the work the stages were failing to do. It says the
+ * honest thing once, at the top, in Patrick's words, which is worth more than
+ * four gradations nobody could fill in truthfully.
+ */
 export default async function Garden() {
   const entries = await getEntries();
+  const notes = entries.filter((e) => e.kind === "note");
+  const lines = entries.filter((e) => e.kind === "line");
 
   return (
     <section
@@ -20,7 +33,7 @@ export default async function Garden() {
     >
       <div
         className="relative mx-auto"
-        style={{ maxWidth: "1000px", padding: "0 1.5rem", zIndex: 1 }}
+        style={{ maxWidth: "44rem", padding: "0 1.5rem", zIndex: 1 }}
       >
         <BlurFade delay={0.05}>
           <p
@@ -46,6 +59,7 @@ export default async function Garden() {
               lineHeight: 1,
               letterSpacing: "-0.025em",
               color: G.ink,
+              textWrap: "balance",
             }}
           >
             The Garden
@@ -60,6 +74,7 @@ export default async function Garden() {
               fontSize: "1.02rem",
               lineHeight: 1.75,
               color: G.inkSoft,
+              textWrap: "pretty",
             }}
           >
             Projects and writing that are still in the ground. Some of it will
@@ -67,58 +82,53 @@ export default async function Garden() {
           </p>
         </BlurFade>
 
-        {/* The legend only means something once there is something to label. */}
-        {entries.length > 0 && (
-        <BlurFade delay={0.24}>
+        {notes.length > 0 && (
           <div
             style={{
-              marginTop: "2rem",
+              marginTop: "2.75rem",
               display: "flex",
-              flexWrap: "wrap",
-              gap: "1.4rem",
+              flexDirection: "column",
+              gap: "0.9rem",
             }}
           >
-            {STAGES.map((key) => (
-              <span
-                key={key}
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "0.4rem",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: "0.66rem",
-                  letterSpacing: "0.1em",
-                  textTransform: "uppercase",
-                  color: G.inkSoft,
-                }}
-              >
-                <span style={{ fontSize: "0.9rem" }}>
-                  {STAGE_META[key].glyph}
-                </span>
-                {STAGE_META[key].label}
-              </span>
+            {notes.map((entry, i) => (
+              <GardenNote
+                key={entry.slug}
+                entry={entry}
+                delay={0.24 + i * 0.06}
+              />
             ))}
           </div>
-        </BlurFade>
         )}
 
-        <div
-          style={{
-            marginTop: "2.75rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(290px, 1fr))",
-            gap: "1.25rem",
-            alignItems: "stretch",
-          }}
-        >
-          {entries.map((entry, i) => (
-            <GardenBed
-              key={entry.slug}
-              entry={entry}
-              delay={0.08 + i * 0.06}
-            />
-          ))}
-        </div>
+        {/* Titles with nothing written yet, gathered under the notes rather
+            than mixed in among them. */}
+        {lines.length > 0 && (
+          <div style={{ marginTop: notes.length > 0 ? "3rem" : "2.75rem" }}>
+            <BlurFade delay={0.24 + notes.length * 0.06}>
+              <p
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.62rem",
+                  letterSpacing: "0.16em",
+                  textTransform: "uppercase",
+                  color: G.inkSoft,
+                  opacity: 0.7,
+                  marginBottom: "0.6rem",
+                }}
+              >
+                Planted, not written
+              </p>
+            </BlurFade>
+            {lines.map((entry, i) => (
+              <GardenLine
+                key={entry.slug}
+                entry={entry}
+                delay={0.3 + notes.length * 0.06 + i * 0.05}
+              />
+            ))}
+          </div>
+        )}
 
         {entries.length === 0 && (
           <BlurFade delay={0.24}>
