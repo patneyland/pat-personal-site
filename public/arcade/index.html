@@ -1343,6 +1343,76 @@ body {
 @media (max-width: 720px) {
   .back-wrap { padding-bottom: 1.4rem; }
 }
+
+/* ─── Gary ───────────────────────────────────────────────
+   The same drawings as the Gary on /fun, off the same sheets in /assets. He
+   walks the bottom edge of the page: coin slot first, then over to the dial.
+   gary-step is redefined here because this page does not load globals.css. */
+.gary {
+  position: fixed;
+  left: 0;
+  bottom: 10px;
+  z-index: 60;
+  width: 49px;
+  height: 62px;
+  pointer-events: none;
+  will-change: transform;
+}
+.gary[hidden] { display: none; }
+
+.gary-sprite {
+  all: unset;
+  display: block;
+  width: 49px;
+  height: 62px;
+  --gary-w: 49px;
+  background-repeat: no-repeat, no-repeat;
+  background-position: 0 0;
+  cursor: pointer;
+  pointer-events: auto;
+}
+.gary-sprite:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 4px; }
+
+.gary-bubble {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;                 /* JS sets this: see placeBubble in gary.js */
+  width: max-content;
+  max-width: 210px;
+  padding: 9px 11px;
+  font-family: var(--font-arcade);
+  font-size: 7.5px;
+  line-height: 1.85;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #d8d2c8;
+  background: rgba(10, 10, 12, 0.96);
+  border: 1px solid #45423c;
+  border-radius: 8px;
+  pointer-events: none;
+}
+.gary-bubble[hidden] { display: none; }
+/* The tail, a rotated corner of the same box so the borders line up. */
+.gary-bubble::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: var(--tail, 50%);
+  width: 9px;
+  height: 9px;
+  margin: -5px 0 0 -5px;
+  background: rgba(10, 10, 12, 0.96);
+  border-right: 1px solid #45423c;
+  border-bottom: 1px solid #45423c;
+  transform: rotate(45deg);
+}
+
+@keyframes gary-step {
+  to { background-position: calc(var(--gary-w, 49px) * var(--gary-cells, -8)) 0; }
+}
+
+@media (max-width: 760px) { .gary { display: none; } }
+
 </style>
 </head>
 
@@ -1472,6 +1542,7 @@ body {
 <script src="/arcade/minesweeper.js"></script>
 <script src="/arcade/asteroids.js"></script>
 <script src="/arcade/cabinet.js"></script>
+<script src="/arcade/gary.js"></script>
 
 </body>
 </html>

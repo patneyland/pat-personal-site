@@ -46,6 +46,36 @@ That is exactly the site Pat is building, and it means the "each page is its own
 world" instinct was never in tension with "easy to navigate." It only became a
 problem because the landmarks are weak and the edges carry no information.
 
+### How much weight this reference actually carries
+
+Worth being straight about, because it is the kind of claim that gets challenged.
+
+**The lineage is real.** Lynch coined wayfinding and the word is standard
+vocabulary in digital design now. His five elements were carried into web work
+by the founding text of the field, Rosenfeld and Morville's *Information
+Architecture for the World Wide Web*, first edition 1998, the polar bear book,
+now in a fourth edition with Jorge Arango. Arango went on to write *Living in
+Information*, whose whole argument is that digital products should be designed
+as places. Morville's *Ambient Findability* leans on Lynch directly. This is a
+continuous line, not a stretched analogy.
+
+**But nobody runs a Lynch audit.** In day to day product work in 2026 it is a
+conceptual frame, not a method. It shows up in IA writing, conference talks and
+senior practitioners' vocabulary. Claiming it is what UX people discuss weekly
+would get pushback, and rightly.
+
+**So pair it with the phrasing practitioners do use now.** The same argument is
+live in design systems circles as **coherence over consistency**: consistency
+means making things uniform, coherence means making them make sense together,
+and consistency is only ever a tool for reaching coherence. Pushed to the
+extreme, consistency produces uniformity and a stiff experience that helps
+nobody. The related practical body of work is **multi-brand and sub-brand
+theming**, where one system carries several brands that share a skeleton and
+differ in skin, which is structurally the same problem as this site.
+
+Useful division for the video: **Lynch is the why, coherence over consistency is
+the how it gets argued today, and multi-brand theming is how it gets built.**
+
 ### What is spine, and what is free
 
 The mistake in `design.md` was drawing the spine too wide, so it swallowed
@@ -122,23 +152,30 @@ the way an animal chooses where to hunt, by the strength of the cue that
 something good is on the other side. Nielsen's line is the one to remember: life
 is too short to click on things you do not understand.
 
-Measured against that, the site has three real problems, all structural:
+**First, what is deliberate and stays.** `Nav.tsx` returns null on `/` and
+`/fun`. Pat confirmed 2026-09-04 that this is the design, not an oversight. It
+holds up under the frame: `/` is a plain resume with exactly one way out, and
+`/fun` is the node where every path actually meets and carries its own links.
+The site funnels rather than branching from the door. Do not add the nav to
+either page.
 
-1. **Two of the five districts have no path to them.** `Nav.tsx` returns null on
-   `/` and `/fun`, which are both entry points, so anyone arriving has no map.
-   The front door links to exactly one place, `/fun`. Everything else is reached
-   only through whatever `/fun` happens to offer
-2. **The arcade has no path at all.** It lives at `public/arcade`, it is not a
+The one obligation that creates: **`/fun` is now load bearing.** It is the only
+node, so every district has to be reachable from it. Anything not linked there
+is not linked at all. That is worth checking whenever a section is added.
+
+Two things left that are worth a look:
+
+1. **The arcade may have no path.** It lives at `public/arcade`, it is not a
    route, it is not in the nav, and nothing in `content/resume.md` links to it.
-   It is a district with no street
-3. **"Garden" is a low-scent label.** It is a real convention and it is the
-   right name for the thing, but a reader who has not met it before cannot tell
-   what is behind that link. Same, more mildly, for "Fun"
-
-1 and 2 are worth fixing. 3 is a copy decision and therefore Pat's, and the
-honest options are: keep the word and let the page explain itself in its first
-line, which it already does; or give the nav a second line of scent under each
-label. Do not rename it to something duller to score a point.
+   If `/fun` links to it, fine and this is nothing. If not, it is a district
+   with no street, and that is only good if it is meant to be found rather than
+   navigated to. Pat's call, and a legitimate answer is yes, it is an easter egg
+2. **"Garden" is a low-scent label.** It is a real convention and the right name
+   for the thing, but a reader who has not met it cannot tell what is behind the
+   link. Same, more mildly, for "Fun." This is a copy decision and therefore
+   Pat's. The honest options: keep the word and let the page explain itself in
+   its first line, which it already does; or give the nav a second line of scent
+   under each label. Do not rename it to something duller to score a point
 
 ### The exception that proves it
 
@@ -486,10 +523,19 @@ New, and needed before building:
 Wayfinding and navigation, for section 0:
 - Kevin Lynch, *The Image of the City*, MIT Press 1960. The five elements are
   chapter 3. Short book, worth actually reading
+- Rosenfeld, Morville and Arango, *Information Architecture for the Web and
+  Beyond*, 4th ed. The polar bear book. This is the link from Lynch to web work
+- Jorge Arango, *Living in Information*, for the digital-products-as-places
+  argument
 - https://www.uxmatters.com/mt/archives/2013/05/information-wayfinding-part-2-elements-of-the-information-environment.php
 - https://www.nngroup.com/articles/information-foraging/
 - https://www.nngroup.com/articles/3-ia-mistakes/
 - https://blog.logrocket.com/ux-design/jakobs-law-creating-user-centric-interfaces/
+
+Coherence over consistency, and multi-brand theming:
+- https://uxmag.com/articles/design-for-coherence-not-consistency
+- https://www.supernova.io/blog/eight-multi-brand-design-systems-elevating-global-brand-consistency
+- https://nessgrixti.com/portfolio/wise-multi-brand/
 
 Layout and the AI look:
 - https://www.925studios.co/blog/ai-slop-design-tells
