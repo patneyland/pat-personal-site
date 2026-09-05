@@ -394,6 +394,16 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   to { background-position: calc(var(--gary-w, 43px) * var(--gary-cells, -8)) 0; }
 }
 
+/* A standing Gary. Holds the neutral pose for most of the cycle and waves
+   briefly, because an even two-frame swap is a metronome and reads as a
+   broken GIF. Covered by the prefers-reduced-motion rule above via
+   [data-gary]. */
+@keyframes gary-idle {
+  0%, 88%   { background-position: 0 0; }
+  89%, 97%  { background-position: calc(var(--gary-w, 57px) * -1) 0; }
+  98%, 100% { background-position: 0 0; }
+}
+
 @keyframes gary-pace {
   0%      { transform: translateX(0) scaleX(1); }
   49.99%  { transform: translateX(calc(100cqw - 100%)) scaleX(1); }

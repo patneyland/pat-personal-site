@@ -464,7 +464,13 @@ export default function CardLayout({
   return (
     <>
       {leads.map((card, i) => (
-        <div key={card.key} style={{ marginTop: i === 0 ? "3rem" : "3rem" }}>
+        /* Gary's box adds 72px of its own above the rule, so the gap is
+           halved where he stands or the band reads as a hole with a small
+           figure marooned in the corner of it. */
+        <div
+          key={card.key}
+          style={{ marginTop: i === 0 && asideBlock ? "1.5rem" : "3rem" }}
+        >
           {i === 0 && asideBlock}
           <Lead card={card} theme={theme} />
         </div>

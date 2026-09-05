@@ -67,6 +67,16 @@ type GaryState = {
   /** True once the greeting has been shown in this tab. */
   greeted: boolean;
   markGreeted: () => void;
+  /**
+   * Where the panel's trail should aim.
+   *
+   * The panel is fixed to the bottom-right and Gary is in the flow, so the
+   * trail can never truly touch him. It can at least leave on the side he is
+   * on: up-left out on the story board, up-right for a standing Gary at the
+   * end of the rule. A trail aimed at nothing is worse than no trail.
+   */
+  standing: boolean;
+  setStanding: (standing: boolean) => void;
 };
 
 const Ctx = createContext<GaryState | null>(null);
@@ -123,6 +133,8 @@ export function useGary(): GaryState {
       setMessages: () => {},
       greeted: true,
       markGreeted: () => {},
+      standing: false,
+      setStanding: () => {},
     };
   }
   return ctx;
@@ -138,6 +150,9 @@ export function GaryProvider({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  /* Set by GaryStanding while it is mounted, so the panel knows which side of
+     the screen he is on. See the `standing` note on GaryState. */
+  const [standing, setStanding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [greeted, setGreeted] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -185,6 +200,8 @@ export function GaryProvider({
         setMessages,
         greeted: !hydrated || greeted,
         markGreeted,
+        standing,
+        setStanding,
       }}
     >
       {children}
@@ -197,7 +214,7 @@ export function GaryProvider({
  * The bubble on /fun and the corner panel everywhere else both render this.
  */
 export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) {
-  const { messages, setMessages } = useGary();
+  const { messages, setMessages, greeting } = useGary();
   const pathname = usePathname();
 
   const [draft, setDraft] = useState("");
@@ -292,6 +309,24 @@ export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) 
           </div>
         ))}
 
+        {/* An empty panel is a punished click: on /fun the greeting comes off
+            his head, but nothing rendered it here, so opening the chat from a
+            standing Gary showed a blank cloud. Rendered rather than pushed
+            into `messages`, so it is not replayed to the model as a turn and
+            cannot be duplicated by a reload. */}
+        {messages.length === 0 && greeting && (
+          <div style={{ color: F.ink, textAlign: "left" }}>
+            <span
+              style={{
+                display: "inline-block",
+                maxWidth: "90%",
+                whiteSpace: "pre-wrap",
+              }}
+              dangerouslySetInnerHTML={{ __html: linkify(greeting) }}
+            />
+          </div>
+        )}
+
         {streaming && !messages[messages.length - 1]?.content && (
           <p style={{ color: F.inkFaint }}>...</p>
         )}
@@ -344,7 +379,7 @@ export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) 
  * screen and speaks instead.
  */
 export function GaryPanel() {
-  const { enabled, open, setOpen } = useGary();
+  const { enabled, open, setOpen, standing } = useGary();
   const pathname = usePathname();
   const claimed =
     useSyncExternalStore(subscribePresenters, readPresenters, readPresentersServer) > 0;
@@ -372,10 +407,11 @@ export function GaryPanel() {
     <ThoughtBubble
       role="dialog"
       ariaLabel="Chat with Gary"
-      /* Pointing up and to the left, roughly where he is: on /story he is
-         somewhere out on the board above this corner. */
+      /* Leaves on the side he is actually on. Out on the story board he is
+         up and to the left; a standing Gary is at the right end of the rule
+         near the top, so the trail exits on the right instead. */
       tail="up"
-      tailX={44}
+      tailX={standing ? PANEL_W - 44 : 44}
       seed={23}
       style={{
         /* Set here rather than with a class. ThoughtBubble applies
