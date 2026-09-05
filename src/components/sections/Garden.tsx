@@ -13,10 +13,9 @@ import { getEntries } from "@/lib/garden";
  * exception he asked for is the mark before each title, which is the only
  * garden-ish thing left after the green and the depicted greenhouse were cut.
  *
- * The weight tiers are derived here rather than authored, because a garden
- * entry has nothing to author them from. The most recently tended note leads,
- * the rest sit in the grid, and a title with nothing written behind it drops
- * to the index.
+ * Every entry is the same tile at the same size, which is how Patrick wants
+ * both pages. Notes come first and title-only entries after, which is the only
+ * ordering left now that the tiers are gone.
  */
 export default async function Garden() {
   const entries = await getEntries();
@@ -24,9 +23,8 @@ export default async function Garden() {
   const lines = entries.filter((e) => e.kind === "line");
 
   const cards: Card[] = [
-    ...notes.map((entry, i) => ({
+    ...notes.map((entry) => ({
       key: entry.slug,
-      weight: (i === 0 ? "lead" : "standard") as Card["weight"],
       eyebrow: entry.tags.length ? entry.tags.join(" · ") : null,
       meta: entry.tended || entry.planted || null,
       title: entry.title,
@@ -36,11 +34,10 @@ export default async function Garden() {
       internal: !entry.external,
       cta: entry.external ? "Read it elsewhere" : "Read it",
       image: null,
-      mark: <PenMark mark="note" size={i === 0 ? 26 : 16} />,
+      mark: <PenMark mark="note" size={16} />,
     })),
     ...lines.map((entry) => ({
       key: entry.slug,
-      weight: "minor" as Card["weight"],
       eyebrow: entry.tags.length ? entry.tags.join(" · ") : null,
       meta: entry.tended || entry.planted || null,
       title: entry.title,
@@ -114,13 +111,7 @@ export default async function Garden() {
           </p>
         </BlurFade>
 
-        {/* "Planted, not written" is a placeholder label, not Patrick's copy. */}
-        <CardLayout
-          cards={cards}
-          theme={G}
-          indexLabel={lines.length > 0 ? "Planted, not written" : undefined}
-          aside={<GaryStanding />}
-        />
+        <CardLayout cards={cards} theme={G} aside={<GaryStanding />} />
 
         {entries.length === 0 && (
           <BlurFade delay={0.24}>

@@ -10,28 +10,26 @@ import { ArrowUpRight, ArrowRight } from "lucide-react";
 /**
  * The shape both the portfolio and the garden are laid out in.
  *
- * Patrick's call, 2026-09-04: the two pages should be laid out the same and
- * differ only in colour. That is the site's whole argument about coherence
- * made literal, so it is built as one component rather than two that look
- * alike and drift apart by the third edit. A district supplies its cards and
- * its hue; nothing else about the shape is its to choose.
+ * One uniform grid. Every entry is the same tile at the same size, and the
+ * rows line up.
  *
- * The shape is a newspaper front page rather than a gallery:
+ * This has moved twice in a day, so the reasoning matters more than the
+ * conclusion. It began as a uniform grid, went to a newspaper hierarchy on
+ * 2026-09-04 (one lead at full width, two-column standards, an index line for
+ * anything with no writing behind it), and came back to uniform the same day
+ * at Patrick's direction: he wants the tiles all one size, as they were.
  *
- *   lead      one at a time, full width, image large, blurb shown
- *   standard  two columns
- *   minor     a line in an index, no card, no image
+ * The trade he accepted, stated plainly so nobody reopens it by accident: an
+ * equal-height tile with no image gets padded out to match a taller neighbour
+ * that has one, and the page cannot say which project matters most. The
+ * hierarchy version is in the history if it is ever wanted back.
  *
- * Which tier an item lands in is authored, not guessed. See lib/portfolio.ts.
- * Eight entries at identical size asserted they were all equally important,
- * which left the page with no argument to make.
+ * The two districts differ in colour and nothing else. That is deliberate, and
+ * it is the site's whole argument about coherence.
  */
-
-export type Weight = "lead" | "standard" | "minor";
 
 export type Card = {
   key: string;
-  weight: Weight;
   /** The one uppercase label an item gets. A category, or null. */
   eyebrow: string | null;
   /** Year, or the date last tended. Sits opposite the eyebrow. */
@@ -70,73 +68,6 @@ const STAMP: React.CSSProperties = {
   textTransform: "uppercase",
 };
 
-function Shell({
-  card,
-  style,
-  children,
-  onEnter,
-  onLeave,
-}: {
-  card: Card;
-  style: React.CSSProperties;
-  children: React.ReactNode;
-  onEnter: () => void;
-  onLeave: () => void;
-}) {
-  const handlers = { onMouseEnter: onEnter, onMouseLeave: onLeave };
-  if (card.href && card.internal) {
-    return (
-      <Link href={card.href} style={style} {...handlers}>
-        {children}
-      </Link>
-    );
-  }
-  if (card.href) {
-    return (
-      <a
-        href={card.href}
-        target="_blank"
-        rel="noopener noreferrer"
-        style={style}
-        {...handlers}
-      >
-        {children}
-      </a>
-    );
-  }
-  return <div style={style}>{children}</div>;
-}
-
-function Blurb({
-  card,
-  theme,
-  size,
-}: {
-  card: Card;
-  theme: CardTheme;
-  size: string;
-}) {
-  const style: React.CSSProperties = {
-    marginTop: "0.7rem",
-    maxWidth: "38rem",
-    fontSize: size,
-    lineHeight: 1.7,
-    color: theme.inkSoft,
-    textWrap: "pretty",
-  };
-  if (card.blurbHtml) {
-    return (
-      <div
-        className="tile-blurb"
-        style={style}
-        dangerouslySetInnerHTML={{ __html: card.blurbHtml }}
-      />
-    );
-  }
-  if (card.blurbText) return <p style={style}>{card.blurbText}</p>;
-  return null;
-}
-
 /** True when the category just repeats the title, as with "Trivia / TRIVIA". */
 function sameAsTitle(card: Card) {
   return (
@@ -145,280 +76,170 @@ function sameAsTitle(card: Card) {
   );
 }
 
-function StampRow({ card, theme }: { card: Card; theme: CardTheme }) {
+const BLURB: React.CSSProperties = {
+  marginTop: "0.7rem",
+  fontSize: "0.9rem",
+  lineHeight: 1.7,
+  textWrap: "pretty",
+};
+
+function Tile({
+  card,
+  theme,
+  delay,
+}: {
+  card: Card;
+  theme: CardTheme;
+  delay: number;
+}) {
+  const [hot, setHot] = useState(false);
+  const live = hot && Boolean(card.href);
   const eyebrow = sameAsTitle(card) ? null : card.eyebrow;
-  if (!eyebrow && !card.meta) return null;
-  return (
-    <div
-      style={{
-        ...STAMP,
-        display: "flex",
-        alignItems: "baseline",
-        justifyContent: "space-between",
-        gap: "1rem",
-      }}
-    >
-      <span style={{ color: theme.accent }}>{eyebrow}</span>
-      {card.meta && (
-        <span
+  const Arrow = card.internal ? ArrowRight : ArrowUpRight;
+
+  const shell: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    /* Fills the stretched grid cell, which is what makes every row line up. */
+    height: "100%",
+    padding: "1.3rem 1.4rem 1.5rem",
+    borderRadius: 6,
+    textDecoration: "none",
+    backgroundColor: live ? theme.surfaceHot : theme.surface,
+    border: `1px solid ${live ? theme.edgeHot : theme.edge}`,
+    transition: "border-color 0.25s ease, background-color 0.25s ease",
+  };
+
+  const body = (
+    <>
+      {card.image && (
+        <div
           style={{
-            color: theme.inkSoft,
-            flexShrink: 0,
-            fontVariantNumeric: "tabular-nums",
+            aspectRatio: "16/9",
+            overflow: "hidden",
+            borderRadius: 3,
+            marginBottom: "1.1rem",
+            backgroundColor: "var(--bg-alt)",
           }}
         >
-          {card.meta}
-        </span>
+          <img
+            src={card.image}
+            alt={card.title}
+            loading="lazy"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </div>
       )}
-    </div>
-  );
-}
 
-function Cta({
-  card,
-  theme,
-  hot,
-}: {
-  card: Card;
-  theme: CardTheme;
-  hot: boolean;
-}) {
-  if (!card.cta) return null;
-  const External = card.internal ? ArrowRight : ArrowUpRight;
-  return (
-    <span
-      style={{
-        ...STAMP,
-        marginTop: "1rem",
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "0.35rem",
-        color: hot ? theme.ink : theme.accent,
-        transition: "color 0.2s ease",
-      }}
-    >
-      {card.cta}
-      <External size={13} strokeWidth={1.5} />
-    </span>
-  );
-}
-
-function Thumb({ card, radius }: { card: Card; radius: number }) {
-  if (!card.image) return null;
-  return (
-    <div
-      style={{
-        aspectRatio: "16/9",
-        overflow: "hidden",
-        borderRadius: radius,
-        backgroundColor: "var(--bg-alt)",
-      }}
-    >
-      <img
-        src={card.image}
-        alt={card.title}
-        loading="lazy"
-        style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover",
-          display: "block",
-        }}
-      />
-    </div>
-  );
-}
-
-function Lead({ card, theme }: { card: Card; theme: CardTheme }) {
-  const [hot, setHot] = useState(false);
-  return (
-    <BlurFade delay={0.24}>
-      <Shell
-        card={card}
-        onEnter={() => setHot(true)}
-        onLeave={() => setHot(false)}
-        style={{
-          display: "block",
-          textDecoration: "none",
-          borderTop: `1px solid ${hot && card.href ? theme.edgeHot : theme.edge}`,
-          paddingTop: "1.5rem",
-          transition: "border-color 0.3s ease",
-        }}
-      >
-        <StampRow card={card} theme={theme} />
-        <h2
+      {(eyebrow || card.meta) && (
+        <div
           style={{
-            marginTop: "0.6rem",
-            marginBottom: "1.2rem",
+            ...STAMP,
             display: "flex",
-            alignItems: "center",
-            gap: "0.6rem",
-            fontFamily: "var(--font-display)",
-            fontSize: "clamp(1.75rem, 4vw, 2.6rem)",
-            fontWeight: 700,
-            lineHeight: 1.1,
-            letterSpacing: "-0.02em",
-            color: theme.ink,
-            textWrap: "balance",
+            alignItems: "baseline",
+            justifyContent: "space-between",
+            gap: "1rem",
           }}
         >
-          {card.mark && (
-            <span style={{ color: theme.accent, display: "flex" }}>
-              {card.mark}
+          <span style={{ color: theme.accent }}>{eyebrow}</span>
+          {card.meta && (
+            <span
+              style={{
+                color: theme.inkSoft,
+                flexShrink: 0,
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
+              {card.meta}
             </span>
           )}
-          {card.title}
-        </h2>
-        <Thumb card={card} radius={4} />
-        <Blurb card={card} theme={theme} size="1rem" />
-        <Cta card={card} theme={theme} hot={hot} />
-      </Shell>
-    </BlurFade>
-  );
-}
+        </div>
+      )}
 
-function Standard({
-  card,
-  theme,
-  delay,
-}: {
-  card: Card;
-  theme: CardTheme;
-  delay: number;
-}) {
-  const [hot, setHot] = useState(false);
-  const live = hot && Boolean(card.href);
-  return (
-    <BlurFade delay={delay}>
-      <Shell
-        card={card}
-        onEnter={() => setHot(true)}
-        onLeave={() => setHot(false)}
+      <h3
         style={{
+          marginTop: "0.5rem",
           display: "flex",
-          flexDirection: "column",
-          padding: "1.3rem 1.4rem 1.5rem",
-          borderRadius: 6,
-          textDecoration: "none",
-          backgroundColor: live ? theme.surfaceHot : theme.surface,
-          border: `1px solid ${live ? theme.edgeHot : theme.edge}`,
-          transition: "border-color 0.25s ease, background-color 0.25s ease",
-        }}
-      >
-        {card.image && (
-          <div style={{ marginBottom: "1.1rem" }}>
-            <Thumb card={card} radius={3} />
-          </div>
-        )}
-        <StampRow card={card} theme={theme} />
-        <h3
-          style={{
-            marginTop: "0.5rem",
-            display: "flex",
-            alignItems: "center",
-            gap: "0.5rem",
-            fontFamily: "var(--font-heading)",
-            fontSize: "1.15rem",
-            fontWeight: 600,
-            lineHeight: 1.3,
-            color: theme.ink,
-            textWrap: "balance",
-          }}
-        >
-          {card.mark && (
-            <span style={{ color: theme.accent, display: "flex" }}>
-              {card.mark}
-            </span>
-          )}
-          {card.title}
-        </h3>
-        <Blurb card={card} theme={theme} size="0.9rem" />
-        <Cta card={card} theme={theme} hot={hot} />
-      </Shell>
-    </BlurFade>
-  );
-}
-
-/**
- * A link with nothing written behind it is not a card, it is a line in a list.
- * Saying so removes the empty stretched tile the grid used to produce.
- */
-function IndexLine({
-  card,
-  theme,
-  delay,
-}: {
-  card: Card;
-  theme: CardTheme;
-  delay: number;
-}) {
-  const [hot, setHot] = useState(false);
-  const live = hot && Boolean(card.href);
-  return (
-    <BlurFade delay={delay}>
-      <Shell
-        card={card}
-        onEnter={() => setHot(true)}
-        onLeave={() => setHot(false)}
-        style={{
-          display: "flex",
-          alignItems: "baseline",
-          gap: "1rem",
-          padding: "0.85rem 0",
-          borderTop: `1px solid ${theme.edge}`,
-          textDecoration: "none",
+          alignItems: "center",
+          gap: "0.5rem",
+          fontFamily: "var(--font-heading)",
+          fontSize: "1.15rem",
+          fontWeight: 600,
+          lineHeight: 1.3,
+          color: theme.ink,
+          textWrap: "balance",
         }}
       >
         {card.mark && (
-          <span
-            style={{
-              color: theme.inkSoft,
-              display: "flex",
-              alignSelf: "center",
-              opacity: 0.7,
-            }}
-          >
+          <span style={{ color: theme.accent, display: "flex" }}>
             {card.mark}
           </span>
         )}
-        <span
-          style={{
-            fontFamily: "var(--font-heading)",
-            fontSize: "1rem",
-            fontWeight: 500,
-            color: live ? theme.accent : theme.ink,
-            transition: "color 0.2s ease",
-          }}
-        >
-          {card.title}
-        </span>
-        {card.eyebrow && !sameAsTitle(card) && (
-          <span style={{ ...STAMP, color: theme.inkSoft, opacity: 0.8 }}>
-            {card.eyebrow}
-          </span>
-        )}
+        {card.title}
+      </h3>
+
+      {card.blurbHtml ? (
+        <div
+          className="tile-blurb"
+          style={{ ...BLURB, color: theme.inkSoft }}
+          dangerouslySetInnerHTML={{ __html: card.blurbHtml }}
+        />
+      ) : card.blurbText ? (
+        <p style={{ ...BLURB, color: theme.inkSoft }}>{card.blurbText}</p>
+      ) : null}
+
+      {/* Holds the link at the bottom, so a row of tiles has its links on one
+          line rather than wherever each blurb happened to end. */}
+      <div style={{ flex: 1 }} />
+
+      {card.cta && (
         <span
           style={{
             ...STAMP,
-            marginLeft: "auto",
+            marginTop: "1rem",
             display: "inline-flex",
             alignItems: "center",
             gap: "0.35rem",
-            flexShrink: 0,
-            color: live ? theme.accent : theme.inkSoft,
-            fontVariantNumeric: "tabular-nums",
+            color: hot ? theme.ink : theme.accent,
             transition: "color 0.2s ease",
           }}
         >
-          {card.meta}
-          {card.href &&
-            (card.internal ? (
-              <ArrowRight size={13} strokeWidth={1.5} />
-            ) : (
-              <ArrowUpRight size={13} strokeWidth={1.5} />
-            ))}
+          {card.cta}
+          <Arrow size={13} strokeWidth={1.5} />
         </span>
-      </Shell>
+      )}
+    </>
+  );
+
+  const handlers = {
+    onMouseEnter: () => setHot(true),
+    onMouseLeave: () => setHot(false),
+  };
+
+  return (
+    <BlurFade delay={delay} className="h-full">
+      {card.href && card.internal ? (
+        <Link href={card.href} style={shell} {...handlers}>
+          {body}
+        </Link>
+      ) : card.href ? (
+        <a
+          href={card.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={shell}
+          {...handlers}
+        >
+          {body}
+        </a>
+      ) : (
+        <div style={shell}>{body}</div>
+      )}
     </BlurFade>
   );
 }
@@ -426,99 +247,38 @@ function IndexLine({
 export default function CardLayout({
   cards,
   theme,
-  indexLabel,
   aside,
 }: {
   cards: Card[];
   theme: CardTheme;
-  /** Optional heading over the index, when the minor items need naming. */
-  indexLabel?: string;
   /**
-   * Rendered right-aligned directly on top of the first rule, so whatever it
-   * is appears to stand on the line. Gary, on the pages he does not walk.
+   * Rendered right-aligned, standing on the rule above the grid. Gary, on the
+   * pages he does not walk. With no lead card there is no rule of its own for
+   * him to stand on, so this draws one.
    */
   aside?: React.ReactNode;
 }) {
-  const leads = cards.filter((c) => c.weight === "lead");
-  const standards = cards.filter((c) => c.weight === "standard");
-  const minors = cards.filter((c) => c.weight === "minor");
-
-  let delay = 0.3;
-  const next = () => (delay += 0.05);
-
-  /* He stands on the first rule on the page, whichever tier draws it. */
-  const asideBlock = aside ? (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "flex-end",
-        /* His feet are flush with the bottom of the sprite cell, so the box
-           bottom sitting on the rule puts him standing on it. */
-        marginBottom: 0,
-      }}
-    >
-      {aside}
-    </div>
-  ) : null;
-
   return (
     <>
-      {leads.map((card, i) => (
-        /* Gary's box adds 72px of its own above the rule, so the gap is
-           halved where he stands or the band reads as a hole with a small
-           figure marooned in the corner of it. */
-        <div
-          key={card.key}
-          style={{ marginTop: i === 0 && asideBlock ? "1.5rem" : "3rem" }}
-        >
-          {i === 0 && asideBlock}
-          <Lead card={card} theme={theme} />
-        </div>
-      ))}
-
-      {standards.length > 0 && (
-        <div className="card-grid-2" style={{ marginTop: "3rem" }}>
-          {standards.map((card) => (
-            <Standard
-              key={card.key}
-              card={card}
-              theme={theme}
-              delay={next()}
-            />
-          ))}
+      {aside && (
+        <div style={{ marginTop: "1.5rem" }}>
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            {aside}
+          </div>
+          <div style={{ borderTop: `1px solid ${theme.edge}` }} />
         </div>
       )}
 
-      {leads.length === 0 && standards.length === 0 && asideBlock}
-
-      {minors.length > 0 && (
-        <div style={{ marginTop: "3.25rem" }}>
-          {indexLabel && (
-            <BlurFade delay={next()}>
-              <p
-                style={{
-                  ...STAMP,
-                  fontSize: "0.6rem",
-                  letterSpacing: "0.16em",
-                  color: theme.inkSoft,
-                  opacity: 0.7,
-                  marginBottom: "0.5rem",
-                }}
-              >
-                {indexLabel}
-              </p>
-            </BlurFade>
-          )}
-          {minors.map((card) => (
-            <IndexLine
-              key={card.key}
-              card={card}
-              theme={theme}
-              delay={next()}
-            />
-          ))}
-        </div>
-      )}
+      <div className="card-grid" style={{ marginTop: aside ? "2rem" : "3rem" }}>
+        {cards.map((card, i) => (
+          <Tile
+            key={card.key}
+            card={card}
+            theme={theme}
+            delay={0.24 + i * 0.05}
+          />
+        ))}
+      </div>
     </>
   );
 }

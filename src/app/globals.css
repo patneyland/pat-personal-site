@@ -226,18 +226,14 @@ body {
   text-align: center;
 }
 
-/* The standard tier of CardLayout. Two columns, one on a narrow screen.
-   In CSS rather than inline so it can carry the media query. */
-.card-grid-2 {
+/* CardLayout's grid. Uniform tiles, equal height, columns set by how many
+   fit. Was a two-column tier of a lead/standard/index hierarchy for part of
+   2026-09-04; Patrick wanted the tiles all one size again. */
+.card-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
   gap: 1.25rem;
-  /* start, not stretch. A card with no image should be short, not padded out
-     to match a taller neighbour with an empty middle. */
-  align-items: start;
-}
-@media (min-width: 44rem) {
-  .card-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  align-items: stretch;
 }
 
 /* Markdown blurbs inside portfolio tiles stay tight and inherit tile colour. */

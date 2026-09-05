@@ -9,7 +9,6 @@ export default async function Portfolio() {
 
   const cards: Card[] = items.map((item) => ({
     key: item.slug,
-    weight: item.weight,
     eyebrow: item.tag || null,
     meta: item.year || null,
     title: item.title,
