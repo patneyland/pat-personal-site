@@ -1,5 +1,6 @@
 import BlurFade from "@/components/ui/BlurFade";
 import CardLayout, { type Card } from "@/components/sections/CardLayout";
+import GaryStanding from "@/components/ui/GaryStanding";
 import { P } from "@/components/sections/portfolioTheme";
 import { getItems } from "@/lib/portfolio";
 
@@ -57,7 +58,7 @@ export default async function Portfolio() {
           </h1>
         </BlurFade>
 
-        <CardLayout cards={cards} theme={P} />
+        <CardLayout cards={cards} theme={P} aside={<GaryStanding />} />
       </div>
     </section>
   );

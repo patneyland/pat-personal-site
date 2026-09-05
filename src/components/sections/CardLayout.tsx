@@ -427,11 +427,17 @@ export default function CardLayout({
   cards,
   theme,
   indexLabel,
+  aside,
 }: {
   cards: Card[];
   theme: CardTheme;
   /** Optional heading over the index, when the minor items need naming. */
   indexLabel?: string;
+  /**
+   * Rendered right-aligned directly on top of the first rule, so whatever it
+   * is appears to stand on the line. Gary, on the pages he does not walk.
+   */
+  aside?: React.ReactNode;
 }) {
   const leads = cards.filter((c) => c.weight === "lead");
   const standards = cards.filter((c) => c.weight === "standard");
@@ -440,10 +446,26 @@ export default function CardLayout({
   let delay = 0.3;
   const next = () => (delay += 0.05);
 
+  /* He stands on the first rule on the page, whichever tier draws it. */
+  const asideBlock = aside ? (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        /* His feet are flush with the bottom of the sprite cell, so the box
+           bottom sitting on the rule puts him standing on it. */
+        marginBottom: 0,
+      }}
+    >
+      {aside}
+    </div>
+  ) : null;
+
   return (
     <>
-      {leads.map((card) => (
-        <div key={card.key} style={{ marginTop: "3rem" }}>
+      {leads.map((card, i) => (
+        <div key={card.key} style={{ marginTop: i === 0 ? "3rem" : "3rem" }}>
+          {i === 0 && asideBlock}
           <Lead card={card} theme={theme} />
         </div>
       ))}
@@ -460,6 +482,8 @@ export default function CardLayout({
           ))}
         </div>
       )}
+
+      {leads.length === 0 && standards.length === 0 && asideBlock}
 
       {minors.length > 0 && (
         <div style={{ marginTop: "3.25rem" }}>

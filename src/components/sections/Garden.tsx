@@ -1,5 +1,6 @@
 import BlurFade from "@/components/ui/BlurFade";
 import CardLayout, { type Card } from "@/components/sections/CardLayout";
+import GaryStanding from "@/components/ui/GaryStanding";
 import PenMark from "@/components/ui/PenMark";
 import { G } from "@/components/sections/gardenTheme";
 import { getEntries } from "@/lib/garden";
@@ -118,6 +119,7 @@ export default async function Garden() {
           cards={cards}
           theme={G}
           indexLabel={lines.length > 0 ? "Planted, not written" : undefined}
+          aside={<GaryStanding />}
         />
 
         {entries.length === 0 && (
