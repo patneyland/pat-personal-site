@@ -277,6 +277,43 @@
            '</li>';
   }
 
+  /* The rail is only so tall, and a full board is twelve items: ten rows, the
+     break, and Pat's pinned row. Rather than let the overflow hide whichever
+     came last - which was always his, the one row that must not disappear -
+     drop rows off the bottom of the top ten until the rest fits. Four is the
+     floor; below that the board is not worth showing.
+
+     paintBoard always redraws from the full set before trimming. Trimming the
+     DOM in place looked equivalent and was not: the first paint happens before
+     Press Start 2P has loaded, the rows measure short, and rows got cut that
+     would have fitted a moment later - permanently, because there was nothing
+     left to put back. */
+  var lastBoard = null;
+
+  function paintBoard() {
+    if (!board || !lastBoard) return;
+    var b = lastBoard;
+    var html = b.rows.map(function (row, i) { return rowHtml(b.g, row, i + 1); }).join('');
+    if (b.mine && !b.inTop) {
+      html += '<li class="b-gap" aria-hidden="true">&middot;&middot;&middot;</li>' +
+              rowHtml(b.g, b.mine, b.rank || 99, 'is-pinned');
+    }
+    board.innerHTML = html;
+
+    var guard = 0;
+    while (board.scrollHeight > board.clientHeight + 1 && guard++ < 20) {
+      var rows = board.querySelectorAll('li:not(.b-gap):not(.is-pinned)');
+      if (rows.length <= 4) break;
+      rows[rows.length - 1].remove();
+    }
+  }
+
+  /* Re-fit once the pixel font is in, since everything measures differently
+     before it lands. */
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(function () { paintBoard(); });
+  }
+
   /* The champion strip is Pat's own all-time high, not the world's. Others
      can outrank him on the board below - they cannot take that box, and his
      row is pinned onto the list even when it has been knocked out of the
@@ -297,6 +334,7 @@
         champInitials.textContent = '---';
         champScore.textContent = '---';
         if (champDate) champDate.textContent = '';
+        lastBoard = null;
         board.innerHTML = '<li class="b-empty">' +
           (net.isOffline() ? 'BOARD UNREACHABLE' : 'BE THE FIRST') + '</li>';
         return;
@@ -308,19 +346,16 @@
       champScore.textContent = net.rowValue(g.id, head);
       if (champDate) champDate.textContent = monthYear(head.created_at);
 
-      var html = rows.map(function (row, i) {
-        return rowHtml(g, row, i + 1);
-      }).join('');
-
       // Knocked out of the top ten? Pin him underneath at his real rank.
       var inTop = mine && rows.some(function (r) { return r.id === mine.id; });
-      board.innerHTML = html;
+      lastBoard = { g: g, rows: rows, mine: mine, inTop: inTop, rank: null };
+      paintBoard();
+
       if (mine && !inTop) {
         net.fetchRank(g.id, g.mode, mine[net.metricCol(g.id)]).then(function (rank) {
-          if (game !== g) return;
-          board.insertAdjacentHTML('beforeend',
-            '<li class="b-gap" aria-hidden="true">&middot;&middot;&middot;</li>' +
-            rowHtml(g, mine, rank || 99, 'is-pinned'));
+          if (game !== g || !lastBoard) return;
+          lastBoard.rank = rank;
+          paintBoard();
         });
       }
     });
@@ -420,8 +455,13 @@
     });
   });
 
+  var refit = null;
   window.addEventListener('resize', function () {
     if (instance && instance.resize) instance.resize();
+    // Rows were dropped to fit the old height; reload so a taller window
+    // gets them back rather than staying short for the rest of the session.
+    clearTimeout(refit);
+    refit = setTimeout(paintBoard, 200);
   });
 
   /** The blinking line at the foot of the attract screen. */

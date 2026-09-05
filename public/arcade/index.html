@@ -461,7 +461,12 @@ body {
 
 /* Pool of light the tube throws on the floor beneath it */
 /* ═══ RIGHT RAIL: the scoreboard ═════════════════════════ */
-.rail { display: flex; flex-direction: column; gap: 1.75rem; min-height: 0; }
+/* 1.2rem, not the 1.75 this started at. A full board is ten rows, the "..."
+   break and Pat's pinned row underneath - twelve items - and at 1.75 the
+   board ran out of height and clipped the pinned row clean off below about
+   1440x900. The rows had already shrunk to zero leading by then, so the
+   space had to come from between the sections instead. */
+.rail { display: flex; flex-direction: column; gap: 1.2rem; min-height: 0; }
 
 .rail-head {
   display: flex;
@@ -580,8 +585,10 @@ body {
 }
 
 .board li {
-  flex: 0 1 auto;
-  min-height: 0;
+  /* Rows do not shrink. They used to, and a full board crushed them to zero
+     leading until the glows merged and the last row was clipped anyway.
+     cabinet.js drops rows off the bottom instead - see fitBoard. */
+  flex: 0 0 auto;
   display: grid;
   grid-template-columns: 1.9rem 1fr auto;
   align-items: baseline;
@@ -714,11 +721,18 @@ body {
 
 .coin-module {
   flex: 0 0 auto;
-  margin-top: auto;
+  /* No margin-top: auto here. An auto margin swallows the rail's spare height
+     before .board's flex-grow can claim it, so the board stayed at its content
+     height and the leaderboard was capped around seven rows however tall the
+     window got. The board grows instead, which pushes this to the bottom
+     anyway - the auto margin was doing a job that was already done. */
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem 1rem 0.25rem;
+  /* Tight on purpose. The rail is a fixed height and every pixel here is one
+     the leaderboard does not get; the board was down to seven of the top ten
+     at 1920 before this came in. */
+  padding: 0.9rem 1rem 0.2rem;
   border-top: 1px solid var(--border-subtle);
 }
 
@@ -1015,7 +1029,9 @@ body {
 /* His best, pinned back on when the top ten has pushed it off. */
 .board li.b-gap {
   display: block;
-  padding: 3px 0;
+  flex: 0 0 auto;
+  padding: 1px 0;
+  line-height: 1;
   text-align: center;
   letter-spacing: 0.35em;
   color: var(--sc-rule);
@@ -1210,14 +1226,23 @@ body {
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 7px;
 }
+/* The board takes what is left after the buttons rather than the full height.
+   The buttons used to float over it: the board is square and sized off the
+   height, so on anything but the widest screens there was no side margin for
+   them to sit in and they covered the first column. In the column they cannot
+   overlap it at any size, at the cost of a few pixels of board. */
 .ms-board {
   display: grid;
   grid-template-columns: repeat(var(--ms-size, 10), 1fr);
   gap: 2px;
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
   width: auto;
   aspect-ratio: 1;
   max-width: 100%;
@@ -1243,10 +1268,7 @@ body {
 /* The two marking buttons live together bottom left, opposite the volume
    button, so they read as cabinet furniture rather than part of the board. */
 .ms-marks {
-  position: absolute;
-  left: 3.5%;
-  bottom: 4%;
-  z-index: 6;
+  flex: 0 0 auto;
   display: flex;
   gap: 6px;
 }
