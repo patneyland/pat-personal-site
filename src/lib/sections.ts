@@ -1,40 +1,26 @@
 /**
  * The districts.
  *
- * One row per section of the site, and the single place a section's identity
- * colour is written down.
+ * One row per section of the site, in nav order.
  *
- * The nav reads this and wears each district's hue, which turns the menu into
- * a legend: a visitor learns that green means garden by looking at it, before
- * they ever click. Arriving in a district then confirms what the nav promised,
- * because the same hue is what the page accents with.
+ * These used to carry a hue each, and the nav wore them so the bar doubled as
+ * a legend. Patrick cut that on 2026-09-05: the nav is one colour now. A
+ * district's own hue still exists, in gardenTheme.ts and portfolioTheme.ts and
+ * as the --hue-* tokens in globals.css, and is worn by the page itself rather
+ * than announced in the menu.
  *
- * Adding a section means adding a row here and nowhere else. See
- * docs/refinement.md section 0.
- *
- * Two rules for a hue:
- *
- * 1. It has to be legible on the nav bar's near-black, so a district whose
- *    page colour is dark gets a brightened version here rather than the exact
- *    value the page uses. Home's gold is the case in point.
- * 2. It has to be tellable apart from every other row at a glance. That is the
- *    whole job. Two districts in the same hue means the legend says nothing.
+ * Adding a section means adding a row here and nowhere else.
  */
 export type Section = {
   href: string;
   label: string;
-  hue: string;
 };
 
 export const SECTIONS: Section[] = [
-  /* Gold, brightened off the /fun accent (#b8922a) so it reads on the bar. */
-  { href: "/fun", label: "Home", hue: "#d9a83c" },
-  /* The story is cream paper, so its hue is the paper. */
-  { href: "/story", label: "Story", hue: "#e6d9bf" },
-  /* See portfolioTheme.ts. The one district that did not have its own colour. */
-  { href: "/portfolio", label: "Portfolio", hue: "#7fc0e8" },
-  /* See gardenTheme.ts. */
-  { href: "/garden", label: "Garden", hue: "#a9a3ec" },
+  { href: "/fun", label: "Home" },
+  { href: "/story", label: "Story" },
+  { href: "/portfolio", label: "Portfolio" },
+  { href: "/garden", label: "Garden" },
 ];
 
 /** The district a path is inside, or null for the front door and anything unlisted. */

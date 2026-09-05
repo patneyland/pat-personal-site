@@ -9,14 +9,14 @@ export default async function Portfolio() {
 
   const cards: Card[] = items.map((item) => ({
     key: item.slug,
-    eyebrow: item.tag || null,
+    eyebrow: null,
     meta: item.year || null,
     title: item.title,
     blurbHtml: item.blurb,
     blurbText: null,
     href: item.href,
     internal: item.internal,
-    cta: item.cta,
+    cta: Boolean(item.href),
     image: item.image,
   }));
 
@@ -27,23 +27,8 @@ export default async function Portfolio() {
         style={{ maxWidth: "1000px", padding: "0 1.5rem" }}
       >
         <BlurFade delay={0.05}>
-          <p
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.66rem",
-              letterSpacing: "0.2em",
-              textTransform: "uppercase",
-              color: P.accent,
-            }}
-          >
-            Things I have built
-          </p>
-        </BlurFade>
-
-        <BlurFade delay={0.12}>
           <h1
             style={{
-              marginTop: "0.85rem",
               fontFamily: "var(--font-display)",
               fontSize: "clamp(2.4rem, 7vw, 4.25rem)",
               fontWeight: 700,

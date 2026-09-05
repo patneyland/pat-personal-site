@@ -14,11 +14,11 @@ export const P = {
   card: "var(--bg-card)",
   ink: "var(--text)",
   inkSoft: "var(--text-muted)",
-  accent: "#7fc0e8",
+  accent: "var(--hue-portfolio)",
   /* Dimmed for resting borders, so a card edge is tinted rather than lit. */
-  accentDim: "#3a6a86",
+  accentDim: "color-mix(in srgb, var(--hue-portfolio) 55%, var(--bg))",
   edge: "var(--border)",
-  edgeHot: "rgba(127,192,232,0.45)",
+  edgeHot: "color-mix(in srgb, var(--hue-portfolio) 45%, transparent)",
   surface: "var(--bg-card)",
-  surfaceHot: "rgba(127,192,232,0.05)",
+  surfaceHot: "color-mix(in srgb, var(--hue-portfolio) 5%, transparent)",
 };

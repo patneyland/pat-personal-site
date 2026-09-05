@@ -101,7 +101,7 @@ export default function GaryStanding({
               width: p.d,
               height: p.d,
               borderRadius: "50%",
-              border: "1.4px solid #fff",
+              border: "1.4px solid var(--gary-ink)",
               opacity: lit ? 0.95 : 0.4,
               transition: "opacity 0.25s ease",
               pointerEvents: "none",

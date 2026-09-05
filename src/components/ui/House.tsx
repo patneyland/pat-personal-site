@@ -119,7 +119,7 @@ interface Props {
   ink?: string;
 }
 
-export default function House({ right = "6%", ink = "#ffffff" }: Props) {
+export default function House({ right = "6%", ink = "var(--gary-ink)" }: Props) {
   return (
     <div
       aria-hidden

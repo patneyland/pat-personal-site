@@ -5,7 +5,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BlurFade from "@/components/ui/BlurFade";
-import { ArrowUpRight, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 /**
  * The shape both the portfolio and the garden are laid out in.
@@ -41,7 +41,8 @@ export type Card = {
   href: string | null;
   /** Internal routes use next/link rather than opening a new tab. */
   internal: boolean;
-  cta: string | null;
+  /** Whether the tile shows its arrow. The wording went on 2026-09-05. */
+  cta: boolean;
   image: string | null;
   /** Optional mark set before the title. The garden's, per Patrick's ask. */
   mark?: React.ReactNode;
@@ -95,7 +96,12 @@ function Tile({
   const [hot, setHot] = useState(false);
   const live = hot && Boolean(card.href);
   const eyebrow = sameAsTitle(card) ? null : card.eyebrow;
-  const Arrow = card.internal ? ArrowRight : ArrowUpRight;
+  /* One arrow for every tile. It used to be ArrowUpRight for anything
+     off-site, which meant a row of tiles carried two different marks and
+     "Read it" sat beside "Read it elsewhere". Patrick asked for one mark and
+     no wording on 2026-09-05: where a tile goes is the tile's business, not a
+     thing the reader should have to decode from a glyph. */
+  const Arrow = ArrowRight;
 
   const shell: React.CSSProperties = {
     display: "flex",
@@ -112,16 +118,24 @@ function Tile({
 
   const body = (
     <>
-      {card.image && (
-        <div
-          style={{
-            aspectRatio: "16/9",
-            overflow: "hidden",
-            borderRadius: 3,
-            marginBottom: "1.1rem",
-            backgroundColor: "var(--bg-alt)",
-          }}
-        >
+      {/* Every tile carries this block, image or not. An entry with nothing to
+          show used to skip it and sit shorter than its neighbours, which is
+          what the flex spacer below was invented to paper over. A placeholder
+          is the honest version: the tile is the same shape either way, and the
+          mark says "this one is writing" rather than pretending a picture is
+          missing. Patrick's woodworking photos replace one of these shortly. */}
+      <div
+        style={{
+          aspectRatio: "16/9",
+          overflow: "hidden",
+          borderRadius: 3,
+          marginBottom: "1.1rem",
+          backgroundColor: "var(--bg-alt)",
+          display: card.image ? undefined : "grid",
+          placeItems: card.image ? undefined : "center",
+        }}
+      >
+        {card.image ? (
           <img
             src={card.image}
             alt={card.title}
@@ -133,8 +147,25 @@ function Tile({
               display: "block",
             }}
           />
-        </div>
-      )}
+        ) : (
+          <svg
+            width="46"
+            height="46"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={theme.accent}
+            strokeWidth={1.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            style={{ opacity: 0.4 }}
+          >
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+            <path d="M14 3v5h5" />
+            <path d="M9 12.5h6M9 16h6" />
+          </svg>
+        )}
+      </div>
 
       {(eyebrow || card.meta) && (
         <div
@@ -209,8 +240,7 @@ function Tile({
             transition: "color 0.2s ease",
           }}
         >
-          {card.cta}
-          <Arrow size={13} strokeWidth={1.5} />
+          <Arrow size={15} strokeWidth={1.5} />
         </span>
       )}
     </>

@@ -3,33 +3,128 @@
 @tailwind utilities;
 
 /* ─── Design Tokens ─────────────────────────────────── */
-/* The neutrals are cool, the accent is warm.
+/* Faded Sign: sun-bleached sign paint on an achromatic ground.
  *
- * They used to be warm together, near-black through to a warm off-white, and
- * the whole site read as one brown. Cooling only the neutrals gives the gold
- * something to be warm against, and reads cleaner without touching any page
- * that already depends on the gold itself.
+ * Two rules hold the scheme together, and breaking either one is what the
+ * previous palettes got wrong:
+ *
+ * 1. The ground is achromatic. R = G = B on every ground, surface and border
+ *    value, in both modes. Gary is a pure white alpha mask and the whole
+ *    reason /fun works is that he sits on a ground with no colour in it. A
+ *    tinted ground puts a hue behind him and he stops being ink.
+ * 2. The ground is near, not pure. #121212 rather than #000, because a chalky
+ *    pastel on pure black has no shared substrate and the edges shimmer.
+ *    #F7F7F7 rather than #fff for the same reason inverted.
+ *
+ * Dark is the default because the site was built dark and the black ground is
+ * the thing Patrick likes about /fun. Light is opt-in, and reachable two ways:
+ * the OS setting, or the toggle in the nav.
+ *
+ * Note there is no prefers-color-scheme media query below, on purpose. The
+ * inline script in layout.tsx resolves the OS preference and stamps
+ * data-theme on <html> before first paint, so CSS only ever has two states to
+ * describe and the light palette is written down once. A media query as well
+ * would mean maintaining the same fifteen values in two blocks, and they
+ * would drift. The cost is that with JavaScript off nobody reaches light
+ * mode, which is a safe way to fail: dark is the stronger of the two and the
+ * one the site was designed in.
  *
  * --accent is NOT any one district's colour. It is shared furniture: the
- * story's drawn arrows, the scripture on /fun, and the links in boring mode
- * all use it. A district's own hue lives in its theme file and in
- * lib/sections.ts. Do not repoint --accent at a section colour, or /story
- * changes colour with it. */
+ * story's drawn arrows and the scripture on /fun both use it. A district's own
+ * hue is --hue-<district> below, read by lib/sections.ts and the theme files.
+ * Do not repoint --accent at a section colour, or /story changes with it.
+ *
+ * Boring mode opts out of all of this. It is hardcoded white, black and
+ * #0000ee further down and does not read a single token here. */
 :root {
-  --bg:          #0d0f12;
-  --bg-alt:      #14171b;
-  --bg-card:     #171a1f;
+  --bg:          #121212;
+  --bg-alt:      #181818;
+  --bg-card:     #1e1e1e;
 
-  --text:        #e9edf1;
-  --text-muted:  #8b939c;
-  --text-faint:  #383e45;
+  --text:        #ededed;
+  --text-muted:  #9e9e9e;
+  --text-faint:  #545454;
 
-  --accent:      #c9a84c;
-  --accent-dim:  #7a6330;
-  --accent-glow: rgba(201, 168, 76, 0.07);
+  /* Faded lilac. Shared furniture, not a district. */
+  --accent:      #c9a6c8;
+  --accent-dim:  #7a6579;
+  --accent-glow: rgba(201, 166, 200, 0.07);
 
-  --border:        #242931;
-  --border-subtle: #1a1e23;
+  --border:        #2b2b2b;
+  --border-subtle: #1c1c1c;
+
+  /* The districts that wear a hue. Read by gardenTheme.ts and
+     portfolioTheme.ts.
+
+     /fun and /story are districts too and have no hue here, because they carry
+     their identity as material instead: /fun is a white card on the ground,
+     /story is a cream collage. Their palette-study hues (faded coral, bleached
+     wheat) are recorded in design.md and were dropped from the code on
+     2026-09-05 when the nav stopped wearing district colours and nothing read
+     them any more. --hue-fun-paper below is a separate value and is live.
+     Garden is #b8ce93 rather than the sage #a9cba6 the palette study spec'd:
+     sage and the portfolio's powder blue landed at 10.51:1 and 9.84:1, too
+     close in hue and value to tell apart at the 0.7rem the nav sets its
+     labels. Dropping garden's chroma and lifting its hue opens the gap. */
+  --hue-portfolio: #9fc0da;  /* powder blue  */
+  --hue-garden:    #b8ce93;  /* sage, amended */
+
+  /* Gary's ink. He is painted as a mask, so this is the only value that moves
+     him between modes. See GaryPacing.tsx. */
+  --gary-ink:      #ffffff;
+
+  /* On-paper hues. /fun's card is a white sheet and /story's polaroids are
+     cream, in BOTH modes: those surfaces are objects, not backgrounds, so they
+     do not invert with the site. Anything drawn on them therefore needs the
+     light-mode value even while the site is dark, which is why these two do
+     not appear in the light block below. Using --hue-fun on the white card
+     puts a pastel coral on white at about 1.8:1.
+
+     /fun's card carries two values that DO move, because they describe the
+     card's relationship to the ground rather than the card itself: a shadow
+     tuned for near-black is a smudge on #F7F7F7, and a #e2e2e2 edge vanishes
+     into it. */
+  --hue-fun-paper:   #b0442a;  /* brick */
+  --fun-card-edge:   #e2e2e2;
+  --fun-card-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
+
+  /* Maximum ink, for the one place that needs more contrast than --text.
+     Garamond is a light face and the scripture at that size reads as grey at
+     anything short of the extreme. */
+  --ink-max:       #ffffff;
+}
+
+/* Light mode. The hue angles hold and the mood does not: coral becomes brick,
+   wheat becomes ochre, powder blue becomes dusty teal. That is inherent to
+   pastels, which have nowhere to go on white except down into earth.
+
+   Stamped by layout.tsx, never matched by a media query. See the note above. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:          #f7f7f7;
+  --bg-alt:      #ededed;
+  --bg-card:     #ffffff;
+
+  --text:        #171717;
+  --text-muted:  #5c5c5c;
+  --text-faint:  #969696;
+
+  --accent:      #7a4e78;  /* dusty plum */
+  --accent-dim:  #b99bb8;
+  --accent-glow: rgba(122, 78, 120, 0.06);
+
+  --border:        #dcdcdc;
+  --border-subtle: #e8e8e8;
+
+  --hue-portfolio: #35657f;  /* dusty teal */
+  --hue-garden:    #436b40;  /* moss       */
+
+  --gary-ink:      #171717;
+  --ink-max:       #000000;
+
+  --fun-card-edge:   #d4d4d4;
+  --fun-card-shadow: 0 4px 20px rgba(0, 0, 0, 0.10);
 }
 
 /* ─── Base ───────────────────────────────────────────── */
@@ -40,9 +135,8 @@
 }
 
 html {
-  /* The site is committed dark. Tell the browser, so scrollbars, form
-     controls, and the paint before CSS loads all match instead of
-     flashing light on a light OS. */
+  /* Scrollbars, form controls and the paint before CSS loads. The stamp on
+     <html> decides which; layout.tsx writes color-scheme alongside it. */
   color-scheme: dark;
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -162,7 +256,7 @@ body {
 .garden-prose {
   font-size: 1.0625rem;
   line-height: 1.85;
-  color: #c7ced6;
+  color: color-mix(in srgb, var(--text) 88%, var(--bg));
 }
 .garden-prose > * + * { margin-top: 1.35rem; }
 .garden-prose h2,
@@ -175,7 +269,7 @@ body {
 .garden-prose h2 { font-size: 1.5rem; }
 .garden-prose h3 { font-size: 1.2rem; }
 .garden-prose a {
-  color: #a9a3ec;
+  color: var(--hue-garden);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;
@@ -413,6 +507,26 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   [data-gary] { animation: none !important; }
 }
 
+/* Gary in light mode.
+ *
+ * The walking and facing sheets are painted as background images, and every
+ * opaque pixel in them is pure white, so on #F7F7F7 he disappears. invert()
+ * works on the RGB channels and leaves alpha alone, so a white-ink-on-
+ * transparent sheet becomes black-ink-on-transparent with a pixel-identical
+ * silhouette. Neither element carries a filter of its own, so there is no
+ * chain to fight. StoryGary is not here: he is drawn with mask-image and
+ * background-color already, so --gary-ink moves him for free.
+ *
+ * The one visible cost: the -solid knockout layer inverts too, landing near
+ * #EDEDED against a #F7F7F7 ground, which can show as a very faint silhouette
+ * where he crosses the house. The fix is to paint these two the way
+ * player.ts already paints StoryGary, with a mask and --gary-ink, and to give
+ * the knockout its own layer at --bg. That is a DOM change rather than a
+ * colour one: the walker's animations are paused by ref, and a second layer
+ * has to be paused with it or the two drift out of register. */
+:root[data-theme="light"] [data-gary],
+:root[data-theme="light"] [data-gary-facing] { filter: invert(1); }
+
 /* ─── The verse under the card on /fun ───────────────────────────
    Two copies of the line sit side by side in .scripture-track, so sliding the
    track left by half its own width lands the second copy exactly where the
@@ -462,7 +576,7 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   letter-spacing: 0.015em;
   /* Pure white on near-black. Garamond is a light face and anything less than
      #fff at this size reads as grey rather than as quiet. */
-  color: #ffffff;
+  color: var(--ink-max);
   /* Delayed by the entrance, so the loop takes over at the moment the line
      lands rather than dragging it left while it is still walking in. */
   animation: scripture-scroll var(--scripture-loop, 46s) linear
@@ -494,7 +608,7 @@ body:has(.boring) { background: #ffffff; color: #000000; }
 }
 
 .scripture-ref:hover {
-  color: #ffffff;
+  color: var(--ink-max);
   text-decoration: underline;
   text-underline-offset: 3px;
   text-decoration-thickness: 1px;

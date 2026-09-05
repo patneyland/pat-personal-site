@@ -74,8 +74,10 @@ const Polaroid = forwardRef<
             transform: "translateX(-50%) rotate(-4deg)",
             width: 90,
             height: 26,
-            backgroundColor: "rgba(201,168,76,0.35)",
-            border: "1px solid rgba(201,168,76,0.25)",
+            backgroundColor:
+              "color-mix(in srgb, var(--hue-fun-paper) 32%, transparent)",
+            border:
+              "1px solid color-mix(in srgb, var(--hue-fun-paper) 25%, transparent)",
           }}
         />
       )}
@@ -494,7 +496,7 @@ export default function Story({
       style={{
         backgroundColor: "var(--bg)",
         backgroundImage:
-          "radial-gradient(circle at 15% 10%, rgba(201,168,76,0.05), transparent 40%), radial-gradient(circle at 85% 60%, rgba(201,168,76,0.04), transparent 45%)",
+          "radial-gradient(circle at 15% 10%, color-mix(in srgb, var(--accent) 5%, transparent), transparent 40%), radial-gradient(circle at 85% 60%, color-mix(in srgb, var(--accent) 4%, transparent), transparent 45%)",
         paddingTop: "5rem",
         paddingBottom: "6rem",
       }}
@@ -512,7 +514,7 @@ export default function Story({
               fontWeight: 700,
               lineHeight: 1,
               letterSpacing: "-0.025em",
-              color: "var(--accent)",
+              color: "var(--text)",
               textWrap: "balance",
             }}
           >

@@ -30,7 +30,7 @@ import sharp from "sharp";
 import { readFile, writeFile } from "node:fs/promises";
 
 /** Must match --bg in globals.css. The hole is only invisible on that ground. */
-const GROUND = [14, 14, 14];
+const GROUND = [18, 18, 18];
 
 /** Below this alpha a pixel counts as background for the flood. */
 const INK = 24;

@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import BlurFade from "@/components/ui/BlurFade";
 import { G } from "@/components/sections/gardenTheme";
-import PenMark from "@/components/ui/PenMark";
 import { getEntries, getEntry } from "@/lib/garden";
 
 export async function generateStaticParams() {
@@ -61,20 +60,12 @@ export default async function GardenEntryPage({
           </BlurFade>
 
           <BlurFade delay={0.12}>
-            <div
-              style={{
-                marginTop: "2.5rem",
-                color: G.accent,
-              }}
-            >
-              <PenMark mark="note" size={18} />
-            </div>
-          </BlurFade>
-
-          <BlurFade delay={0.18}>
             <h1
               style={{
-                marginTop: "0.85rem",
+                /* The sprout used to sit between the back link and the title
+                   and carried this gap on its own margin. It went on
+                   2026-09-05; the gap was worth keeping, so it moved here. */
+                marginTop: "2.5rem",
                 fontFamily: "var(--font-display)",
                 fontSize: "clamp(1.9rem, 5vw, 3rem)",
                 fontWeight: 700,
@@ -113,6 +104,40 @@ export default async function GardenEntryPage({
               dangerouslySetInnerHTML={{ __html: entry.body }}
             />
           </BlurFade>
+
+          {/* Where the thing itself lives, when it lives somewhere else.
+              This used to be the tile's own destination on /garden, which
+              sent a reader to GitHub past Patrick's writing about it. The
+              tile goes to this page now and the outbound link waits here.
+
+              The label is the URL, not a phrase. Claude does not write copy
+              for this site, and a bare address is a fact rather than a line
+              of prose. */}
+          {entry.external && (
+            <BlurFade delay={0.34}>
+              <a
+                href={entry.external}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  marginTop: "2.5rem",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.04em",
+                  color: G.accent,
+                  textDecoration: "none",
+                  borderBottom: `1px solid ${G.edgeHot}`,
+                  paddingBottom: "0.15rem",
+                }}
+              >
+                {entry.external.replace(/^https?:\/\//, "").replace(/\/$/, "")}
+                <ArrowUpRight size={13} strokeWidth={1.5} />
+              </a>
+            </BlurFade>
+          )}
 
           {entry.tags.length > 0 && (
             <BlurFade delay={0.36}>

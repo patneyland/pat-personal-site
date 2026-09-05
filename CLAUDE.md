@@ -158,6 +158,19 @@ The short version:
 - **Verify in a browser before claiming something works.** A stale `next start` will happily serve
   an old build and make a correct change look broken. Kill the port first, and if a process will
   not die, serve on a different port rather than fighting it.
+- **Then put it on a preview URL.** `npm run preview` runs `vercel deploy --yes`, which builds a
+  Vercel preview and prints its URL. Set 2026-09-05 as the standard way Patrick looks at work in
+  progress, because he moves between a Mac and a headless Windows box and a localhost port on one
+  of them is no use on the other.
+
+  Three things worth knowing about it:
+
+  - **It deploys the working tree, not a commit.** Uncommitted changes go up, which is the whole
+    point. It is not a record of anything; do not treat a preview URL as a checkpoint.
+  - **It is a preview, never production.** No `--prod` without Patrick saying so in that session.
+  - **The URL is behind Vercel's SSO protection.** It opens for him on any machine once he is
+    logged in as `pat-neyland`, and 302s to a login for everyone else. That is the desired
+    behaviour: do not turn protection off to make a link shareable.
 - **The repo is public.** Patrick's phone number, personal gmail, and home city must never appear
   in it. His resume PDF is excluded by `*.pdf` in `.gitignore`. Scan for all three before any push.
 - Ask before pushing, and before deploying to production.

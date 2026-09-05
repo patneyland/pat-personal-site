@@ -16,29 +16,76 @@ The aesthetic direction is: **editorial dark minimalism with warmth** — inspir
 
 ## Color Palette
 
-```css
-:root {
-  /* Backgrounds */
-  --bg:         #0e0e0e;   /* near-black, slightly warm */
-  --bg-alt:     #161616;   /* subtle section separator */
-  --bg-card:    #1c1c1c;   /* card/panel surfaces */
+**Faded Sign**, set 2026-09-05, replacing the warm gold on cool neutrals. Chosen from a
+four-option study after an earlier batch of four was rejected; the study is in pat_agent at
+`output/pat-site-palettes.html`.
 
-  /* Text */
-  --text:       #e8e2d9;   /* warm off-white — not harsh */
-  --text-muted: #7a7570;   /* secondary / captions */
-  --text-faint: #3d3a38;   /* dividers, disabled */
+Two rules hold it together and neither is negotiable:
 
-  /* Accent — amber/gold */
-  /* Chosen to echo Patrick's finance/accounting roots, now electrified */
-  --accent:     #c9a84c;   /* primary accent: warm gold */
-  --accent-dim: #7a6330;   /* muted gold for subtle touches */
-  --accent-glow: rgba(201, 168, 76, 0.08); /* background glow */
+1. **The ground is achromatic.** R = G = B on every ground, surface and border value, in both
+   modes. Gary is a pure white alpha mask and the reason `/fun` works is that he sits on a ground
+   with no colour in it. A tinted ground puts a hue behind him and he stops being ink.
+2. **The ground is near, not pure.** `#121212` rather than `#000`, because a chalky pastel on pure
+   black has no shared substrate and the edges shimmer. `#F7F7F7` rather than `#fff` inverted.
 
-  /* Borders */
-  --border:     #2a2826;
-  --border-subtle: #1e1c1a;
-}
-```
+The values live in `src/app/globals.css` and are not repeated here, because a palette written down
+twice is a palette that drifts. Read them there. What this file records is why they are shaped the
+way they are.
+
+### The site has two modes now
+
+Dark is the default because the site was built dark and the black ground is the thing Patrick likes
+about `/fun`. Light is reachable two ways: the OS setting, or **the toggle**, added 2026-09-05.
+Sun and moon only, showing the mode a click will give you. It sits in the nav, and again in the
+bottom corner of the `/fun` card next to the arcade joystick, because `Nav` renders nothing on
+`/fun` and a visitor who never leaves that page would otherwise have no way out of the mode their
+OS put them in.
+
+The toggle is mostly an escape hatch rather than a way to choose light. Dark is the stronger of the
+two palettes and the one the site was designed in; following the OS alone meant a visitor whose
+machine says light landed in the weaker version with no way out.
+
+Two things follow from how it is built, and both matter if you touch the palette:
+
+- **`globals.css` has no `prefers-color-scheme` query, on purpose.** An inline script in
+  `layout.tsx` reads the OS setting and stamps `data-theme` on `<html>` before first paint, so the
+  CSS only ever describes two states and the light palette is written down once. A media query as
+  well would mean the same fifteen values in two blocks, and they would drift. The cost is that
+  with JavaScript off nobody reaches light mode, which is a safe way to fail.
+- **Dark is the default, and the OS is not consulted.** Patrick, 2026-09-05: "I want the default
+  to be dark, not computer." Dark is the palette the site was built in and light is the compromise
+  version, so nobody gets dropped into it by a setting they made for a different reason.
+- **Nothing is stored.** A click holds while you move around the site, since App Router navigation
+  leaves the document and its stamp alone, and a hard reload puts you back on dark. Do not add
+  `localStorage` or a `prefers-color-scheme` read back without asking.
+
+Two pages opt out completely and must stay that way: `/` boring mode is hardcoded white, black
+Times and `#0000ee` and reads no token here, and the arcade is a separate document in
+`public/arcade/` with its own reset and its own `color-scheme: dark`. The stamp never reaches it.
+Patrick's instruction, 2026-09-05: the arcade stays how it is no matter what.
+
+The hue angles hold across the two modes and the mood does not: faded coral becomes brick,
+bleached wheat becomes ochre, powder blue becomes dusty teal, sage becomes moss. That is inherent
+to pastels, which have nowhere to go on white except down into earth. It is a known cost, not a
+bug.
+
+### On-paper hues, the thing that is easy to get wrong
+
+`/fun`'s card is a white sheet and `/story`'s polaroids are cream, **in both modes**. Those
+surfaces are objects, not backgrounds, so they do not invert with the site. Anything drawn on them
+needs the light-mode value even while the site is dark. `--hue-fun-paper` exists for exactly this:
+painting `/fun`'s link with `--hue-fun` puts a pastel coral on white at about 1.8:1.
+
+### The districts
+
+Each page still gets its own hue, and the nav still works as a legend. What changed is that the
+four hues are now drawn from one family instead of being four unrelated choices, and they are CSS
+custom properties (`--hue-fun`, `--hue-story`, `--hue-portfolio`, `--hue-garden`) rather than hex
+in TypeScript, because a hue that reads on `#121212` does not read on `#F7F7F7`.
+
+Garden is `#b8ce93` and not the sage the palette study specified. Against the portfolio's powder
+blue at the 0.7rem the nav sets its labels, the study's sage was a second grey. Dropping its chroma
+and lifting its hue opens the gap. This is rule 2 of `lib/sections.ts` doing its job.
 
 ### Tailwind Token Mapping
 
@@ -189,6 +236,13 @@ Hover states on cards: subtle `translateY(-2px)` + border brightens to `--accent
 
 Use `lucide-react` only. Always `strokeWidth={1.5}`. Size: `16` for inline, `20` for standalone.
 
+One exception, and it should stay the only one: `AtariJoystick.tsx`, the arcade's mark in the nav
+and on the `/fun` card. Lucide has `Gamepad2`, which is an Xbox pad and forty years wrong for that
+page, and `Joystick`, which is a generic stick on a flat base. The CX40 is a specific object and
+its single corner button is the whole tell. It is drawn on lucide's own 24x24 grid at the same
+stroke weight so it sits level with the icons beside it. Draw the next one only if a real object
+is being depicted; reach for lucide for anything that is a UI control.
+
 ---
 
 ## What to Avoid
@@ -246,11 +300,21 @@ below the world, which reads as a rendering bug.
 
 | Route | World |
 |---|---|
-| `/` | Warm dark editorial. The base palette above |
-| `/story` | Paper and polaroid collage, hand-drawn arrow connectors |
-| `/portfolio` | Base palette, with cream paper tiles for the boring items |
-| `/garden` | Greenhouse: moss ground, soft overhead light, handwritten stage labels |
+| `/` | Boring mode. Hardcoded white, black Times and `#0000ee`. Reads no token here and must not |
+| `/fun` | One white card on the achromatic ground. Faded coral, brick on paper |
+| `/story` | Paper and polaroid collage, hand-drawn arrow connectors. Bleached wheat |
+| `/portfolio` | Powder blue, dusty teal in light |
+| `/garden` | Sage, moss in light. The greenhouse was cut 2026-09-04; the hue is all that tells it apart |
+| `/arcade` | A standalone document in `public/arcade/` with its own reset. Off the system on purpose |
 | `/portfolio/woodworking` | Workshop. Not built yet |
+
+**Cohesion beat separation, 2026-09-05.** Patrick asked for the four designed pages to read as one
+place: `/portfolio` and `/garden` felt AI generated and `/fun` and `/story` had a palette he did
+not like. The neutrals are now global and identical on all four and the districts differ only by
+hue. `docs/refinement.md` section 0 argues via Lynch that districts are more legible when they look
+nothing alike, and that is a real cost being paid deliberately: the wayfinding is carried by the
+nav legend, which survives. Colour was never the problem on `/portfolio` and `/garden` anyway. That
+is a structural problem and it is still open.
 
 ### Direction still open
 

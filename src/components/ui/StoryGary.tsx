@@ -167,7 +167,8 @@ export default function StoryGary({
     const layer = document.createElement("div");
     layer.setAttribute("aria-hidden", "true");
     layer.style.cssText =
-      "position:absolute;inset:0;pointer-events:none;z-index:5;color:var(--fg,#EDEDE8)";
+      "position:absolute;inset:0;pointer-events:none;z-index:5;" +
+      "color:var(--gary-ink,#ededed);--char-knockout:var(--bg)";
     board.append(layer);
 
     let svg: SVGSVGElement | null = null;

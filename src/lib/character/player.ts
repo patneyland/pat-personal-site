@@ -41,6 +41,8 @@ export interface Clip {
 export interface Manifest {
   version: number;
   atlas: string;
+  /** The knockout companion, same size and registration. See mount(). */
+  atlasSolid?: string;
   atlasSize: [number, number];
   mask: boolean;
   clips: Record<string, Clip>;
@@ -55,6 +57,7 @@ export class Character {
 
   private root: HTMLElement | null = null;
   private body: HTMLElement | null = null;
+  private fill: HTMLElement | null = null;
 
   private clipName = "";
   private clip: Clip | null = null;
@@ -99,25 +102,49 @@ export class Character {
     root.style.cssText =
       "position:absolute;left:0;top:0;transform-origin:0 0;pointer-events:none";
 
-    const body = document.createElement("i");
-    const atlas = `url("${this.manifest.atlas}")`;
     const [aw, ah] = this.manifest.atlasSize;
-    body.style.cssText = [
-      "position:absolute",
-      "display:block",
-      `-webkit-mask-image:${atlas}`,
-      `mask-image:${atlas}`,
-      `-webkit-mask-size:${aw}px ${ah}px`,
-      `mask-size:${aw}px ${ah}px`,
-      "-webkit-mask-repeat:no-repeat",
-      "mask-repeat:no-repeat",
-      "background-color:currentColor",
-    ].join(";");
 
+    /* One <i> per layer, same geometry, different mask and different fill.
+       draw() writes both, so they cannot drift out of register.
+
+       The knockout goes first so it sits behind. It is his silhouette, ink
+       plus everything the ink encloses, filled with --char-knockout. Without
+       it the page shows through him: on /story the bottoms of letters were
+       visible through his head as he walked past a paragraph. A host that
+       does not set --char-knockout gets `transparent` and the old
+       single-layer behaviour, which is what /lab and any light surface want.
+
+       Built by scripts/dev/make-character-solid.mjs. It is a mask rather than
+       a sheet baked in the ground colour, so it follows the token through
+       light and dark and survives a palette change. */
+    const layer = (mask: string, fillColor: string) => {
+      const el = document.createElement("i");
+      const url = `url("${mask}")`;
+      el.style.cssText = [
+        "position:absolute",
+        "display:block",
+        `-webkit-mask-image:${url}`,
+        `mask-image:${url}`,
+        `-webkit-mask-size:${aw}px ${ah}px`,
+        `mask-size:${aw}px ${ah}px`,
+        "-webkit-mask-repeat:no-repeat",
+        "mask-repeat:no-repeat",
+        `background-color:${fillColor}`,
+      ].join(";");
+      return el;
+    };
+
+    const fill = this.manifest.atlasSolid
+      ? layer(this.manifest.atlasSolid, "var(--char-knockout, transparent)")
+      : null;
+    const body = layer(this.manifest.atlas, "currentColor");
+
+    if (fill) root.append(fill);
     root.append(body);
     host.append(root);
     this.root = root;
     this.body = body;
+    this.fill = fill;
     if (this.clip) this.draw(0, true);
   }
 
@@ -270,12 +297,15 @@ export class Character {
 
     const f = c.frames[i];
     const [rx, ry, rw, rh] = f.r;
-    const s = this.body.style;
-    s.left = `${f.o[0]}px`;
-    s.top = `${f.o[1]}px`;
-    s.width = `${rw}px`;
-    s.height = `${rh}px`;
-    s.webkitMaskPosition = `${-rx}px ${-ry}px`;
-    s.maskPosition = `${-rx}px ${-ry}px`;
+    for (const el of [this.fill, this.body]) {
+      if (!el) continue;
+      const s = el.style;
+      s.left = `${f.o[0]}px`;
+      s.top = `${f.o[1]}px`;
+      s.width = `${rw}px`;
+      s.height = `${rh}px`;
+      s.webkitMaskPosition = `${-rx}px ${-ry}px`;
+      s.maskPosition = `${-rx}px ${-ry}px`;
+    }
   }
 }

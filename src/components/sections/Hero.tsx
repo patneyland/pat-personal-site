@@ -9,18 +9,27 @@ import GaryPacing from "@/components/ui/GaryPacing";
 import House, { HOUSE_HEADROOM } from "@/components/ui/House";
 import ScriptureMarquee from "@/components/ui/ScriptureMarquee";
 import { ArrowRight } from "lucide-react";
+import AtariJoystick from "@/components/ui/AtariJoystick";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
-/* The home world. One white card on the site's dark ground, read dark on
-   light. The shadow is deep because it falls on near-black, not on paper. */
+/* The home world. One white card on the site's ground, read dark on light.
+   The card is an object, not a background: it stays white in light mode too,
+   so everything in this constant except the shadow and the edge is fixed
+   across modes. The accent is the brick from the light palette rather than
+   --hue-fun, because --hue-fun is a pastel coral in dark mode and a pastel on
+   white is about 1.8:1. See the --hue-fun-paper note in globals.css.
+
+   The shadow and the edge are the two values that do move: a shadow tuned for
+   near-black is a smudge on #F7F7F7, and a #e2e2e2 edge disappears on it. */
 const F = {
   card: "#ffffff",
-  edge: "#e2e2e2",
+  edge: "var(--fun-card-edge)",
   edgeSoft: "#ececec",
   ink: "#1a1a1a",
   inkSoft: "#555555",
   inkFaint: "#888888",
-  accent: "#b8922a",
-  shadow: "0 4px 32px rgba(0,0,0,0.45)",
+  accent: "var(--hue-fun-paper)",
+  shadow: "var(--fun-card-shadow)",
 };
 
 const PHOTOS = [
@@ -103,13 +112,46 @@ export default function Hero() {
             <House />
             <GaryPacing />
             <div
-              className="grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
+              className="relative grid gap-6 rounded-2xl p-5 sm:p-6 md:grid-cols-[minmax(0,300px)_minmax(0,1fr)] md:items-center md:gap-7"
               style={{
                 backgroundColor: F.card,
                 border: `1px solid ${F.edge}`,
                 boxShadow: F.shadow,
               }}
             >
+              {/* The way into the arcade. Small and in the corner on purpose:
+                  it is an easter egg, not a fifth section, and the three links
+                  above it are the things Patrick actually wants read first.
+
+                  A plain anchor rather than next/link. /arcade is a static
+                  document in public/ reached through a rewrite, so there is no
+                  route payload for Link to prefetch. */}
+              {/* The two doors out of this card, in its bottom corner. The
+                  theme toggle has to be here as well as in the nav, because
+                  Nav renders nothing on /fun: this page carries its own links
+                  and a visitor who never leaves it would otherwise have no way
+                  to get out of whatever mode their OS put them in. */}
+              <div className="absolute bottom-3 right-3 flex items-center gap-2.5 sm:bottom-4 sm:right-4">
+                <a
+                  href="/arcade"
+                  aria-label="Arcade"
+                  title="Arcade"
+                  style={{ color: F.inkFaint, lineHeight: 0 }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = F.accent;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = F.inkFaint;
+                  }}
+                >
+                  <AtariJoystick size={18} />
+                </a>
+                <ThemeToggle
+                  size={16}
+                  color={F.inkFaint}
+                  hoverColor={F.accent}
+                />
+              </div>
               {/* Left: slideshow */}
               <div>
                 <div

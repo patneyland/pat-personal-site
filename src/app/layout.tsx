@@ -90,6 +90,35 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Stamps data-theme on <html> before the first paint.
+ *
+ * Dark, always, whatever the machine is set to. Patrick, 2026-09-05: "I want
+ * the default to be dark, not computer." That is a design call rather than a
+ * technical one, and it is the right one here: dark is the palette the site
+ * was built in, and the black ground is what makes the /fun card and a white
+ * Gary work. Light is the compromise version, so nobody should be dropped
+ * into it by an OS setting they set for a different reason. The toggle is how
+ * you get there.
+ *
+ * Nothing is stored either. A click holds while you move around the site,
+ * because App Router navigation leaves the document and its stamp alone, and
+ * a hard reload puts you back on dark.
+ *
+ * It stays inline and in <head> even though the value is now a constant,
+ * because the alternative is writing the attribute into the server-rendered
+ * <html> tag, and React would then own it and clobber the toggle's change on
+ * the next render. globals.css has no prefers-color-scheme query for the same
+ * reason it never did: the CSS describes two states and the light palette is
+ * written down once.
+ *
+ * The arcade never sees any of this. It is a static document in
+ * public/arcade/ with its own reset and its own tokens, served outside this
+ * layout, and it stays exactly as it is whatever the rest of the site does.
+ */
+const THEME_STAMP =
+  `document.documentElement.setAttribute("data-theme","dark");`;
+
 export default function RootLayout({
   children,
 }: {
@@ -100,6 +129,9 @@ export default function RootLayout({
       lang="en"
       className={`${playfair.variable} ${dmSans.variable} ${jetbrainsMono.variable} ${caveat.variable} ${ebGaramond.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_STAMP }} />
+      </head>
       <body className="bg-bg text-ink antialiased">
         {/* Gary's panel is mounted here rather than in /fun on purpose. His job
             is handing out links, and a panel inside a page would unmount
