@@ -1240,12 +1240,18 @@ body {
 .ms-cell:hover { background: rgba(255, 255, 255, 0.13); }
 
 /* Flag mode. Sits bottom left of the glass, opposite the volume button. */
-.ms-flag-btn {
-  all: unset;
+/* The two marking buttons live together bottom left, opposite the volume
+   button, so they read as cabinet furniture rather than part of the board. */
+.ms-marks {
   position: absolute;
   left: 3.5%;
   bottom: 4%;
   z-index: 6;
+  display: flex;
+  gap: 6px;
+}
+.ms-flag-btn {
+  all: unset;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -1275,6 +1281,14 @@ body {
   border: 1px solid currentColor;
   border-radius: 3px;
   opacity: 0.75;
+}
+/* Question mode lights up in the same cyan a question mark is drawn in, so
+   the button and the mark it plants are obviously the same thing. */
+.ms-flag-btn.is-question[aria-pressed="true"] {
+  color: var(--sc-rank);
+  border-color: var(--sc-rank);
+  background: rgba(4, 26, 34, 0.85);
+  box-shadow: 0 0 14px rgba(0, 213, 255, 0.22);
 }
 .ms-flag-btn[aria-pressed="true"] {
   opacity: 1;

@@ -36,34 +36,54 @@ window.ArcadeGames.minesweeper = (function () {
        right button at all. This is the visible way in. It sits bottom left,
        opposite the volume button, so it reads as another piece of cabinet
        furniture rather than part of the board. */
-    var flagBtn = document.createElement('button');
-    flagBtn.type = 'button';
-    flagBtn.className = 'ms-flag-btn';
-    flagBtn.setAttribute('aria-pressed', 'false');
-    flagBtn.setAttribute('aria-label', 'Flag mode: click cells to flag them');
-    /* The key is printed on the button rather than left in the attract text,
-       which is gone by the time anyone needs it. */
-    flagBtn.innerHTML = '<span class="ms-flag-glyph">⚑</span>' +
-                        '<span class="ms-flag-text">FLAG</span>' +
-                        '<kbd class="ms-flag-key">F</kbd>';
-    wrap.appendChild(flagBtn);
-    host.appendChild(wrap);
-
-    var flagMode = false;
-
-    function setFlagMode(on) {
-      flagMode = !!on;
-      flagBtn.setAttribute('aria-pressed', flagMode ? 'true' : 'false');
-      wrap.classList.toggle('flagging', flagMode);
+    /* The keys are printed on the buttons rather than left in the attract
+       text, which is gone by the time anyone needs them. */
+    function markButton(cls, glyph, label, key) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ms-flag-btn ' + cls;
+      b.setAttribute('aria-pressed', 'false');
+      b.setAttribute('aria-label', label);
+      b.innerHTML = '<span class="ms-flag-glyph">' + glyph + '</span>' +
+                    '<kbd class="ms-flag-key">' + key + '</kbd>';
+      wrap.appendChild(b);
+      return b;
     }
 
-    flagBtn.addEventListener('click', function (e) {
-      e.stopPropagation();
-      setFlagMode(!flagMode);
-      S.flag();
-      // Give the keyboard back, or the next R/F lands on this button.
-      if (e.detail > 0) flagBtn.blur();
-    });
+    var bar = document.createElement('div');
+    bar.className = 'ms-marks';
+    wrap.appendChild(bar);
+    var flagBtn = markButton('is-flag', '⚑',
+                             'Flag mode: click cells to flag them', 'F');
+    var quesBtn = markButton('is-question', '?',
+                             'Question mode: click cells to mark them unsure', 'Q');
+    bar.appendChild(flagBtn);
+    bar.appendChild(quesBtn);
+    host.appendChild(wrap);
+
+    /* 0 plain clicking, 1 planting flags, 2 planting question marks. One
+       mode, two buttons: turning one on turns the other off, because a click
+       can only mean one thing. */
+    var markMode = 0;
+
+    function setMarkMode(mode) {
+      markMode = mode;
+      flagBtn.setAttribute('aria-pressed', mode === 1 ? 'true' : 'false');
+      quesBtn.setAttribute('aria-pressed', mode === 2 ? 'true' : 'false');
+      wrap.classList.toggle('flagging', mode !== 0);
+    }
+
+    function wireMode(btn, mode) {
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        setMarkMode(markMode === mode ? 0 : mode);
+        S.flag();
+        // Give the keyboard back, or the next R/F/Q lands on this button.
+        if (e.detail > 0) btn.blur();
+      });
+    }
+    wireMode(flagBtn, 1);
+    wireMode(quesBtn, 2);
 
     var grid, minesPlaced, revealedCount, flagCount;
     var state = 'idle';          // idle | ready | playing | won | lost
@@ -120,7 +140,7 @@ window.ArcadeGames.minesweeper = (function () {
         }
         grid.push(row);
       }
-      setFlagMode(false);
+      setMarkMode(0);
       api.setState('playing');   // the board is live the moment it is drawn
       report();
     }
@@ -208,6 +228,17 @@ window.ArcadeGames.minesweeper = (function () {
       // One cell is a tick; a flood opening a pocket is the two-note sweep.
       if (opened > 1) S.sweep(); else if (opened === 1) S.tick();
       checkWin();
+    }
+
+    /** Plant one particular mark, or lift it if it is already there. */
+    function applyMark(r, c, mark) {
+      if (!minesPlaced && !api.canStart()) return;
+      if (state !== 'playing' && state !== 'ready') return;
+      var cell = grid[r][c];
+      if (cell.revealed) return;
+      setMark(cell, cell.mark === mark ? 0 : mark);
+      S.flag();
+      report();
     }
 
     /** none -> flag -> question -> none, as Windows did it. */
@@ -331,11 +362,12 @@ window.ArcadeGames.minesweeper = (function () {
       if (!rc) return;
       if (longPressed) { longPressed = false; return; }
       if (e.button === 2) return;         // handled by contextmenu
-      // In flag mode a plain click plants a flag. Clicking an already
-      // revealed cell still chords, because that is never destructive and
-      // it is what you want when you are mid-sweep.
-      if (flagMode && !grid[rc.r][rc.c].revealed) {
-        cycleMark(rc.r, rc.c);
+      // In a marking mode a plain click plants that mark, and clicking it
+      // again lifts it - no cycling through the other one to get back to
+      // plain. Clicking an already revealed cell still chords, because that
+      // is never destructive and it is what you want mid-sweep.
+      if (markMode && !grid[rc.r][rc.c].revealed) {
+        applyMark(rc.r, rc.c, markMode);
         return;
       }
       handleReveal(rc.r, rc.c);
@@ -351,7 +383,8 @@ window.ArcadeGames.minesweeper = (function () {
       var tag = e.target && e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (e.key === 'r' || e.key === 'R') { e.preventDefault(); newGame(); }
-      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setFlagMode(!flagMode); }
+      if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setMarkMode(markMode === 1 ? 0 : 1); }
+      if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); setMarkMode(markMode === 2 ? 0 : 2); }
     }
 
     boardEl.addEventListener('pointerdown', onPointerDown);
@@ -383,7 +416,7 @@ window.ArcadeGames.minesweeper = (function () {
     mode: '10x10',
     metric: 'time',
     attract: '10 BY 10. FIFTEEN MINES. FASTEST WINS.',
-    controls: 'CLICK REVEALS  /  RIGHT CLICK OR F CYCLES FLAG AND ?',
+    controls: 'CLICK REVEALS  /  RIGHT CLICK CYCLES  /  F FLAG  /  Q QUESTION',
     mount: mount
   };
 })();
