@@ -41,8 +41,11 @@ window.ArcadeGames.minesweeper = (function () {
     flagBtn.className = 'ms-flag-btn';
     flagBtn.setAttribute('aria-pressed', 'false');
     flagBtn.setAttribute('aria-label', 'Flag mode: click cells to flag them');
+    /* The key is printed on the button rather than left in the attract text,
+       which is gone by the time anyone needs it. */
     flagBtn.innerHTML = '<span class="ms-flag-glyph">⚑</span>' +
-                        '<span class="ms-flag-text">FLAG</span>';
+                        '<span class="ms-flag-text">FLAG</span>' +
+                        '<kbd class="ms-flag-key">F</kbd>';
     wrap.appendChild(flagBtn);
     host.appendChild(wrap);
 
