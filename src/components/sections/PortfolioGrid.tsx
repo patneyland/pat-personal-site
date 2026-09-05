@@ -7,6 +7,7 @@ import { useState } from "react";
 import BlurFade from "@/components/ui/BlurFade";
 import { ArrowUpRight } from "lucide-react";
 import type { Item } from "@/lib/portfolio";
+import { P } from "@/components/sections/portfolioTheme";
 
 function Tile({ item, delay }: { item: Item; delay: number }) {
   const [hot, setHot] = useState(false);
@@ -23,7 +24,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
     textDecoration: "none",
     backgroundColor: "var(--bg-card)",
     border: `1px solid ${
-      hot && linked ? "var(--accent-dim)" : "var(--border)"
+      hot && linked ? P.accentDim : "var(--border)"
     }`,
     transform: hot && linked ? "translateY(-2px)" : "translateY(0)",
     transition: "border-color 0.25s ease, transform 0.25s ease",
@@ -74,7 +75,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
           textTransform: "uppercase",
         }}
       >
-        <span style={{ color: "var(--accent)" }}>{item.tag}</span>
+        <span style={{ color: P.accent }}>{item.tag}</span>
         {item.year && (
           <span
             style={{
@@ -132,7 +133,7 @@ function Tile({ item, delay }: { item: Item; delay: number }) {
             fontSize: "0.66rem",
             letterSpacing: "0.1em",
             textTransform: "uppercase",
-            color: hot ? "var(--text)" : "var(--accent)",
+            color: hot ? "var(--text)" : P.accent,
             transition: "color 0.2s ease",
           }}
         >

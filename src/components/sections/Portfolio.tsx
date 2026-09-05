@@ -1,6 +1,7 @@
 import BlurFade from "@/components/ui/BlurFade";
 import PortfolioGrid from "@/components/sections/PortfolioGrid";
 import { getItems } from "@/lib/portfolio";
+import { P } from "@/components/sections/portfolioTheme";
 
 export default async function Portfolio() {
   const items = await getItems();
@@ -12,7 +13,7 @@ export default async function Portfolio() {
         style={{ maxWidth: "1100px", padding: "0 1.5rem" }}
       >
         <BlurFade delay={0.05}>
-          <p className="text-caption" style={{ color: "var(--accent)" }}>
+          <p className="text-caption" style={{ color: P.accent }}>
             Things I have built
           </p>
         </BlurFade>

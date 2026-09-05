@@ -3,21 +3,33 @@
 @tailwind utilities;
 
 /* ─── Design Tokens ─────────────────────────────────── */
+/* The neutrals are cool, the accent is warm.
+ *
+ * They used to be warm together, near-black through to a warm off-white, and
+ * the whole site read as one brown. Cooling only the neutrals gives the gold
+ * something to be warm against, and reads cleaner without touching any page
+ * that already depends on the gold itself.
+ *
+ * --accent is NOT any one district's colour. It is shared furniture: the
+ * story's drawn arrows, the scripture on /fun, and the links in boring mode
+ * all use it. A district's own hue lives in its theme file and in
+ * lib/sections.ts. Do not repoint --accent at a section colour, or /story
+ * changes colour with it. */
 :root {
-  --bg:          #0e0e0e;
-  --bg-alt:      #161616;
-  --bg-card:     #1c1c1c;
+  --bg:          #0d0f12;
+  --bg-alt:      #14171b;
+  --bg-card:     #171a1f;
 
-  --text:        #e8e2d9;
-  --text-muted:  #7a7570;
-  --text-faint:  #3d3a38;
+  --text:        #e9edf1;
+  --text-muted:  #8b939c;
+  --text-faint:  #383e45;
 
   --accent:      #c9a84c;
   --accent-dim:  #7a6330;
   --accent-glow: rgba(201, 168, 76, 0.07);
 
-  --border:        #2a2826;
-  --border-subtle: #1e1c1a;
+  --border:        #242931;
+  --border-subtle: #1a1e23;
 }
 
 /* ─── Base ───────────────────────────────────────────── */

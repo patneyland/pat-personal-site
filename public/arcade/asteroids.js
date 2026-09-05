@@ -6,8 +6,10 @@
    stops, screen wrap on everything, and rocks that split 3 -> 2 -> 2.
 
    Deliberate fidelity choices:
-   - Four bullets on screen, the original's limit. It is what forces you to
-     aim instead of holding fire.
+   - Four bullets on screen, the original's limit, and no auto-fire: one
+     press is one shot. Together they are what force you to aim. Auto-repeat
+     hands you a four-shot burst for free and undoes both.
+   - Waves grow by two rocks from four, capped at eleven, as the original.
    - Thrust accelerates, it does not set velocity. Drag is very light, so
      you are always flying, never driving.
    - Rocks are irregular polygons generated once per rock, so no two look
@@ -33,7 +35,9 @@ window.ArcadeGames.asteroids = (function () {
   var BULLET_SPEED = 520;
   var BULLET_LIFE = 1.15;          // seconds
   var MAX_BULLETS = 4;
-  var FIRE_COOLDOWN = 0.16;
+  /* Only there to swallow a double-strike from key jitter. It is not a rate
+     limiter: the four-bullet cap is the limiter, exactly as it was in 1979. */
+  var FIRE_COOLDOWN = 0.06;
 
   var ROCK_SPEC = {
     3: { r: 52, score: 20,  splits: 2 },
@@ -206,7 +210,11 @@ window.ArcadeGames.asteroids = (function () {
       else if (k === ' ') {
         e.preventDefault();
         if (state === 'idle') { start(); return; }
-        keys.fire = true;
+        /* One press, one shot. The cabinet had no auto-fire: holding the
+           button did nothing until you let go and pressed again, which is
+           what makes the four-bullet cap bite. e.repeat is the OS key-repeat
+           coming through, and it is exactly what we do not want. */
+        if (!e.repeat) fire();
       } else if (k === 'Enter') {
         if (state === 'idle') { e.preventDefault(); start(); }
       } else if (k === 'r' || k === 'R') { e.preventDefault(); start(); }
@@ -219,7 +227,7 @@ window.ArcadeGames.asteroids = (function () {
       if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
       else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
       else if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.thrust = false;
-      else if (k === ' ') keys.fire = false;
+      // Space is edge-triggered in onKeyDown; there is no held fire state.
     }
 
     function onPointerDown() { if (state === 'idle') start(); }
@@ -286,8 +294,6 @@ window.ArcadeGames.asteroids = (function () {
       ship.x += ship.vx * dt; ship.y += ship.vy * dt;
       wrap(ship);
 
-      if (keys.fire) fire();
-
       /* bullets */
       for (var i = bullets.length - 1; i >= 0; i--) {
         var b = bullets[i];
@@ -342,7 +348,10 @@ window.ArcadeGames.asteroids = (function () {
       if (!rocks.length) {
         wave++;
         invuln = Math.max(invuln, 1.0);
-        spawnWave(Math.min(11, 3 + wave));
+        /* The original went up by two a wave from four, capping at eleven:
+           4, 6, 8, 10, 11. This was 3 + wave, which is one a wave, so it
+           took twice as long to get hard. */
+        spawnWave(Math.min(11, 2 + wave * 2));
         report();
       }
 
