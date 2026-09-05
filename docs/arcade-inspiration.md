@@ -1,6 +1,9 @@
 # Arcade page - inspiration and references
 
-Collected 2026-09-04, for the `/arcade` page mockup (`docs/mockups/arcade.html`).
+Collected 2026-09-04, for the `/arcade` page. The mockup this fed has since
+been built and shipped: the page is `public/arcade/`, and the build itself is
+documented in [arcade.md](arcade.md). The first gold mockup, before any of
+Pat's direction, is kept at [arcade-v1-mockup.html](arcade-v1-mockup.html).
 
 ## Tier 1 - go look at these
 
@@ -27,7 +30,15 @@ Collected 2026-09-04, for the `/arcade` page mockup (`docs/mockups/arcade.html`)
 - [Anatomy of Arcade High Score Tables](https://arcadeblogger.com/2021/01/31/anatomy-of-arcade-high-score-tables/) - the history. Three-character initials existed to stop obscenities in attract mode (Atari's Steve Calfee). Asteroids ran a top 10, Star Fire a top 20. Moon Cresta allowed 10 characters and immediately regretted it.
 - The convention worth stealing: default tables shipped with the developers' own initials pre-loaded, so the top of the board was always a name that meant something. That is exactly the argument for putting Pat's all-time score in its own block above the table.
 
-## Open questions for Pat
-- Does the CRT eventually run the real Neon Arcade games (Snake, Minesweeper), or stay an attract-mode title card?
-- Real scores from the `arcade_scores` table, or curated?
-- How loud is the palette allowed to get - amber phosphor only, or green too?
+## Open questions, answered
+
+- *Does the CRT run real games or stay a title card?* Real. Snake, Minesweeper
+  and Asteroids, picked with a dial on the bezel.
+- *Real scores or curated?* Real, and worldwide, in their own table
+  `site_arcade_scores`. The family board in `arcade_scores` is untouched.
+- *How loud is the palette allowed to get?* Multicolour, the way an early
+  eighties table looked. Amber and green were both tried and dropped; the gold
+  version read as AI-generated.
+
+The leaderboard convention above was taken up as written: Pat's own all-time
+high sits in its own block above the table, and no one can displace it.
