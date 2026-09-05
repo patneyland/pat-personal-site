@@ -132,7 +132,11 @@ window.ArcadeNet = (function () {
     }).then(function (res) {
       if (!res.ok) {
         return res.json().catch(function () { return {}; }).then(function (j) {
-          throw new Error(j.message || ('Submit failed (' + res.status + ')'));
+          var raw = String(j.message || '');
+          if (/reserved_name/.test(raw) || /site_arcade_scores_reserved_name/.test(raw)) {
+            throw new Error('That name is taken. Pick another.');
+          }
+          throw new Error(raw || ('Submit failed (' + res.status + ')'));
         });
       }
       return res.json().then(function (rows) { return rows[0]; });
@@ -176,6 +180,40 @@ window.ArcadeNet = (function () {
         return isNaN(total) ? null : total + 1;
       })
       .catch(function () { return null; });
+  }
+
+  /* The name Pat plays under. Owner runs never ask for it, and the database
+     reserves it: a CHECK constraint refuses any row carrying this name,
+     in any casing, that is not flagged is_owner. */
+  var OWNER_NAME = 'pat neyland';
+
+  /** Owner submit. Keeps exactly ONE row per game: it updates that row when
+      the run beat it and leaves it alone when it did not, so the board shows
+      Pat once, at his best, rather than filling up with his attempts.
+      Resolves { ok, improved, first }. */
+  function submitOwnerScore(opts) {
+    var secret = getOwnerSecret();
+    if (!secret) return Promise.reject(new Error('Not in owner mode.'));
+    return fetch(URL + '/rest/v1/rpc/submit_owner_score', {
+      method: 'POST',
+      headers: Object.assign({}, HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        p_secret: secret,
+        p_game: opts.game,
+        p_mode: opts.mode,
+        p_player: OWNER_NAME,
+        p_score: opts.score == null ? null : opts.score,
+        p_time_ms: opts.time_ms == null ? null : opts.time_ms
+      })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('Submit failed (' + res.status + ')');
+      return res.json();
+    }).then(function (r) {
+      if (!r || r.ok !== true) throw new Error('Owner key rejected.');
+      return r;
+    }, function () {
+      throw new Error('Network error - score not saved.');
+    });
   }
 
   /** Flip is_owner on a row. Returns true only if the secret was right. */
@@ -233,6 +271,8 @@ window.ArcadeNet = (function () {
   }
 
   return {
+    OWNER_NAME: OWNER_NAME,
+    submitOwnerScore: submitOwnerScore,
     metricCol: metricCol,
     fetchScores: fetchScores,
     fetchOwnerBest: fetchOwnerBest,

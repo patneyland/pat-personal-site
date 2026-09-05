@@ -116,6 +116,7 @@
   var ovForm      = ovOver.querySelector('.ov-form');
   var ovInput     = ovOver.querySelector('.ov-input');
   var ovBtn       = ovOver.querySelector('.ov-btn');
+  var ovLabel     = ovOver.querySelector('.ov-label');
   var ovMsg       = ovOver.querySelector('.ov-msg');
 
   picture.innerHTML = '';
@@ -179,8 +180,18 @@
         score: result.score == null ? null : result.score,
         time_ms: result.time_ms == null ? null : result.time_ms
       };
-      ovInput.value = net.getSavedPlayer();
-      if (!ovInput.value) setTimeout(function () { ovInput.focus(); }, 30);
+      if (net.isOwnerMode()) {
+        // Pat always plays as himself. The field is filled and locked so a
+        // run cannot land under a typo.
+        ovInput.value = net.OWNER_NAME;
+        ovInput.readOnly = true;
+        ovLabel.textContent = 'PLAYING AS';
+      } else {
+        ovInput.readOnly = false;
+        ovLabel.textContent = 'ENTER YOUR NAME';
+        ovInput.value = net.getSavedPlayer();
+        if (!ovInput.value) setTimeout(function () { ovInput.focus(); }, 30);
+      }
     }
   };
 
@@ -197,24 +208,28 @@
     ovMsg.textContent = 'SENDING...';
     ovMsg.className = 'ov-msg';
 
-    net.submitScore({
-      game: pending.game, mode: pending.mode, player: name,
-      score: pending.score, time_ms: pending.time_ms
-    }).then(function (row) {
-      net.savePlayer(name);
+    var run = { game: pending.game, mode: pending.mode,
+                score: pending.score, time_ms: pending.time_ms };
+
+    // Owner runs go through submit_owner_score, which keeps one row per game
+    // and only moves it when the run was actually better. Everyone else
+    // inserts a fresh row the ordinary way.
+    var sending = net.isOwnerMode()
+      ? net.submitOwnerScore(run).then(function (r) {
+          return r.improved
+            ? (r.first ? 'ON THE BOARD' : 'NEW PERSONAL BEST')
+            : 'NOT YOUR BEST — BOARD UNCHANGED';
+        })
+      : net.submitScore(Object.assign({ player: name }, run)).then(function () {
+          net.savePlayer(name);
+          return 'ON THE BOARD';
+        });
+
+    sending.then(function (msg) {
       S.submit();
       ovForm.hidden = true;
       pending = null;
-      // In owner mode, claim the row we just wrote. The insert cannot set
-      // is_owner itself; this is the only door, and it needs the secret.
-      if (net.isOwnerMode() && row && row.id) {
-        return net.claimScore(row.id).then(function (ok) {
-          ovMsg.textContent = ok ? 'ON THE BOARD — CLAIMED' : 'ON THE BOARD';
-          ovMsg.className = 'ov-msg is-good';
-          loadBoard();
-        });
-      }
-      ovMsg.textContent = 'ON THE BOARD';
+      ovMsg.textContent = msg;
       ovMsg.className = 'ov-msg is-good';
       loadBoard();
     }).catch(function (err) {
@@ -236,13 +251,18 @@
 
   /* ------------------------------ the rail ------------------------------ */
 
-  /* The marker beside Pat's name. Drawn rather than typed: Press Start 2P
-     has no crown or star glyph, so a character falls back to a system font
-     and turns to mush at 9px. An SVG stays crisp at any size. */
+  /* The marker beside Pat's name: the verified badge, scalloped disc and
+     tick, in Twitter's blue. Drawn rather than typed, because Press Start 2P
+     has no such glyph and a font fallback turns to mush at 10px. */
   var CROWN =
     '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-      '<path d="M12 2.5l2.7 5.9 6.4.7-4.8 4.3 1.35 6.3L12 16.5l-5.65 3.2 1.35-6.3' +
-        'L2.9 9.1l6.4-.7z" fill="currentColor"/>' +
+      '<path fill="currentColor" d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91' +
+        's-2.52-1.27-3.91-.81C14.67 2.63 13.43 1.75 12 1.75s-2.67.88-3.34 2.19' +
+        'c-1.39-.46-2.9-.2-3.91.81s-1.27 2.52-.81 3.91C2.63 9.33 1.75 10.57 1.75 12' +
+        's.88 2.67 2.19 3.34c-.46 1.39-.2 2.9.81 3.91s2.52 1.27 3.91.81' +
+        'c.67 1.31 1.91 2.19 3.34 2.19s2.67-.88 3.34-2.19c1.39.46 2.9.2 3.91-.81' +
+        's1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34z' +
+        'm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>' +
     '</svg>';
 
   function rowHtml(g, row, rank, extraClass) {
@@ -250,7 +270,7 @@
     return '<li class="' + cls.trim() + '">' +
              '<span class="b-rank">' + ('0' + rank).slice(-2) + '</span>' +
              '<span class="b-name">' + esc(row.player) +
-               (row.is_owner ? '<i class="b-crown" title="Pat’s own score">' +
+               (row.is_owner ? '<i class="b-verified" title="Verified: Pat’s own score">' +
                                  CROWN + '</i>' : '') +
              '</span>' +
              '<span class="b-score">' + net.rowValue(g.id, row) + '</span>' +

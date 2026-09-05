@@ -1000,14 +1000,18 @@ body {
    above on purpose: same specificity, so source order is what wins. */
 .board li.is-owner .b-name,
 .board li.is-owner .b-rank { color: var(--sc-score); opacity: 1; }
-.b-crown {
+/* Pat's name is one token with the badge - never split across lines. */
+.board li.is-owner .b-name { white-space: nowrap; }
+.b-verified {
   display: inline-block;
   margin-left: 7px;
-  color: var(--sc-score);
-  filter: drop-shadow(0 0 5px var(--ink-glow));
+  /* Twitter's blue, deliberately outside the arcade palette so it reads as a
+     badge rather than as another phosphor colour. */
+  color: #1d9bf0;
+  filter: drop-shadow(0 0 5px rgba(29, 155, 240, 0.55));
   vertical-align: baseline;
 }
-.b-crown svg { width: 10px; height: 10px; display: block; }
+.b-verified svg { width: 11px; height: 11px; display: block; }
 /* His best, pinned back on when the top ten has pushed it off. */
 .board li.b-gap {
   display: block;
