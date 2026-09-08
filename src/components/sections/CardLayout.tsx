@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import BlurFade from "@/components/ui/BlurFade";
+import { GARY_HEIGHT } from "@/components/ui/GaryPacing";
 import { ArrowRight } from "lucide-react";
 
 /**
@@ -282,9 +283,19 @@ export default function CardLayout({
   cards: Card[];
   theme: CardTheme;
   /**
-   * Rendered right-aligned, standing on the rule above the grid. Gary, on the
-   * pages he does not walk. With no lead card there is no rule of its own for
-   * him to stand on, so this draws one.
+   * Gary, pacing the rule above the grid.
+   *
+   * He used to stand at the right-hand end of it and wait to be clicked, which
+   * is why this slot was a right-aligned flex row. He walks now, the same way
+   * he walks the top of the card on /fun, so what he needs is not a place to
+   * stand but a ground line and a strip of sky above it. The rule is the
+   * ground: it is drawn on a positioned element, and GaryPacing puts its own
+   * track at `bottom: 100%` of the nearest positioned ancestor, so his feet
+   * land on the rule at any width with nothing here saying so in pixels.
+   *
+   * The spacer above holds the sky open. Without it he would be drawn over the
+   * heading, because his track is absolutely positioned and takes no room in
+   * the flow.
    */
   aside?: React.ReactNode;
 }) {
@@ -292,10 +303,16 @@ export default function CardLayout({
     <>
       {aside && (
         <div style={{ marginTop: "1.5rem" }}>
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+          {/* The sky he paces in. Held open in the flow; he is not in it. */}
+          <div style={{ height: GARY_HEIGHT }} aria-hidden="true" />
+          <div
+            style={{
+              position: "relative",
+              borderTop: `1px solid ${theme.edge}`,
+            }}
+          >
             {aside}
           </div>
-          <div style={{ borderTop: `1px solid ${theme.edge}` }} />
         </div>
       )}
 

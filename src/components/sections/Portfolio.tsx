@@ -1,11 +1,17 @@
 import BlurFade from "@/components/ui/BlurFade";
 import CardLayout, { type Card } from "@/components/sections/CardLayout";
-import GaryStanding from "@/components/ui/GaryStanding";
+import GaryPacing from "@/components/ui/GaryPacing";
 import { P } from "@/components/sections/portfolioTheme";
 import { getItems } from "@/lib/portfolio";
+import { readGreeting } from "@/lib/gary/prompt";
+import { NAV_H } from "@/lib/nav";
 
 export default async function Portfolio() {
   const items = await getItems();
+  /* Read here rather than in the client component: content/gary.md is on
+     disk, and this page is already a server component. The heading is named
+     in full because it is Patrick's to rename, and content/gary.md says so. */
+  const greeting = readGreeting("His greeting on the portfolio");
 
   const cards: Card[] = items.map((item) => ({
     key: item.slug,
@@ -42,7 +48,19 @@ export default async function Portfolio() {
           </h1>
         </BlurFade>
 
-        <CardLayout cards={cards} theme={P} aside={<GaryStanding />} />
+        <CardLayout
+          cards={cards}
+          theme={P}
+          aside={
+            <GaryPacing
+              greeting={greeting}
+              greetKey="/portfolio"
+              knockout={false}
+              ceiling={NAV_H}
+              greetModes={["right"]}
+            />
+          }
+        />
       </div>
     </section>
   );

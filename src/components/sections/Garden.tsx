@@ -1,8 +1,10 @@
 import BlurFade from "@/components/ui/BlurFade";
 import CardLayout, { type Card } from "@/components/sections/CardLayout";
-import GaryStanding from "@/components/ui/GaryStanding";
+import GaryPacing from "@/components/ui/GaryPacing";
 import { G } from "@/components/sections/gardenTheme";
 import { getEntries } from "@/lib/garden";
+import { readGreeting } from "@/lib/gary/prompt";
+import { NAV_H } from "@/lib/nav";
 
 /**
  * The plot.
@@ -31,6 +33,9 @@ const GARDEN_IMAGES: Record<string, string> = {
 
 export default async function Garden() {
   const entries = await getEntries();
+  /* His line for this page, read off disk here because this is already a
+     server component. See the note on the portfolio's. */
+  const greeting = readGreeting("His greeting in the garden");
   const notes = entries.filter((e) => e.kind === "note");
   const lines = entries.filter((e) => e.kind === "line");
 
@@ -96,7 +101,19 @@ export default async function Garden() {
           </h1>
         </BlurFade>
 
-        <CardLayout cards={cards} theme={G} aside={<GaryStanding />} />
+        <CardLayout
+          cards={cards}
+          theme={G}
+          aside={
+            <GaryPacing
+              greeting={greeting}
+              greetKey="/garden"
+              knockout={false}
+              ceiling={NAV_H}
+              greetModes={["right"]}
+            />
+          }
+        />
 
         {entries.length === 0 && (
           <BlurFade delay={0.24}>

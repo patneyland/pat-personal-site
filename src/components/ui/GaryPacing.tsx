@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import { useGary, GaryConversation, F } from "@/components/ui/GaryChat";
+import {
+  claimConversation,
+  useGary,
+  GaryConversation,
+  F,
+} from "@/components/ui/GaryChat";
 import ThoughtBubble from "@/components/ui/ThoughtBubble";
 import {
   fitWidth,
@@ -17,7 +22,18 @@ import {
 } from "@/lib/bubblePlacement";
 
 /**
- * Gary, pacing the top edge of the card, and stopping to talk.
+ * Gary, pacing a horizontal edge, and stopping to talk.
+ *
+ * Three pages use him: the top of the card on /fun, and the rule under the
+ * heading on the portfolio and in the garden. He used to be /fun's alone, and
+ * the other two had a GaryStanding who stood at the end of the rule waiting to
+ * be clicked. That was the wrong character. He is the same drawing on every
+ * page, so he should behave the same way on every page, and standing still on
+ * two of four made those two read as the pages Gary had not got round to.
+ *
+ * What differs between them is passed in rather than sniffed: his line, the
+ * key it is remembered under, whether to paint his knockout, what is in his
+ * sky. Nothing in here branches on pathname, and nothing should start to.
  *
  * The pacing itself: his speed is not chosen, it is derived. The sprite
  * advances a fixed distance per walk cycle, so if the element moves at any
@@ -28,7 +44,8 @@ import {
  *           (measured off the drawings: 49px step length, two steps per cycle)
  *
  * Both sheets are cropped so their bottom row is his lowest foot pixel, which
- * is why bottom: 100% lands him exactly on the card's edge at any size.
+ * is why bottom: 100% lands him exactly on the top edge of whatever wrapper
+ * he is mounted in, at any size.
  *
  * Stopping to talk is the interesting part. He walks under a CSS animation, so
  * nothing in JS knows where he is at any moment. Rather than reimplement the
@@ -48,6 +65,8 @@ const FRAMES = 8;
 const FPS = 12;
 const STRIDE_RATIO = 98 / 177; // distance per cycle, as a fraction of his height
 const HEIGHT = 72; // display height of one cell, px
+/** His height, for a page that has to hold open the sky he walks in. */
+export const GARY_HEIGHT = HEIGHT;
 const ASPECT = 114 / 144;
 const WIDTH = HEIGHT * ASPECT;
 
@@ -114,12 +133,77 @@ type Geo = {
   vh: number;
 };
 
-export default function GaryPacing() {
+export default function GaryPacing({
+  /**
+   * The line he says on arrival, already read out of content/gary.md by the
+   * server component that renders him. Defaults to the site greeting, which is
+   * /fun's. Empty string means this page has nothing for him to say, and he
+   * goes straight to pacing without a bubble.
+   */
+  greeting: greetingProp,
+  /**
+   * Which page this is, for remembering that its greeting has been said. The
+   * pathname is the obvious value and every caller passes it; it is a prop
+   * rather than a usePathname() call so a page can hold its own key steady
+   * across a route change if it ever needs to.
+   */
+  greetKey = "/fun",
+  /**
+   * Paint his knockout silhouette under him. On /fun he walks across the roof
+   * of the house, and without it the drawing behind shows through his head. He
+   * has nothing behind him on the portfolio or in the garden, and the knockout
+   * is a flat #121212 rather than a theme colour, so painting it there would
+   * put a faint dark patch on the page for no gain.
+   */
+  knockout = true,
+  /**
+   * How far down the viewport the painted drawing must stay, in px.
+   *
+   * /fun has no nav, so nothing is in his sky and the default is 0. The
+   * portfolio and the garden are under a 54px sticky nav, and his greeting
+   * needs roughly 150px above his head: without this the box solves into the
+   * top of the viewport and the nav is painted over the top of it. Given to
+   * the shared solver as the bounds' top edge, so a greeting that will not
+   * fit under the ceiling moves or shrinks by the same rules as everything
+   * else rather than being clipped.
+   */
+  ceiling = 0,
+  /**
+   * Which sides the greeting may take. The conversation is unaffected: it is a
+   * box the visitor opened and it may go above or below as it always has.
+   *
+   * /fun keeps "above", and the long note further down explains why the
+   * greeting gets one side rather than being allowed to flip: nobody asked for
+   * it, so it must not land on the card. The portfolio and the garden want
+   * "right" for the mirror-image reason. Their sky is not empty, it has the
+   * page's <h1> in it, and a greeting solved into the space above his head
+   * covers the one word telling you which page you are on. The band beside him
+   * between the heading and the rule is genuinely empty, so he speaks into
+   * that instead, and the page costs no extra height to make room for ten
+   * seconds of handwriting.
+   */
+  greetModes = ["above"],
+}: {
+  greeting?: string;
+  greetKey?: string;
+  knockout?: boolean;
+  ceiling?: number;
+  greetModes?: Exclude<BubbleMode, "pinned">[];
+} = {}) {
   const track = useRef<HTMLDivElement>(null);
   const walker = useRef<HTMLDivElement>(null);
   const [seconds, setSeconds] = useState(0);
 
-  const { enabled, greeting, greeted, markGreeted, open, setOpen } = useGary();
+  const {
+    enabled,
+    greeting: siteGreeting,
+    hasGreeted,
+    markGreeted,
+    open,
+    setOpen,
+  } = useGary();
+  const greeting = greetingProp ?? siteGreeting;
+  const greeted = hasGreeted(greetKey);
 
   const [greetingNow, setGreetingNow] = useState(false);
   /** Fading out rather than blinking out of existence. */
@@ -165,20 +249,65 @@ export default function GaryPacing() {
     setDraw(rollDraw());
   }, [stopped]);
 
+  /**
+   * Whether to greet at all, decided once and then never revisited.
+   *
+   * Said is said: he is marked as having greeted the moment the line goes up,
+   * not when it finishes. It used to be marked at the end of the ten seconds,
+   * which was invisible while /fun was his only page and wrong as soon as it
+   * was not. Clicking from the portfolio to the garden and back takes about
+   * four seconds, so he greeted the portfolio again, and again, every time you
+   * came back. A greeting you have already read is not a greeting.
+   *
+   * The ref is what makes "once" mean once. Marking greeted changes hasGreeted
+   * and re-runs this effect, and the guard turns the second pass into a
+   * no-op rather than a second greeting.
+   */
+  const decided = useRef(false);
   useEffect(() => {
+    if (decided.current) return;
     if (!enabled || greeted || !greeting) return;
+    /* Nothing measured yet, so wait; or measured and too narrow to draw a
+       bubble in, so never. Greeting freezes him mid-walk, and on a phone the
+       bubble is suppressed (see `tooNarrow`), which left him standing to
+       attention for ten seconds saying nothing before he started pacing. If
+       he cannot say it, he does not stop to say it. */
+    if (geo.trackW === 0) return;
+    if (geo.trackW < MIN_TRACK_W) return;
+    decided.current = true;
     setGreetingNow(true);
+    markGreeted(greetKey);
+  }, [enabled, greeted, greeting, markGreeted, greetKey, geo.trackW]);
+
+  /**
+   * How long it stays up. Split from the decision above deliberately: these
+   * timers must live exactly as long as the greeting is on screen, and an
+   * effect that also depends on hasGreeted would tear them down and not
+   * rebuild them the instant the greeting was marked as said. `greetingNow` is
+   * the only thing that should be able to cancel them, so it is the only
+   * dependency.
+   */
+  useEffect(() => {
+    if (!greetingNow) return;
     const fade = setTimeout(() => setLeaving(true), GREET_MS);
     const gone = setTimeout(() => {
       setGreetingNow(false);
       setLeaving(false);
-      markGreeted();
     }, GREET_MS + GREET_FADE_MS);
     return () => {
       clearTimeout(fade);
       clearTimeout(gone);
     };
-  }, [enabled, greeted, greeting, markGreeted]);
+  }, [greetingNow]);
+
+  /* He is on the page, so the conversation is his and the corner panel stands
+     down. Claimed for as long as he is mounted and real, not only while the
+     chat is open: the panel is the fallback for pages with no Gary, and this
+     is not one. */
+  useEffect(() => {
+    if (!enabled) return;
+    return claimConversation();
+  }, [enabled]);
 
   useEffect(() => {
     const el = track.current;
@@ -248,9 +377,9 @@ export default function GaryPacing() {
   const openChat = useCallback(() => {
     setGreetingNow(false);
     setLeaving(false);
-    markGreeted();
+    markGreeted(greetKey);
     setOpen(true);
-  }, [markGreeted, setOpen]);
+  }, [markGreeted, greetKey, setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -281,7 +410,7 @@ export default function GaryPacing() {
   const bounds: Bounds = {
     left: Math.max(-trackLeft, -LOBE_BLEED),
     right: trackW + Math.min(vw - trackLeft - trackW, LOBE_BLEED),
-    top: -groundTop,
+    top: -groundTop + ceiling,
     bottom: vh - groundTop,
   };
   const bubbleW = fitWidth(open ? CHAT_W : GREET_W, bounds);
@@ -333,7 +462,7 @@ export default function GaryPacing() {
           hMax: bubbleH,
           hMin: open ? H_MIN : bubbleH,
           bounds,
-          modes: open ? ["above", "below"] : ["above"],
+          modes: open ? ["above", "below"] : greetModes,
           prev:
             bubbleMode.current && bubbleMode.current.open === open
               ? bubbleMode.current.mode
@@ -399,9 +528,11 @@ export default function GaryPacing() {
                  behind him is covered by his silhouette instead of showing
                  through his head. One background-position drives both layers,
                  so gary-step keeps them in register for free. Built by
-                 scripts/dev/make-solid.mjs. */
-              backgroundImage:
-                "url(/assets/gary-pace.png), url(/assets/gary-pace-solid.png)",
+                 scripts/dev/make-solid.mjs. Dropped where there is nothing
+                 behind him to knock out: see the `knockout` prop. */
+              backgroundImage: knockout
+                ? "url(/assets/gary-pace.png), url(/assets/gary-pace-solid.png)"
+                : "url(/assets/gary-pace.png)",
               backgroundSize: `${WIDTH * FRAMES}px ${HEIGHT}px`,
               animation: seconds
                 ? `gary-step ${FRAMES / FPS}s steps(${FRAMES}) infinite,` +
@@ -438,8 +569,9 @@ export default function GaryPacing() {
                 height: HEIGHT,
                 "--gary-w": `${WIDTH}px`,
                 "--gary-cells": -FACING_FRAMES,
-                backgroundImage:
-                  "url(/assets/gary-facing.png), url(/assets/gary-facing-solid.png)",
+                backgroundImage: knockout
+                  ? "url(/assets/gary-facing.png), url(/assets/gary-facing-solid.png)"
+                  : "url(/assets/gary-facing.png)",
                 backgroundSize: `${WIDTH * FACING_FRAMES}px ${HEIGHT}px`,
                 animation: `gary-step ${FACING_CYCLE}s steps(${FACING_FRAMES}) infinite`,
                 pointerEvents: "auto",
@@ -501,7 +633,7 @@ export default function GaryPacing() {
                   ×
                 </button>
               </header>
-              <GaryConversation />
+              <GaryConversation greeting={greeting} />
             </>
           ) : (
             /* His own line, in the site's handwriting, because it is the one
@@ -565,7 +697,7 @@ export default function GaryPacing() {
               ×
             </button>
           </header>
-          <GaryConversation />
+          <GaryConversation greeting={greeting} />
         </div>,
         document.body,
       )}

@@ -79,18 +79,31 @@ function prose(raw: string): string {
 }
 
 /**
- * Patrick's greeting line, pulled out of his file so the bubble on /fun shows
+ * One of Patrick's greeting lines, pulled out of his file so the bubble shows
  * it verbatim rather than generating one.
  *
  * A generated greeting would differ on every load, which is worse: it is the
  * one line every visitor sees, and it should be his words exactly.
+ *
+ * There is a line per page he walks, because "glad you made it to the fun
+ * website" is the wrong thing to say to somebody who arrived on the portfolio.
+ * Each page asks for its own heading by name. A heading that is missing or
+ * empty returns "", and a page with no greeting simply shows no bubble and
+ * goes straight to pacing, so adding a page and forgetting its line is a
+ * quiet omission rather than a break. The headings are Patrick's to rename,
+ * which is why the callers name them and this function does not list them.
  */
-export function readGreeting(): string {
+export function readGreeting(heading = "His greeting"): string {
   const voice = readVoice();
   if (!voice.ok) return "";
 
+  const wanted = heading.trim().toLowerCase();
   const lines = voice.text.split("\n");
-  const start = lines.findIndex((l) => /^##\s*His greeting\s*$/i.test(l.trim()));
+  const start = lines.findIndex(
+    (l) =>
+      l.trim().startsWith("##") &&
+      l.replace(/^#+/, "").trim().toLowerCase() === wanted,
+  );
   if (start === -1) return "";
 
   const body: string[] = [];

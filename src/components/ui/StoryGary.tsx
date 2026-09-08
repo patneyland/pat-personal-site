@@ -10,6 +10,7 @@ import {
   F,
 } from "@/components/ui/GaryChat";
 import ThoughtBubble from "@/components/ui/ThoughtBubble";
+import { NAV_H } from "@/lib/nav";
 import {
   fitWidth,
   H_MIN,
@@ -63,8 +64,6 @@ export const ROUTE_KEYS = [
 /** Same conversation size as /fun and the corner panel. */
 const CHAT_W = 480;
 const CHAT_H = Math.round((CHAT_W * 9) / 16);
-/** The sticky nav is 54px tall. The painted drawing stays below it. */
-const NAV_H = 54;
 /** How long he takes to rejoin the route if the reader scrolled while the
     chat was open. */
 const BLEND_MS = 450;

@@ -23,11 +23,11 @@ import ThoughtBubble from "@/components/ui/ThoughtBubble";
  *
  * It is drawn two different ways. Wherever Gary is on screen the conversation
  * is a thought bubble coming off his mouth, placed against his real position
- * by placeBubble: GaryPacing stops him walking to have it on /fun, StoryGary
- * on /story, GaryStanding on the portfolio and the garden. Only where there is
- * no Gary to speak from does it fall back to the corner panel below. Follow
- * one of his links and the bubble becomes the panel with the talk intact,
- * rather than vanishing.
+ * by placeBubble: GaryPacing stops him walking to have it on /fun, on the
+ * portfolio and in the garden, and StoryGary does the same on /story. Only
+ * where there is no Gary to speak from does it fall back to the corner panel
+ * below. Follow one of his links and the bubble becomes the panel with the
+ * talk intact, rather than vanishing.
  *
  * A hard reload is the other half, which is what sessionStorage covers. It is
  * scoped to the one tab and cleared when it closes, which is exactly "one
@@ -54,7 +54,11 @@ const PANEL_MARGIN = 40;
 const PANEL_W = 480;
 
 const STORE_KEY = "gary.conversation";
-const GREETED_KEY = "gary.greeted";
+/* Bumped from "gary.greeted" when the flag went from one boolean to a set of
+   page keys. An old tab holding "1" would otherwise parse as garbage; under a
+   new name it is simply ignored, and the cost of the change is that a visitor
+   mid-session gets greeted once more. */
+const GREETED_KEY = "gary.greeted.pages";
 
 export type Message = { role: "user" | "assistant"; content: string };
 
@@ -66,9 +70,17 @@ type GaryState = {
   setOpen: (open: boolean) => void;
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
-  /** True once the greeting has been shown in this tab. */
-  greeted: boolean;
-  markGreeted: () => void;
+  /**
+   * Which greetings have already been said in this tab, by page key.
+   *
+   * Per page rather than per site. Gary walks several pages now and each has
+   * its own line, so one boolean meant that whichever page you landed on first
+   * was the only one that ever said anything. Arriving on /fun and then
+   * clicking through to the portfolio should still get you the portfolio's
+   * greeting; arriving there twice in one visit should not.
+   */
+  hasGreeted: (key: string) => boolean;
+  markGreeted: (key: string) => void;
 };
 
 const Ctx = createContext<GaryState | null>(null);
@@ -78,9 +90,10 @@ const Ctx = createContext<GaryState | null>(null);
  *
  * The corner panel is the fallback, not the preferred form: wherever Gary
  * himself is on screen the conversation should come off him as a bubble, and
- * the panel should stand down. StoryGary claims the conversation while he is
- * walking the story board; GaryPacing never needs to, because the panel
- * already excuses itself on /fun by pathname.
+ * the panel should stand down. StoryGary claims it while he is walking the
+ * story board, and GaryPacing claims it wherever it is mounted. GaryPacing
+ * used not to, relying on the panel excusing itself from /fun by pathname;
+ * that stopped being safe the moment he walked more than one page.
  *
  * A module-level count rather than context state, because the claimant
  * (StoryGary) manages the character imperatively inside one long-lived effect
@@ -123,7 +136,7 @@ export function useGary(): GaryState {
       setOpen: () => {},
       messages: [],
       setMessages: () => {},
-      greeted: true,
+      hasGreeted: () => true,
       markGreeted: () => {},
     };
   }
@@ -141,7 +154,7 @@ export function GaryProvider({
 }) {
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [greeted, setGreeted] = useState(true);
+  const [greetedPages, setGreetedPages] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   // Read the tab's conversation back after mount. Doing this in an effect
@@ -150,10 +163,11 @@ export function GaryProvider({
     try {
       const saved = sessionStorage.getItem(STORE_KEY);
       if (saved) setMessages(JSON.parse(saved));
-      setGreeted(sessionStorage.getItem(GREETED_KEY) === "1");
+      const pages = JSON.parse(sessionStorage.getItem(GREETED_KEY) ?? "[]");
+      if (Array.isArray(pages)) setGreetedPages(pages.filter((p) => typeof p === "string"));
     } catch {
-      // Private mode, or storage disabled. Gary still works, he just forgets.
-      setGreeted(false);
+      // Private mode, storage disabled, or a value another tab left in a shape
+      // this build does not know. Gary still works, he just greets again.
     }
     setHydrated(true);
   }, []);
@@ -167,14 +181,26 @@ export function GaryProvider({
     }
   }, [messages, hydrated]);
 
-  const markGreeted = useCallback(() => {
-    setGreeted(true);
-    try {
-      sessionStorage.setItem(GREETED_KEY, "1");
-    } catch {
-      /* see above */
-    }
+  const markGreeted = useCallback((key: string) => {
+    setGreetedPages((prev) => {
+      if (prev.includes(key)) return prev;
+      const next = [...prev, key];
+      try {
+        sessionStorage.setItem(GREETED_KEY, JSON.stringify(next));
+      } catch {
+        /* see above */
+      }
+      return next;
+    });
   }, []);
+
+  /* Treated as already greeted until the tab's storage has been read back, so
+     a page that was greeted earlier in the visit does not flash its greeting
+     for one frame before hydration catches up and takes it away. */
+  const hasGreeted = useCallback(
+    (key: string) => !hydrated || greetedPages.includes(key),
+    [hydrated, greetedPages],
+  );
 
   return (
     <Ctx.Provider
@@ -185,7 +211,7 @@ export function GaryProvider({
         setOpen,
         messages,
         setMessages,
-        greeted: !hydrated || greeted,
+        hasGreeted,
         markGreeted,
       }}
     >
@@ -198,8 +224,22 @@ export function GaryProvider({
  * The conversation itself, with no opinion about what it is drawn inside.
  * The bubble on /fun and the corner panel everywhere else both render this.
  */
-export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) {
-  const { messages, setMessages, greeting } = useGary();
+export function GaryConversation({
+  autoFocus = true,
+  /**
+   * The line standing in for his first turn in an empty conversation.
+   *
+   * Defaults to the site greeting, which is /fun's. A page with its own
+   * greeting passes that instead, or the visitor opens the chat on the
+   * portfolio and is told they made it to the fun website.
+   */
+  greeting: greetingProp,
+}: {
+  autoFocus?: boolean;
+  greeting?: string;
+}) {
+  const { messages, setMessages, greeting: siteGreeting } = useGary();
+  const greeting = greetingProp ?? siteGreeting;
   const pathname = usePathname();
 
   const [draft, setDraft] = useState("");
@@ -379,14 +419,18 @@ export function GaryPanel() {
   }, [open, setOpen]);
 
   /* "/" is boring mode, a plain academic page with no nav and no animation.
-     Nav hides itself there for the same reason. On /fun the bubble over Gary's
-     head is the conversation, so the panel would be a second copy of it. And
-     wherever StoryGary has claimed the conversation, the bubble beside him is
-     the conversation, so the panel stands down there too: it comes back by
-     itself when he is not on the board (narrow screens, reduced motion, or a
-     missing atlas), because nothing claims it then. */
-  if (!enabled || !open || claimed || pathname === "/" || pathname === "/fun")
-    return null;
+     Nav hides itself there for the same reason.
+
+     Everything else is decided by the claim rather than by pathname. This used
+     to name /fun explicitly, which was fine while /fun was the only page he
+     walked; the moment he started pacing the portfolio and the garden too, a
+     pathname list would have had to grow with him, and the page that got
+     forgotten would have shown a second copy of the conversation in the
+     corner. A page that draws Gary claims the conversation and the panel
+     stands down; the claim is released when he is not really there (narrow
+     screens, reduced motion, a missing atlas), and the panel comes back by
+     itself. */
+  if (!enabled || !open || claimed || pathname === "/") return null;
 
   return (
     <ThoughtBubble
@@ -396,7 +440,7 @@ export function GaryPanel() {
          on screen to speak from, so the trail has nobody to reach and simply
          leaves the top-left corner as a thought balloon does. Wherever he IS
          drawn on the page he claims the conversation and places a real bubble
-         off his mouth himself: GaryPacing, StoryGary, GaryStanding. */
+         off his mouth himself: GaryPacing, StoryGary. */
       tail="up"
       tailX={44}
       seed={23}
