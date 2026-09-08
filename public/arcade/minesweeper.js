@@ -417,6 +417,7 @@ window.ArcadeGames.minesweeper = (function () {
     metric: 'time',
     attract: '10 BY 10. FIFTEEN MINES. FASTEST WINS.',
     controls: 'CLICK REVEALS  /  RIGHT CLICK CYCLES  /  F FLAG  /  Q QUESTION',
+    touchControls: 'TAP REVEALS  /  HOLD PLANTS A FLAG',
     mount: mount
   };
 })();

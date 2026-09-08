@@ -22,6 +22,10 @@
   var S = window.ArcadeSound;
 
   var root = document.documentElement;
+  /* The phone shell, if mobile.js decided this is a phone. The cabinet only
+     ever asks it two things: which control legend to print, and who to hand
+     the screen to when it is built. */
+  var phone = !!(window.ArcadePhone && window.ArcadePhone.active);
   var picture = document.querySelector('.picture');
   var dial = document.querySelector('.dial');
   var ticks = document.querySelectorAll('.dial-ticks span');
@@ -100,7 +104,8 @@
         '<button type="submit" class="ov-btn">SUBMIT</button>' +
       '</form>' +
       '<div class="ov-msg"></div>' +
-      '<div class="ov-again">PRESS R TO PLAY AGAIN</div>' +
+      '<button type="button" class="ov-again">' +
+        (phone ? 'PLAY AGAIN' : 'PRESS R TO PLAY AGAIN') + '</button>' +
     '</div>';
 
   var stage       = screen.querySelector('.stage');
@@ -118,6 +123,7 @@
   var ovBtn       = ovOver.querySelector('.ov-btn');
   var ovLabel     = ovOver.querySelector('.ov-label');
   var ovMsg       = ovOver.querySelector('.ov-msg');
+  var ovAgain     = ovOver.querySelector('.ov-again');
 
   picture.innerHTML = '';
   picture.appendChild(screen);
@@ -237,6 +243,12 @@
       ovMsg.textContent = String(err.message || err).toUpperCase();
       ovMsg.className = 'ov-msg is-bad';
     });
+  });
+
+  // The same restart the R key does, for a thumb.
+  ovAgain.addEventListener('click', function (e) {
+    if (instance && instance.start) instance.start();
+    if (e && e.detail > 0) ovAgain.blur();
   });
 
   // R restarts from the game-over screen without stealing the name field.
@@ -420,7 +432,7 @@
     elGameLabels.forEach(function (e) { e.textContent = game.name; });
     ovTitle.textContent = game.name;
     ovSub.textContent = game.attract;
-    ovControls.textContent = game.controls;
+    ovControls.textContent = (phone && game.touchControls) || game.controls;
     paintCredit();
 
     pending = null;
@@ -467,7 +479,11 @@
   /** The blinking line at the foot of the attract screen. */
   function paintCredit() {
     var line = ovAttract.querySelector('.insert');
-    if (line) line.textContent = hasCredit ? 'PRESS SPACE TO START' : 'INSERT COIN';
+    if (line) {
+      line.textContent = hasCredit
+        ? (phone ? 'TAP TO START' : 'PRESS SPACE TO START')
+        : 'INSERT COIN';
+    }
   }
 
   /* ------------------------------ the credit ----------------------------
@@ -533,4 +549,10 @@
   root.setAttribute('data-inserted', hasCredit ? 'true' : 'false');
   if (hasCredit && coinModule) coinModule.classList.add('is-inserting');
   select(0);
+
+  /* The phone shell is built before this file runs, but the screen and the
+     state it publishes only exist once the cabinet has assembled them. */
+  if (window.ArcadePhone && window.ArcadePhone.attach) {
+    window.ArcadePhone.attach({ screen: screen, dial: dial });
+  }
 })();

@@ -9,6 +9,10 @@
 <meta property="og:description" content="Snake, Minesweeper and Asteroids on a CRT. Insert a coin and put your name on the board." />
 <meta property="og:type" content="website" />
 <link rel="icon" href="/arcade/icon.svg" />
+<meta name="theme-color" content="#0e0e0e" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
 <!--
   /arcade - a standalone document, served straight out of public/ and
@@ -1491,6 +1495,328 @@ body {
 
 @media (max-width: 760px) { .gary { display: none; } }
 
+/* ═══ TOUCH ══════════════════════════════════════════════
+   True on every screen, not only a phone: a touchscreen
+   laptop lands on all of this too.
+   ═══════════════════════════════════════════════════════ */
+
+/* The attract screen is a sign, not a control. Without this it sits over the
+   stage and swallows the tap - and the click - that every game reads as
+   "start", which is why tapping the glass appeared to do nothing. */
+.overlay[data-ov="attract"] { pointer-events: none; }
+
+/* Nothing on the glass scrolls, zooms or selects. A swipe in Snake was
+   turning the snake and scrolling the page underneath it at the same time,
+   and a long press in Minesweeper raised the text-selection callout on top
+   of the flag it had just planted. */
+.stage, .game-canvas { touch-action: none; }
+.ms-board { touch-action: manipulation; }
+.ms-cell {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* PLAY AGAIN is a button now, so a thumb has something to press. Its type is
+   set by the .ov-again rule above; this only undoes the chrome. */
+button.ov-again {
+  appearance: none;
+  -webkit-appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.5rem 0.8rem;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+button.ov-again:hover { color: var(--sc-score); }
+
+/* ═══ ASTEROIDS: the thumb pad ═══════════════════════════
+   Built by asteroids.js on a coarse pointer only. In
+   portrait it takes a band under the play field; in
+   landscape there is no room for a band, so it floats in
+   the bottom corners and only the keys take a press.
+   ═══════════════════════════════════════════════════════ */
+.ast-view { position: absolute; inset: 0; }
+.stage.has-ast-pad .ast-view { bottom: 168px; }
+
+.ast-pad {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 168px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px calc(env(safe-area-inset-bottom, 0px) + 4px);
+  pointer-events: none;          /* only the keys themselves take a press */
+  touch-action: none;
+}
+.ast-cluster { display: flex; align-items: center; gap: 10px; }
+
+.ast-key {
+  all: unset;
+  box-sizing: border-box;
+  width: 62px;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 233, 61, 0.32);
+  background: rgba(255, 233, 61, 0.06);
+  color: var(--sc-score);
+  pointer-events: auto;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.08s linear, border-color 0.08s linear;
+}
+.ast-key svg { width: 26px; height: 26px; display: block; }
+.ast-key.is-down {
+  background: rgba(255, 233, 61, 0.3);
+  border-color: var(--sc-score);
+}
+.ast-key-fire { width: 76px; height: 76px; }
+.ast-key-fire svg { width: 30px; height: 30px; }
+.ast-key-hyper {
+  width: 44px;
+  height: 44px;
+  font-family: var(--font-arcade);
+  font-size: 0.62rem;
+  color: var(--sc-rank);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+@media (max-height: 560px) {
+  .stage.has-ast-pad .ast-view { bottom: 0; }
+  .ast-pad { height: auto; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); }
+  .ast-key { width: 56px; height: 56px; }
+  .ast-key-fire { width: 64px; height: 64px; }
+  .ast-key-hyper { width: 44px; height: 44px; font-size: 0.5rem; }
+}
+
+/* ═══ THE PHONE ══════════════════════════════════════════
+   Everything below is behind html[data-phone], which
+   mobile.js sets and nothing else does. The cabinet is
+   still in the DOM - the bezel, the dial, the rail - it is
+   just no longer drawn. See mobile.js for why.
+   ═══════════════════════════════════════════════════════ */
+
+html[data-phone] {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+}
+html[data-phone], html[data-phone] body {
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+html[data-phone] .ov-input { -webkit-user-select: text; user-select: text; }
+
+/* The tube becomes the viewport. dvh so the URL bar sliding away does not
+   leave a band of page under the glass. */
+html[data-phone] .wrap {
+  position: fixed;
+  inset: 0;
+  display: block;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  height: 100vh;
+  height: 100dvh;
+}
+html[data-phone] .layout { display: block; height: 100%; gap: 0; }
+html[data-phone] .crt-stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  container-type: normal;
+  perspective: none;
+}
+html[data-phone] .bezel {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: #000;
+  box-shadow: none;
+}
+html[data-phone] .bezel::after { display: none; }
+html[data-phone] .screen {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  border-radius: 0;
+}
+html[data-phone] .dial-wrap,
+html[data-phone] .bezel-foot,
+html[data-phone] .gary { display: none; }
+
+/* The status line clears the notch; the stage takes everything under it. */
+html[data-phone] .status {
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  left: 16px;
+  right: 16px;
+}
+html[data-phone] .status-value { font-size: 0.85rem; }
+html[data-phone] .status-extra { font-size: 0.5rem; }
+html[data-phone] .stage {
+  inset: calc(env(safe-area-inset-top, 0px) + 46px) 6px
+         calc(env(safe-area-inset-bottom, 0px) + 6px);
+}
+/* The Minesweeper board is square and was sized off the height it was given.
+   On a tall phone that made it 740px wide inside a 378px screen and half the
+   grid ran off the glass. The wrap becomes a size container so the board can
+   take the smaller of the two dimensions instead of only one of them. */
+html[data-phone] .ms-wrap { container-type: size; }
+html[data-phone] .ms-board {
+  flex: 0 0 auto;
+  width: min(100%, calc(100cqh - 58px));
+  height: auto;
+}
+html[data-phone] .ms-cell { font-size: 0.62rem; }
+html[data-phone] .ms-flag-btn { padding: 0.55rem 0.75rem; }
+html[data-phone] .ms-flag-glyph { font-size: 14px; }
+
+html[data-phone] .overlay { padding: 10% 7%; gap: 1rem; }
+html[data-phone] .ov-title { font-size: 1.4rem; }
+html[data-phone] .ov-title-sm { font-size: 1.05rem; }
+html[data-phone] .ov-sub,
+html[data-phone] .ov-controls,
+html[data-phone] .ov-again,
+html[data-phone] .ov-label { font-size: 0.6rem; }
+html[data-phone] .ov-result { font-size: 1.5rem; }
+html[data-phone] .ov-input { font-size: 0.8rem; width: min(280px, 74vw); }
+html[data-phone] .ov-btn { font-size: 0.68rem; padding: 0.7rem 1.4rem; }
+html[data-phone] .insert { font-size: 0.7rem; }
+
+/* --- the gate: one coin, nothing else --- */
+.ph-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.2rem;
+  padding: 2rem 1.5rem calc(env(safe-area-inset-bottom, 0px) + 2rem);
+  text-align: center;
+  transition: opacity 0.42s ease;
+}
+.ph-gate[hidden] { display: none; }
+.ph-gate.is-gone { opacity: 0; pointer-events: none; }
+.ph-gate-name {
+  font-family: var(--font-arcade);
+  font-size: 1.5rem;
+  letter-spacing: 0;
+  color: var(--accent);
+  text-shadow: 0 0 24px rgba(201, 168, 76, 0.45);
+}
+.ph-gate-hint {
+  font-family: var(--font-arcade);
+  font-size: 0.72rem;
+  line-height: 2;
+  color: var(--text-muted);
+}
+.ph-gate .coin-module { margin: 0; padding: 0; }
+.ph-gate .coin-hint { display: none; }   /* the gate says it once, underneath */
+
+/* --- the hud: only ever between runs --- */
+/* Top centre, not the bottom corners, and the reason is Asteroids: its thumb
+   pad lives along the bottom edge in portrait and in the bottom corners in
+   landscape, and a HUD button sitting on top of the turn key is a button that
+   switches game when you meant to steer. The status line owns the top left
+   and right, so the middle is the one place nothing else wants - and since
+   the HUD is only ever up between runs, a stretch to reach it costs nothing. */
+.ph-hud {
+  position: fixed;
+  z-index: 20;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) 18px 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.ph-btn {
+  all: unset;
+  box-sizing: border-box;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.ph-btn svg { width: 22px; height: 22px; display: block; }
+
+/* The mute button joins the row and wears the row's clothes. */
+html[data-phone] .ph-hud .vol-btn {
+  position: static;
+  opacity: 1;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  color: var(--text);
+  pointer-events: auto;
+}
+html[data-phone] .ph-hud .vol-btn svg { width: 22px; height: 22px; }
+.ph-btn:active { background: rgba(255, 233, 61, 0.18); color: var(--sc-score); }
+
+/* A run owns the whole screen. This is the rule the shell exists for. */
+html[data-phone][data-play="playing"] .ph-hud,
+html[data-phone][data-play="playing"] .vol-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* --- the board, as a sheet --- */
+.ph-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: calc(env(safe-area-inset-top, 0px) + 3.2rem) 1.4rem
+           calc(env(safe-area-inset-bottom, 0px) + 2rem);
+}
+.ph-sheet[hidden] { display: none; }
+.ph-sheet-body { max-width: 460px; margin: 0 auto; padding-top: 0.6rem; }
+.ph-sheet .rail { flex: 1 1 auto; width: 100%; max-width: none; margin: 0; }
+.ph-sheet .board { overflow: visible; }
+.ph-sheet .back-wrap { padding-top: 2rem; }
+.ph-close {
+  all: unset;
+  position: absolute;
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  -webkit-tap-highlight-color: transparent;
+}
+.ph-close svg { width: 22px; height: 22px; }
+
 </style>
 </head>
 
@@ -1619,6 +1945,7 @@ body {
 <script src="/arcade/snake.js"></script>
 <script src="/arcade/minesweeper.js"></script>
 <script src="/arcade/asteroids.js"></script>
+<script src="/arcade/mobile.js"></script>
 <script src="/arcade/cabinet.js"></script>
 <script src="/arcade/gary.js"></script>
 

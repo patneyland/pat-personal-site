@@ -38,6 +38,7 @@ back link at the foot of the rail is what stops it being a dead end.
 | `sound.js` | every sound, synthesised at call time |
 | `snake.js`, `minesweeper.js`, `asteroids.js` | the games |
 | `gary.js` | Gary |
+| `mobile.js` | the phone shell - the gate, the HUD, the board sheet |
 
 Scripts are referenced absolutely (`/arcade/sound.js`). They must be: the page
 is served at `/arcade` with no trailing slash, so a relative `src` resolves
@@ -246,6 +247,130 @@ fine in headless, because it does not need the clock.
 
 ---
 
+## The phone
+
+Built 2026-09-08, because the arcade was about to be handed round the family
+and the cabinet is the wrong object on a 390px screen. The bezel, the dial,
+the coin slot and the rail are the best of this page on a desktop and they are
+all overhead on a phone: by the time they have taken their share there is a
+postage stamp left to play in.
+
+On a phone the page becomes three screens instead of one.
+
+1. **The gate.** Full screen, one coin, nothing else reachable. Same rule the
+   cabinet always had, no longer competing with a leaderboard for attention.
+2. **The game.** The whole viewport. While a run is going there is nothing
+   else on screen at all - no HUD, no mute, no back link.
+3. **The board.** A sheet over the top, opened from an icon, and only
+   reachable between runs. The back link to the site lives in it.
+
+`mobile.js` owns this and it is deliberately thin. It does not reimplement the
+cabinet: it **moves the cabinet's own nodes** into the new screens - the coin
+module into the gate, the rail into the sheet, the mute button up into the HUD
+row - so every handler `cabinet.js` binds keeps working and the board keeps
+painting into the same `<ol>` it always did. The switch-game icon clicks the
+dial nobody can see any more. Load order matters: `mobile.js` runs before
+`cabinet.js` so the nodes are where they belong before the cabinet queries for
+them, and `cabinet.js` calls `ArcadePhone.attach()` at the end of its setup to
+hand back the screen it built itself.
+
+`?phone=1` forces the shell on a desktop and `?phone=0` forces it off. Both
+are for looking at it.
+
+### What counts as a phone
+
+```
+(pointer: coarse) and (max-width: 820px),
+(pointer: coarse) and (max-height: 560px)
+```
+
+Width alone catches an iPad in portrait, and would drop a phone out of the
+shell the moment it was turned on its side - 844x390 is wider than any
+width-only threshold that a phone should still match. The second clause is
+what keeps landscape inside the shell.
+
+### Asteroids had to change, the other two did not
+
+Snake and Minesweeper are square, and a square is the same shape on any
+screen. Asteroids is 4:3, and letterboxed into a portrait phone it was
+width-limited: everything drew at about half the scale a desktop gets and the
+ship was a speck. That is most of why it was the game that felt impossible on
+a phone.
+
+So **on a touch screen the field takes the shape of the box and keeps its
+area.** 800x600 becomes roughly 540x890, which is the same 480,000 square
+units: the same rock density, the same room to run, the same distance a bullet
+crosses before it dies. Shrinking the rocks or zooming the camera would have
+changed the game; this changes the window onto it. The field is reshaped at
+mount and on a rotation, and **only while nothing is flying** - the shape must
+never change under a ship that is already moving. Desktop is untouched and
+stays 800x600.
+
+The pad is five keys: turn left and right under the left thumb, hyperspace,
+thrust and fire under the right. Held keys capture the pointer, so a thumb
+that slides off the button still delivers its `pointerup` - without that the
+ship turns forever, which is the classic way a touch pad goes wrong.
+
+**Fire stays one press one shot**, the same rule the keyboard has. The
+four-bullet cap is what makes the game bite and auto-fire while held would
+quietly delete it. If it reads as stiff under a thumb that is the knob to
+turn, and it is a decision rather than an oversight.
+
+### Three touch bugs that were live on every screen, not only phones
+
+- **The attract screen ate the tap.** `.overlay[data-ov="attract"]` sits over
+  `.stage` and had no `pointer-events: none`, so the tap - and on a desktop
+  the click - that every game reads as "start" never reached the game. Only
+  the keyboard worked. Fixed for every pointer, not just touch.
+- **A swipe in Snake scrolled the page** at the same time as it turned the
+  snake. `touch-action: none` on the stage and the canvas.
+- **A long press in Minesweeper raised the selection callout** on top of the
+  flag it had just planted, and quick tapping double-tap-zoomed the board.
+  `-webkit-touch-callout: none` and `touch-action: manipulation` on the cells.
+
+`PRESS R TO PLAY AGAIN` is a real button now rather than a line of text, so a
+thumb has something to press. It still says the R key on a desktop.
+
+### The HUD is at the top centre, and that is not an accident
+
+The two icons started in the bottom corners, where a thumb wants them. That
+put switch-game directly on top of Asteroids' turn-left key in portrait and
+on the fire key in landscape: a button that changes game when you meant to
+steer. The status line owns the top left and right, so the top centre is the
+one place nothing else wants. The HUD is only ever up between runs, so the
+stretch costs nothing. `scripts/dev/phone-audit.mjs` asserts the two never
+overlap, in both orientations.
+
+### Checking it
+
+```
+npm run dev -- --port 3011
+URL=http://localhost:3011 OUT=shots node scripts/dev/phone-audit.mjs
+```
+
+Emulates an iPhone with `isMobile` and `hasTouch` set - which is what makes
+`pointer: coarse` match - walks the gate, all three games, the pad and the
+sheet, and saves a shot of each. Twenty-five assertions, and the ones that
+earn their keep are the geometric ones: the Minesweeper board fitting inside
+the glass, and the HUD clearing the thumb pad. Both of those were broken when
+they were first written, and neither is visible in a passing screenshot
+without looking at it.
+
+### Still not done
+
+- **No real phone has loaded any of this.** It is emulated Chromium at two
+  viewport sizes. iOS Safari in particular has not been near it: `100dvh`, the
+  safe-area insets, `backdrop-filter` on the HUD buttons and whether WebAudio
+  comes through the ringer switch are all unverified there.
+- **Snake does not fill the screen** and is not meant to: a 24x24 grid is
+  square, so it takes the width and centres. The dead space above and below is
+  the cost of not reshaping a grid whose scores are on a shared board.
+- **Mute is only reachable between runs**, since it lives in the HUD now. That
+  follows from the rule that a run owns the whole screen, and it may be the
+  wrong trade.
+
+---
+
 ## Decided against
 
 - **Porting the page into the app router.** See the top of this file.
@@ -255,3 +380,8 @@ fine in headless, because it does not need the clock.
   leaderboard that ranks on time.
 - **A smiley button and LED counters for Minesweeper.** Recognisable, but they
   fight the cabinet the rest of the page is committed to.
+- **A separate `/arcade/phone` route.** One document, one set of games, one
+  leaderboard. The phone shell is a skin over the same cabinet, and the day
+  they diverge is the day one of them starts rotting.
+- **Auto-fire while the fire key is held.** See above: the four-bullet cap is
+  the game.

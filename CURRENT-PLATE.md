@@ -4,7 +4,51 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-09-04.
+Last touched: 2026-09-08.
+
+---
+
+# SHIPPED: the arcade on a phone (2026-09-08)
+
+**Built to be handed round the family.** On a phone the cabinet was the
+problem: bezel, dial, coin slot and rail took the screen and left a postage
+stamp to play in. The shell, the reasoning and the three touch bugs it turned
+up are in [docs/arcade.md](docs/arcade.md#the-phone). Read that before
+touching `public/arcade/mobile.js`.
+
+Short version: three screens instead of one. A full-screen coin gate, then the
+game with the entire viewport to itself, and the leaderboard as a sheet behind
+an icon. Two icons and the mute button live at the top centre and are only up
+between runs. Nothing was reimplemented - `mobile.js` moves the cabinet's own
+nodes into the new screens, so every handler and the board keep working.
+
+- **Asteroids was the unplayable one and now is not.** Letterboxed into a
+  portrait phone its 4:3 field was width-limited and the ship drew at half
+  size. On a touch screen the field now takes the shape of the box and keeps
+  its area, and it gets a five-key thumb pad. Desktop stays 800x600. Fire is
+  still one press one shot on purpose.
+- **Three touch bugs were live on every screen, not only phones.** The attract
+  overlay swallowed the tap that starts a game, so only the keyboard ever
+  worked. A swipe in Snake scrolled the page while it turned the snake. A long
+  press in Minesweeper raised the selection callout over the flag it planted.
+- **The Minesweeper board was 740px wide inside a 378px screen** - half the
+  grid off the glass - because it was sized off the height it was given. The
+  wrap is a size container now and the board takes the smaller dimension.
+- **`scripts/dev/phone-audit.mjs` is the check**, and worth keeping for the
+  same reason the Gary one was: its geometric assertions - the board fitting
+  the glass, the HUD clearing the thumb pad - both failed the first time they
+  ran, and neither shows up in a screenshot nobody opens.
+
+## Still open on it
+
+1. **No real phone has loaded it.** Emulated Chromium at 390x844 and 844x390.
+   iOS Safari has not been near `100dvh`, the safe-area insets, the HUD's
+   `backdrop-filter`, or whether the sound survives the ringer switch.
+2. **Snake does not fill the screen**, on purpose: a 24x24 grid is square, so
+   it takes the width and centres. Reshaping it would change a game whose
+   scores share one board.
+3. **Mute is only reachable between runs.** It follows from the rule that a
+   run owns the whole screen, and it may be the wrong trade.
 
 ---
 

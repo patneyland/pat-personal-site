@@ -24,7 +24,13 @@
 window.ArcadeGames = window.ArcadeGames || {};
 
 window.ArcadeGames.asteroids = (function () {
-  var W = 800, H = 600;            // virtual play space, scaled to the screen
+  /* The virtual play space. 800x600 is the cabinet's, and on a desktop it
+     never changes. On a phone it does: see shapeField() in mount(). Module
+     scope because wrap() and dist2() below need it, which is safe only
+     because the cabinet destroys one game before it mounts the next, so
+     exactly one instance is ever alive. */
+  var W = 800, H = 600;
+  var FIELD_AREA = W * H;
 
   var SHIP_R = 14;
   var TURN_RATE = 4.4;             // radians/sec
@@ -100,9 +106,22 @@ window.ArcadeGames.asteroids = (function () {
   }
 
   function mount(host, api) {
+    /* A thumb has no keyboard, and Asteroids needs five controls at once.
+       The canvas therefore goes in its own box rather than filling the host,
+       so the pad can have a band underneath it instead of sitting on top of
+       the play field. In landscape the CSS gives the box the whole host back
+       and floats the pad in the corners; the box is measured either way, so
+       nothing here has to know which it is. */
+    var coarse = !!(window.ArcadePhone && window.ArcadePhone.active) ||
+                 window.matchMedia('(pointer: coarse)').matches;
+
+    var box = document.createElement('div');
+    box.className = 'ast-view';
+    host.appendChild(box);
+
     var canvas = document.createElement('canvas');
     canvas.className = 'game-canvas';
-    host.appendChild(canvas);
+    box.appendChild(canvas);
     var ctx = canvas.getContext('2d');
 
     var ship, rocks, bullets, debris;
@@ -117,8 +136,32 @@ window.ArcadeGames.asteroids = (function () {
 
     /* ------------------------------ sizing ------------------------------ */
 
+    /* A phone in portrait is the wrong shape for a 4:3 field. Letterboxed
+       into it the field is width-limited, everything is drawn at about half
+       the scale a desktop gets, and the ship ends up a speck - which is most
+       of why this game was the hard one to play on a phone.
+
+       So on a touch screen the field takes the shape of the box instead, and
+       keeps its AREA. Same rock density, same room to run, same distance a
+       bullet crosses; it is simply a portrait 480,000 square units rather
+       than a landscape one. Anything else - shrinking the rocks, zooming the
+       camera - would have changed the game rather than the window onto it.
+
+       Only ever between runs. The field must not change shape underneath a
+       ship that is already flying. */
+    function shapeField() {
+      var r = box.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      var aspect = Math.min(2, Math.max(0.5, r.width / r.height));
+      var w = Math.round(Math.sqrt(FIELD_AREA * aspect));
+      var h = Math.round(FIELD_AREA / w);
+      if (w === W && h === H) return false;
+      W = w; H = h;
+      return true;
+    }
+
     function resize() {
-      var r = host.getBoundingClientRect();
+      var r = box.getBoundingClientRect();
       if (!r.width || !r.height) return;
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(r.width * dpr);
@@ -127,6 +170,7 @@ window.ArcadeGames.asteroids = (function () {
       canvas.style.height = r.height + 'px';
 
       // Letterbox the 4:3 play space inside whatever box we are given
+      if (coarse && state === 'idle' && shapeField()) reset();
       scale = Math.min(r.width / W, r.height / H) * 0.96;
       offX = (r.width - W * scale) / 2;
       offY = (r.height - H * scale) / 2;
@@ -134,7 +178,7 @@ window.ArcadeGames.asteroids = (function () {
       draw();
     }
     var ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
-    if (ro) ro.observe(host);
+    if (ro) ro.observe(box);
 
     /* ------------------------------ entities ---------------------------- */
 
@@ -285,6 +329,84 @@ window.ArcadeGames.asteroids = (function () {
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
     host.addEventListener('pointerdown', onPointerDown);
+
+    /* ----------------------------- the pad ------------------------------
+       Five controls for two thumbs: turn left and right under the left one,
+       hyperspace, thrust and fire under the right.
+
+       Turning and thrust are held, and the press is captured to the button
+       so a thumb that slides off it still delivers its pointerup - without
+       that the ship keeps turning forever, which is the classic way a touch
+       pad goes wrong.
+
+       Fire stays one press one shot, the same rule the keyboard has. The
+       four-bullet cap is what makes the game bite, and auto-fire while held
+       would quietly delete it. If it reads as stiff under a thumb, that is
+       the knob to turn, and it is a decision rather than an oversight.
+       -------------------------------------------------------------------- */
+
+    var pad = null;
+
+    function padKey(name, glyph, aria, down, up) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'ast-key ast-key-' + name;
+      b.setAttribute('aria-label', aria);
+      b.innerHTML = glyph;
+      b.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        if (b.setPointerCapture) {
+          try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+        }
+        b.classList.add('is-down');
+        down();
+      });
+      var release = function () { b.classList.remove('is-down'); if (up) up(); };
+      b.addEventListener('pointerup', release);
+      b.addEventListener('pointercancel', release);
+      b.addEventListener('lostpointercapture', release);
+      // A pad press is never a press on the game behind it.
+      b.addEventListener('click', function (e) { e.stopPropagation(); });
+      return b;
+    }
+
+    function tri(rot) {
+      return '<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' +
+             rot + 'deg)"><polygon points="12,5 20,19 4,19" fill="currentColor"/></svg>';
+    }
+
+    function wake() { if (state === 'idle') start(); }
+
+    if (coarse) {
+      pad = document.createElement('div');
+      pad.className = 'ast-pad';
+
+      var left = document.createElement('div');
+      left.className = 'ast-cluster';
+      left.appendChild(padKey('left', tri(-90), 'Turn left',
+        function () { keys.left = true; wake(); },
+        function () { keys.left = false; }));
+      left.appendChild(padKey('right', tri(90), 'Turn right',
+        function () { keys.right = true; wake(); },
+        function () { keys.right = false; }));
+
+      var right = document.createElement('div');
+      right.className = 'ast-cluster';
+      right.appendChild(padKey('hyper', 'H', 'Hyperspace',
+        function () { if (state === 'playing') hyperspace(); }));
+      right.appendChild(padKey('thrust', tri(0), 'Thrust',
+        function () { keys.thrust = true; wake(); },
+        function () { keys.thrust = false; }));
+      right.appendChild(padKey('fire',
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+          '<circle cx="12" cy="12" r="6" fill="currentColor"/></svg>', 'Fire',
+        function () { if (state === 'idle') { start(); return; } fire(); }));
+
+      pad.appendChild(left);
+      pad.appendChild(right);
+      host.appendChild(pad);
+      host.classList.add('has-ast-pad');
+    }
 
     /* ------------------------------- update ----------------------------- */
 
@@ -763,6 +885,7 @@ window.ArcadeGames.asteroids = (function () {
       draw();
     }
 
+    if (coarse) shapeField();
     reset();
     resize();
     api.setState('idle');
@@ -781,7 +904,11 @@ window.ArcadeGames.asteroids = (function () {
         document.removeEventListener('keyup', onKeyUp);
         host.removeEventListener('pointerdown', onPointerDown);
         if (ro) ro.disconnect();
+        if (pad) pad.remove();
+        host.classList.remove('has-ast-pad');
+        W = 800; H = 600;
         canvas.remove();
+        box.remove();
       }
     };
   }
@@ -793,6 +920,7 @@ window.ArcadeGames.asteroids = (function () {
     metric: 'score',
     attract: 'SPLIT THE ROCKS. MIND THE SAUCER.',
     controls: 'ARROWS TURN AND THRUST  /  SPACE FIRES  /  DOWN IS HYPERSPACE',
+    touchControls: 'TURN AND THRUST  /  TAP TO FIRE  /  H IS HYPERSPACE',
     mount: mount
   };
 })();

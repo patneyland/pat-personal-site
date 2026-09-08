@@ -319,6 +319,7 @@ window.ArcadeGames.snake = (function () {
     metric: 'score',
     attract: 'EAT. GROW. DO NOT BITE YOURSELF.',
     controls: 'ARROWS OR WASD',
+    touchControls: 'SWIPE TO TURN',
     mount: mount
   };
 })();
