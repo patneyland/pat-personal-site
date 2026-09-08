@@ -21,11 +21,13 @@ import ThoughtBubble from "@/components/ui/ThoughtBubble";
  * state were mounted inside a page the first link he gave would unmount it
  * mid sentence.
  *
- * It is drawn two different ways. On /fun he is on screen, so the conversation
- * is a speech bubble coming off his head and he stops walking to have it: see
- * GaryPacing. Anywhere else there is no Gary to speak from, so the same
- * conversation continues in a corner panel. Follow one of his links and the
- * bubble becomes the panel with the talk intact, rather than vanishing.
+ * It is drawn two different ways. Wherever Gary is on screen the conversation
+ * is a thought bubble coming off his mouth, placed against his real position
+ * by placeBubble: GaryPacing stops him walking to have it on /fun, StoryGary
+ * on /story, GaryStanding on the portfolio and the garden. Only where there is
+ * no Gary to speak from does it fall back to the corner panel below. Follow
+ * one of his links and the bubble becomes the panel with the talk intact,
+ * rather than vanishing.
  *
  * A hard reload is the other half, which is what sessionStorage covers. It is
  * scoped to the one tab and cleared when it closes, which is exactly "one
@@ -67,16 +69,6 @@ type GaryState = {
   /** True once the greeting has been shown in this tab. */
   greeted: boolean;
   markGreeted: () => void;
-  /**
-   * Where the panel's trail should aim.
-   *
-   * The panel is fixed to the bottom-right and Gary is in the flow, so the
-   * trail can never truly touch him. It can at least leave on the side he is
-   * on: up-left out on the story board, up-right for a standing Gary at the
-   * end of the rule. A trail aimed at nothing is worse than no trail.
-   */
-  standing: boolean;
-  setStanding: (standing: boolean) => void;
 };
 
 const Ctx = createContext<GaryState | null>(null);
@@ -133,8 +125,6 @@ export function useGary(): GaryState {
       setMessages: () => {},
       greeted: true,
       markGreeted: () => {},
-      standing: false,
-      setStanding: () => {},
     };
   }
   return ctx;
@@ -150,9 +140,6 @@ export function GaryProvider({
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  /* Set by GaryStanding while it is mounted, so the panel knows which side of
-     the screen he is on. See the `standing` note on GaryState. */
-  const [standing, setStanding] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [greeted, setGreeted] = useState(true);
   const [hydrated, setHydrated] = useState(false);
@@ -200,8 +187,6 @@ export function GaryProvider({
         setMessages,
         greeted: !hydrated || greeted,
         markGreeted,
-        standing,
-        setStanding,
       }}
     >
       {children}
@@ -375,11 +360,11 @@ export function GaryConversation({ autoFocus = true }: { autoFocus?: boolean }) 
 }
 
 /**
- * The corner panel, used on every page except /fun, where Gary himself is on
- * screen and speaks instead.
+ * The corner panel, used only where no Gary is drawn on the page. Wherever he
+ * is, he claims the conversation and speaks it himself.
  */
 export function GaryPanel() {
-  const { enabled, open, setOpen, standing } = useGary();
+  const { enabled, open, setOpen } = useGary();
   const pathname = usePathname();
   const claimed =
     useSyncExternalStore(subscribePresenters, readPresenters, readPresentersServer) > 0;
@@ -407,11 +392,13 @@ export function GaryPanel() {
     <ThoughtBubble
       role="dialog"
       ariaLabel="Chat with Gary"
-      /* Leaves on the side he is actually on. Out on the story board he is
-         up and to the left; a standing Gary is at the right end of the rule
-         near the top, so the trail exits on the right instead. */
+      /* The panel is the form the conversation takes where there is no Gary
+         on screen to speak from, so the trail has nobody to reach and simply
+         leaves the top-left corner as a thought balloon does. Wherever he IS
+         drawn on the page he claims the conversation and places a real bubble
+         off his mouth himself: GaryPacing, StoryGary, GaryStanding. */
       tail="up"
-      tailX={standing ? PANEL_W - 44 : 44}
+      tailX={44}
       seed={23}
       style={{
         /* Set here rather than with a class. ThoughtBubble applies

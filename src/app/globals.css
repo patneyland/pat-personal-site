@@ -484,14 +484,28 @@ body:has(.boring) { background: #ffffff; color: #000000; }
   to { background-position: calc(var(--gary-w, 43px) * var(--gary-cells, -8)) 0; }
 }
 
-/* A standing Gary. Holds the neutral pose for most of the cycle and waves
+/* A standing Gary. Holds the neutral pose for most of the cycle and gestures
    briefly, because an even two-frame swap is a metronome and reads as a
    broken GIF. Covered by the prefers-reduced-motion rule above via
-   [data-gary]. */
+   [data-gary].
+
+   step-end is load-bearing, not tidiness. background-position is an
+   interpolable property, so without it the browser TWEENS between the two
+   cells: for the 40ms either side of the swap he was drawn as a sliding
+   window across the sheet, half of one pose butted against half of the
+   other. That is the tear. A sprite sheet must cut, never slide, which is
+   why gary-step next door is driven by steps() on /fun. The hold percentages
+   below are only legible under a hard cut, so if these are ever retimed,
+   keep the step-end.
+
+   The gesture also holds long enough to be read as one. It was 320ms out of
+   4s, which even cut cleanly is a twitch; a beat closer to half a second,
+   arriving every few seconds, reads as a man shifting his weight. */
 @keyframes gary-idle {
-  0%, 88%   { background-position: 0 0; }
-  89%, 97%  { background-position: calc(var(--gary-w, 57px) * -1) 0; }
-  98%, 100% { background-position: 0 0; }
+  0%   { background-position: 0 0; animation-timing-function: step-end; }
+  84%  { background-position: calc(var(--gary-w, 57px) * -1) 0; animation-timing-function: step-end; }
+  96%  { background-position: 0 0; animation-timing-function: step-end; }
+  100% { background-position: 0 0; }
 }
 
 @keyframes gary-pace {
