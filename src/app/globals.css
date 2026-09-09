@@ -88,6 +88,21 @@
   --fun-card-edge:   #e2e2e2;
   --fun-card-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
 
+  /* The bar-side OLED, on /pullups. Same argument as the two above: a screen
+     is an object sitting on the page, not a background, so it does not invert
+     with the site. A 0.96" SSD1306 that turns white in light mode is a picture
+     of a switched-off screen.
+
+     --oled-on is the panel's lit white, very slightly cool, because the white
+     modules are not neutral. --oled-mid is a resting bar, --oled-dim an unlit
+     one and the baseline. --oled-off is the panel's black, which is near
+     rather than pure for the same reason --bg is: a lit pixel on absolute
+     black shimmers at its edges. */
+  --oled-on:   #eaf4f7;
+  --oled-mid:  #7d9ba3;
+  --oled-dim:  #2a3538;
+  --oled-off:  #07090a;
+
   /* Maximum ink, for the one place that needs more contrast than --text.
      Garamond is a light face and the scripture at that size reads as grey at
      anything short of the extreme. */
@@ -333,6 +348,46 @@ body {
 /* Markdown blurbs inside portfolio tiles stay tight and inherit tile colour. */
 .tile-blurb > * + * { margin-top: 0.6rem; }
 .tile-blurb a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* ─── Pull-up counter ────────────────────────────────────────
+   /pullups is unlisted: no row in SECTIONS, no entry in sitemap.ts, and
+   robots: index false on the page itself. Reachable by link, invisible
+   otherwise. It is a district with no hue, because its identity is the panel,
+   the way /fun's is a white card. */
+
+.oled-text {
+  font-family: var(--font-pixel), "Courier New", monospace;
+  /* Silkscreen has no lowercase worth the name at small sizes and its metrics
+     are square, so it needs the tracking opened up or the words clot. */
+  letter-spacing: 0.04em;
+}
+
+/* The panel proper. crispEdges is set on the SVG, but the browser will still
+   smooth an upscaled raster of it without this. */
+.oled-panel {
+  image-rendering: pixelated;
+  display: block;
+}
+
+/* The bezel: a screen sits in something. Kept flat and thin rather than made
+   into a skeuomorphic gadget, because the panel is the point and a chunky
+   plastic frame would out-shout it. */
+.oled-bezel {
+  background: var(--oled-off);
+  border: 1px solid var(--border);
+  padding: 10px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.45);
+}
+
+:root[data-theme="light"] .oled-bezel {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14);
+}
+
+.oled-panel-frame {
+  background: var(--oled-off);
+  border: 1px solid var(--border);
+  padding: 10px;
+}
 
 /* ─── Boring mode: the front page ───────────────────────────
    A resume, set the way a resume is set. Times, black on white, ruled section
