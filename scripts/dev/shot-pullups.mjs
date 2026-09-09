@@ -1,7 +1,7 @@
 import { chromium } from "playwright";
 
 const OUT = process.argv[2];
-const URL = "http://localhost:3111/pullups";
+const URL = `http://localhost:${process.argv[3] ?? 3000}/pullups`;
 
 const browser = await chromium.launch();
 for (const theme of ["dark", "light"]) {

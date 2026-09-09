@@ -48,11 +48,7 @@ export default async function PullupsPage() {
     return (
       <main className={`${silkscreen.variable} mx-auto max-w-narrow px-6 py-20`}>
         <h1 className="oled-text text-xl text-ink">Pull-ups</h1>
-        <p className="oled-text mt-4 text-sm text-muted">
-          The counter is not answering right now. It does this when the network
-          is down, and it keeps the reps in flash until it comes back, so
-          nothing is lost. Try again in a minute.
-        </p>
+        <p className="oled-text mt-4 text-sm text-muted">No signal.</p>
       </main>
     );
   }
@@ -65,10 +61,7 @@ export default async function PullupsPage() {
   const activeDays = stats.days.filter((d) => d.total > 0).length;
 
   const weekDelta = week - prevWeek;
-  const weekSub =
-    prevWeek === 0
-      ? "first week on record"
-      : `${weekDelta >= 0 ? "+" : ""}${weekDelta} vs the week before`;
+  const weekSub = prevWeek === 0 ? "" : `${weekDelta >= 0 ? "+" : ""}${weekDelta} vs prev`;
 
   const recent = [...stats.days].reverse().slice(0, 14);
 
@@ -76,13 +69,6 @@ export default async function PullupsPage() {
     <main className={`${silkscreen.variable} mx-auto max-w-narrow px-6 py-16`}>
       <header>
         <h1 className="oled-text text-xl text-ink">Pull-ups</h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          There is a button and a small screen next to my pull-up bar. I tap it
-          once per rep, walk away, and five seconds later the set is in a
-          database. This page is that database, drawn the way the screen draws
-          it. The goal is <strong className="text-ink">{stats.goal} consecutive</strong>{" "}
-          by {stats.deadline}.
-        </p>
       </header>
 
       {/* The screen itself, showing what is on the wall right now. */}
@@ -96,13 +82,10 @@ export default async function PullupsPage() {
             daysLeft={stats.days_left}
           />
         </div>
-        <p className="oled-text mt-3 text-center text-[0.6rem] uppercase tracking-[0.2em] text-faint">
-          live, give or take a minute
-        </p>
       </section>
 
       <section className="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Stat label="This week" value={String(week)} sub={weekSub} />
+        <Stat label="This week" value={String(week)} sub={weekSub || undefined} />
         <Stat label="Best set" value={`${stats.best_ever}/${stats.goal}`} sub="all time" />
         <Stat label="Days left" value={String(stats.days_left)} sub={`to ${stats.deadline}`} />
         <Stat label="All time" value={String(allTime)} sub={`over ${activeDays} days`} />
@@ -115,11 +98,6 @@ export default async function PullupsPage() {
         <div className="mt-3">
           <GoalBlocks best={Math.min(stats.best_ever, stats.goal)} goal={stats.goal} />
         </div>
-        <p className="mt-3 text-xs text-muted">
-          {stats.goal - stats.best_ever > 0
-            ? `${stats.goal - stats.best_ever} to go. The number that moves this is daily volume, not any single attempt.`
-            : "Goal reached."}
-        </p>
       </section>
 
       <section className="mt-12">
@@ -157,11 +135,8 @@ export default async function PullupsPage() {
         </table>
       </section>
 
-      <footer className="mt-16 border-t border-edge pt-6 text-xs leading-relaxed text-faint">
-        An ESP32 with a 0.96&quot; OLED and an arcade button, on the wall by the
-        bar. It posts each set to a Postgres function through a Supabase edge
-        function, and queues to flash when the wifi drops so a dead router never
-        costs a rep. Times are {stats.timezone}.
+      <footer className="oled-text mt-16 border-t border-edge pt-6 text-[0.6rem] uppercase tracking-[0.2em] text-faint">
+        {stats.timezone}
       </footer>
     </main>
   );

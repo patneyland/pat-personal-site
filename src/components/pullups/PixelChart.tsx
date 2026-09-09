@@ -128,7 +128,7 @@ export function PixelChart({ days, label }: { days: PullupDay[]; label: string }
                 : `${active.day.slice(5)}  ${active.total} in ${active.sets} ${
                     active.sets === 1 ? "set" : "sets"
                   }  (${active.reps.join(", ")})`
-              : "hover a day"}
+              : ""}
           </span>
           <span>{days[days.length - 1]?.day.slice(5)}</span>
         </div>
