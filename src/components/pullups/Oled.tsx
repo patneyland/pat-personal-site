@@ -26,6 +26,7 @@ export function OledPanel({
   goal,
   daysLeft,
   offline = false,
+  beat = false,
 }: {
   today: number;
   sets: number;
@@ -33,6 +34,8 @@ export function OledPanel({
   goal: number;
   daysLeft: number;
   offline?: boolean;
+  /** Lit briefly when a new set lands, so the panel shows it is live. */
+  beat?: boolean;
 }) {
   const big = String(today);
   const bigSize = 4;
@@ -78,6 +81,17 @@ export function OledPanel({
       <text x="128" y="59" textAnchor="end" className="oled-text" fontSize="8" fill={ON}>
         {prLabel}
       </text>
+
+      {/* One pixel, bottom left of the header row, lit for a moment when the
+          numbers actually change. No words, and nothing to read when nothing
+          is happening. */}
+      <rect
+        x="124"
+        y="20"
+        width="3"
+        height="3"
+        fill={beat ? ON : "var(--oled-dim)"}
+      />
     </svg>
   );
 }
