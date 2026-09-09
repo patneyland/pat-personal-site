@@ -41,8 +41,10 @@ nodes into the new screens, so every handler and the board keep working.
 
 ## Still open on it
 
-1. **No real phone has loaded it.** Emulated Chromium at 390x844 and 844x390.
-   iOS Safari has not been near `100dvh`, the safe-area insets, the HUD's
+1. **Half-confirmed on a real phone.** Pat played Snake on his own phone on
+   2026-09-08 and it is good: the gate, the full-screen run and the swipe all
+   hold up on a device. Minesweeper and Asteroids have still only ever been
+   emulated, and nobody has checked the safe-area insets, the HUD's
    `backdrop-filter`, or whether the sound survives the ringer switch.
 2. **Snake does not fill the screen**, on purpose: a 24x24 grid is square, so
    it takes the width and centres. Reshaping it would change a game whose

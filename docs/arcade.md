@@ -358,10 +358,11 @@ without looking at it.
 
 ### Still not done
 
-- **No real phone has loaded any of this.** It is emulated Chromium at two
-  viewport sizes. iOS Safari in particular has not been near it: `100dvh`, the
-  safe-area insets, `backdrop-filter` on the HUD buttons and whether WebAudio
-  comes through the ringer switch are all unverified there.
+- **Only Snake has been played on a real phone** (2026-09-08, and it holds up:
+  gate, full-screen run and swipe). Minesweeper and Asteroids are still
+  emulated Chromium at two viewport sizes, and `100dvh`, the safe-area insets,
+  `backdrop-filter` on the HUD buttons and whether WebAudio comes through the
+  ringer switch are all unverified on a device.
 - **Snake does not fill the screen** and is not meant to: a 24x24 grid is
   square, so it takes the width and centres. The dead space above and below is
   the cost of not reshaping a grid whose scores are on a shared board.
