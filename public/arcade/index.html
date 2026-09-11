@@ -120,6 +120,9 @@ body {
   justify-content: center;
   align-items: stretch;
   gap: 2.25rem;
+  /* Containing block for Gary: he stands in the rail at the coin, then
+     walks onto the bezel at the dial, so he cannot live inside .bezel. */
+  position: relative;
 }
 
 .crt-stage-sizer,
@@ -1400,20 +1403,18 @@ body {
 
 /* ─── Gary ───────────────────────────────────────────────
    The same drawings as the Gary on /fun, off the same sheets in /assets. He
-   stands in front of the cabinet's chin, the band of bezel under the glass:
-   centre stage first, then over beside the dial. gary.js mounts him inside
-   .bezel and owns HEIGHT, FOOT and every x; the numbers here are the same
-   values as defaults so the box is right before the script runs.
+   starts in the rail pointing at the coin slot, then walks to the rail's
+   edge, steps off onto the chin, and walks to the dial. gary.js mounts him
+   on .layout and owns HEIGHT, FOOT and every x/y; the numbers here are
+   the same values as defaults so the box is right before the script runs.
    gary-step is redefined here because this page does not load globals.css. */
 .gary {
-  /* Absolute inside the bezel, not fixed to the viewport: his feet sit on
-     the cabinet's bottom border, level with the base of the dial knob, and
-     that edge lands 20-30px above the page bottom depending on the screen
-     height. Fixed-to-bottom put his feet below the cabinet with its border
-     through his chest. */
+  /* Absolute inside .layout, not the bezel: the coin is in the rail and
+     the slot sits above the chin, so a bezel child cannot stand next to
+     it. Placed with a translate from the row's top-left. */
   position: absolute;
   left: 0;
-  bottom: 3px;
+  top: 0;
   z-index: 60;
   width: 57px;
   height: 72px;
@@ -1488,12 +1489,35 @@ body {
   border-right: 1px solid #45423c;
   border-top: 1px solid #45423c;
 }
+/* At the coin: above him, hung off his right shoulder so it grows left
+   into the empty side of the rail and does not cover the plate. */
+.gary-bubble.is-above {
+  top: auto;
+  left: auto;
+  right: 0;
+  bottom: calc(100% + 10px);
+  transform: none;
+  max-width: 170px;
+}
+.gary-bubble.is-above::after {
+  top: auto;
+  left: auto;
+  right: 22px;
+  bottom: 0;
+  margin: 0 0 -5px 0;
+  border-left: 0;
+  border-top: 0;
+  border-right: 1px solid #45423c;
+  border-bottom: 1px solid #45423c;
+}
 
 @keyframes gary-step {
   to { background-position: calc(var(--gary-w, 57px) * var(--gary-cells, -8)) 0; }
 }
 
-@media (max-width: 760px) { .gary { display: none; } }
+/* Under 1000px the layout stacks the rail below the cabinet, and his two
+   stations are a screen apart on different floors. gary.js matches this. */
+@media (max-width: 1000px) { .gary { display: none; } }
 
 /* ═══ TOUCH ══════════════════════════════════════════════
    True on every screen, not only a phone: a touchscreen

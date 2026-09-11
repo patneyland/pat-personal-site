@@ -4,7 +4,18 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-09-08.
+Last touched: 2026-09-11.
+
+---
+
+# SHIPPED: Gary points at the arcade coin (2026-09-11)
+
+He was standing centre-stage on the bezel with the pointing sheet, so the
+arm aimed at empty plastic. He now stands in the rail, left of the plate,
+flipped so the arm aims at the slot. On the coin drop he walks to the
+rail's edge, steps off onto the chin, and walks to the dial at /fun's
+pace (12fps). Mounted on `.layout` because the slot is not on the bezel.
+Details in [docs/arcade.md](docs/arcade.md#gary).
 
 ---
 

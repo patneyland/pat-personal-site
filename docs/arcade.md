@@ -186,38 +186,47 @@ Same drawings and the same walk as the Gary on `/fun`, off the same sheets in
 standalone document, so the walk maths in `gary.js` is carried over from
 `GaryPacing.tsx` rather than reinvented - which is why the constants match it.
 
-He starts beside the coin and says to put one in. The coin dropping is his
-cue: he walks across to the dial and explains it. Clicking him does not open a
-panel; he tells you to get back to the game.
+He starts in the rail, left of the coin plate, pointing at the slot. The
+standing sheet is the pointing pair: unflipped the arm is on his left,
+flipped it is on his right. At the coin he is flipped so the arm aims at
+the slot; at the dial he is not, so it aims at the knob. The coin dropping
+is his cue: he walks to the rail's edge, steps off onto the cabinet's chin,
+and walks over to the dial. Clicking him does not open a panel; he tells
+you to get back to the game.
 
 His pace and his size are `/fun`'s exactly - `FPS = 12`, `HEIGHT = 72` - so
 his stride and cadence match the Gary on the other page rather than merely
-looking similar. **Never raise the translate duration on its own.** Speed is
-stride over cycle; change one without the other and his feet slide.
+looking similar. **Never raise FPS to shorten the crossing.** Speed is
+stride over cycle; hurrying him makes arcade Gary a different man from the
+one on `/fun`. The game is already playable while he walks.
 
-That pace is what dictates where he stands. At 12fps he covers ~60px a
-second, so an earlier version that had him crossing the whole page took
-eighteen seconds. His two stations were pulled together until the walk was
-sensible: about 320px and 5.3s at 1600x1000, 360px and 6.0s at 1920x1080,
-200px and 3.3s at 1366x768. The distance is snapped to a whole number of
-strides, so he finishes on a planted foot rather than mid-air.
+That pace is what the walk costs. At 12fps he covers ~60px a second, so
+coin-to-dial is the width of the cabinet: about 18s at 1920x1080. An
+earlier version stood him centre stage on the bezel and called across to
+the coin, which shortened the walk to ~5s and left him pointing at empty
+plastic. The long walk is the cost of actually pointing at the slot. Each
+walking leg is snapped to a whole number of strides, so he finishes on a
+planted foot rather than mid-air.
 
 Two things that look like mistakes and are not:
 
-- **He does not stand next to the coin, he calls across to it** from centre
-  stage under the screen. Standing beside it would put the walk back over
-  fifteen seconds. The coin glows and is labelled; the dial is the control
-  that actually needs someone next to it, which is where he ends up.
-- **He is mounted inside `.bezel`, not fixed to the viewport.** Fixed to the
-  bottom of the window he hung below the cabinet with the bezel's border
-  cutting through his torso, and on short viewports where the bezel floats
-  mid-column he ended up ~100px beneath it. Absolute inside the bezel, his
-  feet sit on its bottom edge at any size, and his x is in bezel coordinates.
+- **The walk is long on purpose.** Shortening it means hurrying him or
+  standing him somewhere that is not the coin. He starts walking as the
+  coin finishes going in, and the machine is already on.
+- **He is mounted on `.layout`, not inside `.bezel`.** The coin lives in
+  the rail, a sibling of the cabinet, and the slot sits ~90px above the
+  bezel chin. A bezel child cannot stand next to it. Layout is the box that
+  holds both columns. He used to be fixed to the viewport floor, which put
+  his feet 20-30px below the cabinet, and then inside the bezel, which
+  trapped him on the chin. The two floors are real: he walks, steps off,
+  then walks. He does not diagonal-slide from the plate to the chin.
 
-His bubble sits beside him rather than above. A 72px figure standing in the
-92px chin of the bezel leaves no room overhead without the bubble landing on
-the glass. It flips to his other side when it would otherwise run off the
-viewport.
+His bubble sits above him at the coin (the slot is on his right and the
+glass is on his left) and beside him at the dial (72px of a 92px chin
+leaves no room overhead without landing on the glass).
+
+Hidden at 1000px and under, where the layout stacks and the two stations
+are a screen apart.
 
 ---
 

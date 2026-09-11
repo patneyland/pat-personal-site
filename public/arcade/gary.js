@@ -8,19 +8,28 @@
    the constants match it exactly.
 
    What he does here:
-     - starts centre stage under the screen and tells you to put a coin in
-     - once a coin drops, walks over to the dial and explains it
+     - starts in the rail, left of the coin plate, pointing at the slot
+     - once a coin drops, walks to the rail's edge, steps off onto the
+       cabinet's chin, and walks over to the dial
      - if you click him, he tells you to get back to the game
 
-   Where he stands: in front of the cabinet's chin, the 92px band of bezel
-   under the glass that holds the dial on the left and the lamp on the right.
-   He is mounted inside .bezel, so his feet sit on its bottom border by plain
-   CSS and every x below is measured from the bezel's left edge. He used to
-   be fixed to the viewport floor, which put his feet 20-30px below the bezel
-   (its bottom edge lands short of the page bottom by an amount that depends
-   on the screen height) with the border and hairline cutting through his
-   torso, and at the coin station the bezel's rounded corner ran through his
-   shoulder with the pilot lamp at his ear.
+   The standing sheet is the pointing pair. Unflipped, the arm is on his
+   left; flipped, on his right. At the coin he stands left of the plate
+   and is flipped, so the arm aims at the slot. At the dial he stands
+   right of the game list, unflipped, so it aims at the knob. Centre
+   stage on the bezel put that same arm over empty plastic.
+
+   He is mounted on .layout, not .bezel. The coin lives in the rail, a
+   sibling of the cabinet, and the slot sits ~90px above the bezel chin.
+   A bezel child cannot stand next to it. Layout is the box that holds
+   both columns, so both stations and the walk between them share one
+   coordinate system: x,y from the layout's top-left.
+
+   The two floors are real. He does not diagonal-slide from plate to chin;
+   he walks, steps off, and walks. The hop is 0.42s. The walk is /fun's
+   pace, which makes the chin crossing long. That is the cost of standing
+   at the slot. Do not raise FPS to shorten it: arcade Gary and /fun Gary
+   are the same man.
 
    The one rule that matters: his speed is derived, not chosen. The sprite
    advances a fixed distance per walk cycle, so travel-per-second has to equal
@@ -30,9 +39,10 @@
 
 window.ArcadeGary = (function () {
   var FRAMES = 8;            // cells in gary-pace.png
-  /* 12, the same as /fun. It was 24 for a while, because the walk used to run
-     from the back link to the dial, ~900px, which takes eighteen seconds at
-     12. The fix was to shorten the walk (see coinSpot), not to hurry him. */
+  /* 12, the same as /fun. The coin-to-dial crossing is the width of the
+     cabinet, ~18s at this pace. That is slow and it is correct. Raising
+     FPS would hurry him, and then the Gary on this page would not be the
+     Gary on /fun. */
   var FPS = 12;
   var FACING_FRAMES = 2;     // cells in gary-facing.png
   var FACING_CYCLE = 1.6;    // seconds for both standing poses
@@ -40,8 +50,7 @@ window.ArcadeGary = (function () {
   /* 72, the same as /fun, and half the 144px sheet cell so he stays crisp.
      With FPS matched too, SPEED below comes out identical to /fun's: same
      stride, same cadence, same pace. He is also then about the height of
-     the dial knob he stands beside (79px) and clears the glass above the
-     chin by 17px. */
+     the dial knob he stands beside (79px) and of the slot plate (79px). */
   var HEIGHT = 72;                       // display height, px
   var ASPECT = 114 / 144;                // one cell in the sheet
   var WIDTH = Math.round(HEIGHT * ASPECT);
@@ -53,13 +62,19 @@ window.ArcadeGary = (function () {
   var CYCLE = FRAMES / FPS;
   var SPEED = STRIDE / CYCLE;            // px per second. Do not round.
 
-  var GAP = 14;              // how far he stands off the thing he points at
-  /* His feet sit this far above the bezel's bottom edge. 3px is where the
-     base of the dial knob lands (measured: knob bottom 965 on a bezel
-     bottom of 968), so the two share a floor line. */
+  var GAP = 14;              // how far he stands off the dial
+  /* The pointing hand is the sprite's edge, so a small gap is the whole
+     aim. 8px leaves the hand next to the plate without covering the slot. */
+  var COIN_GAP = 8;
+  /* His feet sit this far above the bezel's bottom edge at the dial.
+     3px is where the base of the dial knob lands, so the two share a
+     floor line. */
   var FOOT = 3;
   var EDGE = 8;              // never nearer than this to either end of the bezel
-  var MIN_WIDTH = 760;       // below this the layout stacks and he is in the way
+  var HOP = 0.42;            // seconds, the drop off the rail onto the chin
+  /* Under 1000px the layout stacks the rail below the cabinet, and the
+     two stations are a screen apart. Matches the query in index.html. */
+  var MIN_WIDTH = 1001;
 
   var LINES = {
     coin: 'Click the coin to drop it in the slot.',
@@ -67,10 +82,11 @@ window.ArcadeGary = (function () {
     shush: "Stay focused on the game, this isn't a time for talk."
   };
 
-  var sprite, bubble, root, bezel;
-  var x = 0;                 // his left edge, in px from the bezel's left edge
-  var facing = 1;            // 1 right, -1 left
+  var sprite, bubble, root, stage, bezel;
+  var x = 0, y = 0;          // top-left, px from .layout's top-left
+  var facing = 1;            // 1 as drawn (arm left), -1 mirrored (arm right)
   var walking = false;
+  var station = 'coin';      // 'coin' | 'dial'
   var walkTimer = null, bubbleTimer = null;
   var reduced = false;
 
@@ -81,17 +97,15 @@ window.ArcadeGary = (function () {
   /* ------------------------------- build -------------------------------- */
 
   function build() {
+    stage = document.querySelector('.layout');
     bezel = document.querySelector('.bezel');
-    if (!bezel) return false;
+    if (!stage || !bezel) return false;
 
     root = document.createElement('div');
     root.className = 'gary';
     root.setAttribute('aria-hidden', 'false');
-    // Size and seat from the constants here, so they live in one place.
-    // The CSS carries the same numbers as defaults.
     root.style.width = WIDTH + 'px';
     root.style.height = HEIGHT + 'px';
-    root.style.bottom = FOOT + 'px';
 
     sprite = document.createElement('button');
     sprite.type = 'button';
@@ -107,28 +121,24 @@ window.ArcadeGary = (function () {
 
     root.appendChild(bubble);
     root.appendChild(sprite);
-    /* Into the bezel, not the body. His vertical seat is then a CSS bottom
-       against the cabinet itself, so a relayout - the bezel is sized by the
-       viewport height - can never leave him floating above the chin, and
-       the stacking is simple: nothing in the CRT stack goes above 6. */
-    bezel.appendChild(root);
+    stage.appendChild(root);
 
     stand();
     sprite.addEventListener('click', function (e) {
       e.stopPropagation();
       say(LINES.shush, 4200);
-      if (e.detail > 0) sprite.blur();   // hand the keyboard back to the game
+      if (e.detail > 0) sprite.blur();
     });
     return true;
   }
 
   /* ------------------------------ drawing ------------------------------- */
 
-  /** Standing, facing you, alternating the two drawn poses. */
   function stand() {
     sprite.style.backgroundImage =
       'url(/assets/gary-facing.png), url(/assets/gary-facing-solid.png)';
     sprite.style.backgroundSize = (WIDTH * FACING_FRAMES) + 'px ' + HEIGHT + 'px';
+    sprite.style.backgroundPosition = '0 0';
     sprite.style.setProperty('--gary-cells', -FACING_FRAMES);
     sprite.style.animation = reduced
       ? 'none'
@@ -136,19 +146,30 @@ window.ArcadeGary = (function () {
     paint();
   }
 
-  /** Mid-stride, walking. */
   function walk() {
     sprite.style.backgroundImage =
       'url(/assets/gary-pace.png), url(/assets/gary-pace-solid.png)';
     sprite.style.backgroundSize = (WIDTH * FRAMES) + 'px ' + HEIGHT + 'px';
+    sprite.style.backgroundPosition = '0 0';
     sprite.style.setProperty('--gary-cells', -FRAMES);
     sprite.style.animation =
       'gary-step ' + CYCLE + 's steps(' + FRAMES + ') infinite';
     paint();
   }
 
+  /** Arms-down pose, held. The second cell of the facing sheet. */
+  function hang() {
+    sprite.style.backgroundImage =
+      'url(/assets/gary-facing.png), url(/assets/gary-facing-solid.png)';
+    sprite.style.backgroundSize = (WIDTH * FACING_FRAMES) + 'px ' + HEIGHT + 'px';
+    sprite.style.animation = 'none';
+    sprite.style.backgroundPosition = (-WIDTH) + 'px 0';
+    paint();
+  }
+
   function paint() {
-    root.style.transform = 'translateX(' + Math.round(x) + 'px)';
+    root.style.transform =
+      'translate(' + Math.round(x) + 'px, ' + Math.round(y) + 'px)';
     sprite.style.transform = 'scaleX(' + facing + ')';
     if (bubble && !bubble.hidden) placeBubble();
   }
@@ -163,122 +184,168 @@ window.ArcadeGary = (function () {
     if (ms) bubbleTimer = setTimeout(hush, ms);
   }
 
-  /* The bubble sits beside him, not over his head: the chin is 92px tall
-     and he is 72 of it, so anything above him lands on the glass. Beside
-     him it stays on the plastic, level with the game list next to the dial.
-     It goes on his right, towards the rail and the coin, and flips to his
-     left only if the right side would run off the viewport - which it
-     cannot from either station today, but the rule costs nothing. */
+  /* At the dial: beside him, on the chin, because 72px of a 92px band
+     leaves no room overhead without landing on the glass.
+     At the coin: above him, hung off his right shoulder, growing left.
+     Beside him there the slot is on his right and the glass is on his
+     left. Above him is the empty coin-stage band. */
   function placeBubble() {
+    var above = station === 'coin';
+    bubble.classList.toggle('is-above', above);
+    if (above) { bubble.classList.remove('is-left'); return; }
     var bw = bubble.offsetWidth;
-    var left = bezel.getBoundingClientRect().left + x + WIDTH;
+    var left = stage.getBoundingClientRect().left + x + WIDTH;
     bubble.classList.toggle('is-left', left + bw + 24 > window.innerWidth);
   }
 
   function hush() { bubble.hidden = true; }
 
-  /* ------------------------------- moving ------------------------------- */
+  /* ------------------------------ stations ------------------------------ */
 
-  /** Left edge for standing beside a target element, on the given side,
-      in bezel coordinates. */
-  function spotBeside(selector, side) {
+  function rect(selector) {
     var t = document.querySelector(selector);
     if (!t) return null;
     var r = t.getBoundingClientRect();
-    if (!r.width) return null;
-    var b = bezel.getBoundingClientRect();
-    var left = (side === 'left' ? r.left - WIDTH - GAP : r.right + GAP) - b.left;
-    // Never let him walk off the cabinet.
-    return Math.max(EDGE, Math.min(left, b.width - WIDTH - EDGE));
+    return r.width ? r : null;
   }
 
-  /** Where he stands to talk about the dial: just right of its game list. */
-  function dialSpot() { return spotBeside('.dial-wrap', 'right'); }
+  function stageRect() { return stage.getBoundingClientRect(); }
 
-  /* Where he stands to talk about the coin: centre stage, under the screen
-     that is itself saying INSERT COIN. The coin is across the page in the
-     rail, but it glows and is labelled, so he can call across to it; the
-     dial is the control that needs someone standing next to it.
-
-     Snapped to a whole number of strides from the dial spot. The walk is a
-     CSS transition over exactly cycles*CYCLE seconds, so a distance that is
-     exactly cycles*STRIDE is the only one his feet agree with all the way,
-     and it lands him exactly on the dial spot with a foot planted. Nobody
-     can see that centre stage is up to 20px off true centre. Between the
-     layouts this page takes that is 4 to 9 strides, 2.7 to 6 seconds. */
-  function coinSpot() {
-    var from = dialSpot();
-    if (from == null) return null;
-    var centre = bezel.getBoundingClientRect().width / 2 - WIDTH / 2;
-    var cycles = Math.max(1, Math.round((centre - from) / STRIDE));
-    return from + cycles * STRIDE;
+  /** Left of the slot plate, feet on the plate's bottom edge. */
+  function coinStation() {
+    var p = rect('.plate'), s = stageRect();
+    if (!p) return null;
+    return {
+      x: p.left - COIN_GAP - WIDTH - s.left,
+      y: p.bottom - HEIGHT - s.top
+    };
   }
 
-  function placeAt(px) {
+  /** Just right of the dial's game list, feet on the cabinet chin. */
+  function dialStation() {
+    var d = rect('.dial-wrap'), b = bezel.getBoundingClientRect(), s = stageRect();
+    if (!d) return null;
+    var left = d.right + GAP;
+    left = Math.max(b.left + EDGE, Math.min(left, b.right - WIDTH - EDGE));
+    return {
+      x: left - s.left,
+      y: b.bottom - FOOT - HEIGHT - s.top
+    };
+  }
+
+  function railEdge() {
+    var r = rect('.rail'), s = stageRect();
+    if (!r) return null;
+    return r.left - s.left;
+  }
+
+  function placeAt(px, py) {
     x = px;
+    y = py;
     paint();
   }
 
-  /** Walk to `to`, then run `done`. Duration is derived from SPEED. */
-  function walkTo(to, done) {
-    var from = x;
-    var dist = Math.abs(to - from);
-    if (reduced || dist < 4) { placeAt(to); if (done) done(); return; }
+  /* ------------------------------- moving ------------------------------- */
 
-    facing = to > from ? 1 : -1;
+  /** Flush the current transform so a new transition starts from here,
+      not from a previous leg that is still interpolating. */
+  function startMove(transition) {
+    root.style.transition = transition;
+    void root.offsetWidth;
+  }
+
+  function walkTo(toX, toY, done) {
+    var dist = Math.abs(toX - x);
+    if (reduced || dist < 4) { placeAt(toX, toY); if (done) done(); return; }
+
+    facing = toX > x ? 1 : -1;
     walking = true;
     walk();
 
     var seconds = dist / SPEED;
-    // Round the travel to a whole number of cycles so he finishes on a
-    // planted foot instead of mid-air. The stations are already a whole
-    // number of strides apart (see coinSpot), so this is a no-op in
-    // practice and a safety net if a caller hands in some other distance.
     var cycles = Math.max(1, Math.round(seconds / CYCLE));
     seconds = cycles * CYCLE;
 
-    root.style.transition = 'transform ' + seconds + 's linear';
-    // next frame, so the transition has a start value to work from
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () { placeAt(to); });
-    });
+    startMove('transform ' + seconds + 's linear');
+    placeAt(toX, toY);
 
     clearTimeout(walkTimer);
     walkTimer = setTimeout(function () {
       root.style.transition = '';
       walking = false;
-      facing = 1;
-      stand();
       if (done) done();
     }, seconds * 1000 + 40);
   }
 
+  function hop(toX, toY, done) {
+    if (reduced) { placeAt(toX, toY); if (done) done(); return; }
+    walking = true;
+    hang();
+    startMove('transform ' + HOP + 's cubic-bezier(0.45, 0, 1, 1)');
+    placeAt(toX, toY);
+    clearTimeout(walkTimer);
+    walkTimer = setTimeout(function () {
+      root.style.transition = '';
+      walking = false;
+      if (done) done();
+    }, HOP * 1000 + 40);
+  }
+
   /* ------------------------------ the script ---------------------------- */
 
-  var atDial = false;
+  var leaving = false;
 
   function toCoin() {
-    var spot = coinSpot();
-    if (spot == null) return;
-    placeAt(spot);
-    say(LINES.coin, 0);          // stays up until the coin goes in
+    var c = coinStation();
+    if (!c) return;
+    station = 'coin';
+    leaving = false;
+    facing = -1;
+    placeAt(c.x, c.y);
+    stand();
+    say(LINES.coin, 0);
   }
 
+  /* Three legs, each walking leg a whole number of strides:
+
+       1. left along the rail to a planted foot near its edge
+       2. off the edge onto the chin. The landing is snapped to strides
+          from the dial, so the hop carries the remainder (never backward)
+       3. along the chin to the dial */
   function toDial() {
-    if (atDial) return;
-    atDial = true;
+    if (leaving) return;
+    leaving = true;
     hush();
-    var spot = dialSpot();
-    if (spot == null) return;
-    walkTo(spot, function () { say(LINES.dial, 9000); });
+    var c = coinStation(), d = dialStation(), edge = railEdge();
+    if (!c || !d || edge == null) return;
+
+    var n1 = Math.max(0, Math.floor((c.x - edge) / STRIDE));
+    var edgeX = n1 === 0 ? c.x : c.x - n1 * STRIDE;
+    var n2 = Math.max(0, Math.floor((edgeX - d.x) / STRIDE));
+    var landX = n2 === 0 ? edgeX : Math.min(edgeX, d.x + n2 * STRIDE);
+
+    function arrive() {
+      station = 'dial';
+      facing = 1;
+      stand();
+      say(LINES.dial, 9000);
+    }
+
+    walkTo(edgeX, c.y, function () {
+      hop(landX, d.y, function () {
+        walkTo(d.x, d.y, arrive);
+      });
+    });
   }
 
-  /** Re-seat him when the layout moves under him. Only x needs redoing:
-      the bezel's width changes with the viewport, his seat does not. */
   function reseat() {
     if (walking) return;
-    var spot = atDial ? dialSpot() : coinSpot();
-    if (spot != null) placeAt(spot);
+    var s = station === 'dial' ? dialStation() : coinStation();
+    if (s) {
+      if (station === 'coin') facing = -1;
+      if (station === 'dial') facing = 1;
+      placeAt(s.x, s.y);
+    }
   }
 
   function tooNarrow() { return window.innerWidth < MIN_WIDTH; }
@@ -288,8 +355,9 @@ window.ArcadeGary = (function () {
     if (!build()) return;
     toCoin();
 
-    // The coin is his cue to move on. data-inserted flips on documentElement
-    // when the credit lands - see cabinet.js.
+    // data-inserted flips at 620ms; the drop animation is 780ms. 200ms
+    // more lets the coin finish going in before he turns. Longer than
+    // that and he stands there pointing at an empty plate.
     var html = document.documentElement;
     if (html.getAttribute('data-inserted') === 'true') {
       setTimeout(toDial, 400);
@@ -297,7 +365,7 @@ window.ArcadeGary = (function () {
       var mo = new MutationObserver(function () {
         if (html.getAttribute('data-inserted') === 'true') {
           mo.disconnect();
-          setTimeout(toDial, 900);   // let the coin land and the tube warm up
+          setTimeout(toDial, 200);
         }
       });
       mo.observe(html, { attributes: true, attributeFilter: ['data-inserted'] });
