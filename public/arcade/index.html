@@ -682,46 +682,83 @@ body {
 [data-inserted="true"] .coin-hint { display: none; }
 @keyframes hintpulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-/* The drop. The coin falls to the mouth of the slot, catches on the rim,
-   then goes in. "Goes in" is the trick: over the final phase the coin
-   travels down by exactly its own height while a clip eats it from the
-   bottom by the same amount, so the visible bottom edge stays pinned to the
-   slot line. The coin disappears INTO the cut instead of behind the plate.
+/* The drop. First the coin turns from a readable face to standing on its
+   edge — a vertical sliver that can actually fit the 9px slot — then it
+   falls to the mouth, catches on the rim, slides the length of the cut,
+   and goes out the bottom.
 
-   The two halves live on different elements because the travel replaces the
-   bob on .coin-bob while the clip has to be on .coin itself.
-   --coin-fall is the gap from the coin's resting point to the slot mouth. */
-.coin-module { --coin-fall: 36px; --coin-h: 40px; }
+   "Goes in" is the trick: once the coin's bottom reaches the BOTTOM of
+   the slot, it travels down by exactly its own height while a clip eats
+   it from the bottom by the same amount. The visible bottom edge stays
+   pinned to the slot floor, so the coin disappears out the bottom of the
+   opening instead of vanishing halfway down.
 
-/* Both animations must interpolate IDENTICALLY or the pinned edge drifts
-   down the slot: the travel and the clip have to stay in lockstep. So both
-   run linear, and the weight of the fall is shaped by the spacing of the
-   keyframes instead of by an easing curve. */
+   Three elements because each property has to live on a different one:
+   travel replaces the bob on .coin-bob, rotateY is the idle turn on
+   .coin (and must stay 3D so the rim reads as thickness), and the clip
+   is on a wrapper so it does not flatten that 3D during the flip.
+
+   clip-path flattens preserve-3d and also stops the coin painting over
+   the plate, so it cannot be the eat. Once the flip finishes we swap the
+   3D coin for a 2D sliver (the same 5px capsule) and shrink that sliver
+   toward its bottom once it reaches the slot floor.
+
+   --coin-fall is bob Y when the coin's bottom sits on the slot mouth.
+   --coin-slot is the slot's height, the extra travel through the opening. */
+.coin-module { --coin-fall: 20px; --coin-slot: 44px; --coin-h: 40px; }
+
+/* Linear, same as before: the weight of the motion is the spacing of the
+   keyframes, not an easing curve. Flip, fall, through and eat share one
+   1.5s clock so the rim stays lined up with the slot as it goes in. */
 .coin-module.is-inserting .coin-bob {
-  animation: coinfall 0.78s linear forwards;
+  animation: coinfall 1.5s linear forwards;
 }
 .coin-module.is-inserting .coin {
-  animation: coineat 0.78s linear forwards;
+  animation: coinflip 1.5s linear forwards;
 }
+.coin-module.is-inserting .coin-sliver {
+  animation:
+    sliverin 1.5s linear forwards,
+    slivereat 0.33s linear 1.17s forwards;
+}
+.coin-module.is-inserting .coin::before { animation: none; opacity: 0; }
 .coin-module.is-inserting .coin-shadow { animation: none; opacity: 0; }
 
-@keyframes coinfall {
-  /* gathering speed - the gaps widen */
-  0%   { transform: translateY(-10px); }
-  14%  { transform: translateY(-7px); }
-  26%  { transform: translateY(1px); }
-  34%  { transform: translateY(16px); }
-  40%  { transform: translateY(var(--coin-fall)); }              /* the mouth */
-  /* catches on the rim, settles */
-  48%  { transform: translateY(calc(var(--coin-fall) - 5px)); }
-  54%  { transform: translateY(calc(var(--coin-fall) - 1px)); }
-  58%  { transform: translateY(var(--coin-fall)); }
-  /* in: down by exactly its own height, matched by the clip below */
-  100% { transform: translateY(calc(var(--coin-fall) + var(--coin-h))); }
+@keyframes coinflip {
+  /* hanging, turning onto its edge */
+  0%   { transform: rotateY(8deg); opacity: 1; }
+  12%  { transform: rotateY(40deg); opacity: 1; }
+  20%  { transform: rotateY(70deg); opacity: 1; }
+  26%  { transform: rotateY(85deg); opacity: 1; }
+  30%  { transform: rotateY(90deg); opacity: 1; }   /* vertical — fits the slot */
+  /* swap to the 2D sliver so the later clip-path cannot flatten us away */
+  30.1%, 100% { transform: rotateY(90deg); opacity: 0; }
 }
-@keyframes coineat {
-  0%, 58% { clip-path: inset(0 0 0 0); }
-  100%    { clip-path: inset(0 0 100% 0); }
+@keyframes sliverin {
+  0%, 30% { opacity: 0; }
+  30.1%, 100% { opacity: 1; }
+}
+@keyframes coinfall {
+  /* hold the bob while it turns */
+  0%, 30% { transform: translateY(-10px); }
+  /* gathering speed - the gaps widen */
+  36%  { transform: translateY(-7px); }
+  42%  { transform: translateY(1px); }
+  46%  { transform: translateY(12px); }
+  50%  { transform: translateY(var(--coin-fall)); }              /* the mouth */
+  /* catches on the rim, settles */
+  56%  { transform: translateY(calc(var(--coin-fall) - 5px)); }
+  60%  { transform: translateY(var(--coin-fall)); }
+  /* through the opening, still fully visible */
+  66%  { transform: translateY(calc(var(--coin-fall) + 12px)); }
+  72%  { transform: translateY(calc(var(--coin-fall) + 28px)); }
+  /* hold at the slot floor; the sliver shrinks out the bottom from here */
+  78%, 100% { transform: translateY(calc(var(--coin-fall) + var(--coin-slot))); }
+}
+@keyframes slivereat {
+  /* bottom edge stays put; top drops to meet it */
+  0%   { top: 0;    height: 40px; }
+  100% { top: 40px; height: 0; }
 }
 
 [data-inserted="true"] .coin-stage { visibility: hidden; }
@@ -764,11 +801,19 @@ body {
   50%      { transform: translateY(-4px); }
 }
 
+.coin-clip {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  transform-style: preserve-3d;
+}
+
 .coin {
   position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
+  transform-style: preserve-3d;
   /* Milled edge: alternating light and dark facets around the rim */
   background: conic-gradient(
     from 205deg,
@@ -780,7 +825,7 @@ body {
     0 6px 10px -4px rgba(0, 0, 0, 0.8);
   animation: turn 7s ease-in-out infinite;
 }
-/* Coin face */
+/* Coin face, pushed forward so the rim has a real thickness */
 .coin::after {
   content: "";
   position: absolute;
@@ -793,6 +838,7 @@ body {
     inset 0 0 0 3px rgba(139, 106, 34, 0.35),
     inset 0 1px 1px rgba(255, 255, 255, 0.5),
     inset 0 -1px 2px rgba(0, 0, 0, 0.35);
+  transform: translateZ(2.5px);
 }
 /* Shine that sweeps as the coin turns */
 .coin::before {
@@ -803,10 +849,61 @@ body {
   background: linear-gradient(115deg, transparent 32%, rgba(255, 255, 255, 0.7) 48%, transparent 62%);
   z-index: 2;
   animation: shine 7s ease-in-out infinite;
+  transform: translateZ(3px);
+}
+/* The edge you see at rotateY(90deg): a 5px capsule that fits the 9px slot.
+   Local rotateY(90deg) so its face is the coin's thickness; the parent
+   rotateY during the insert turns that face toward the camera. */
+.coin-edge {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 5px;
+  height: 40px;
+  margin-left: -2.5px;
+  border-radius: 2.5px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.22) 0px,
+      rgba(255, 255, 255, 0.06) 0.7px,
+      rgba(0, 0, 0, 0.2) 1.4px
+    ),
+    linear-gradient(90deg, #5c4314 0%, #f6e4a8 40%, #c9a84c 55%, #6e5219 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset -1px 0 0 rgba(0, 0, 0, 0.4);
+  transform: rotateY(90deg);
+  pointer-events: none;
+}
+/* 2D stand-in for the edge-on coin. Same capsule, already in the plane, so
+   clip-path can eat it without flattening the 3D tree into a vanishing line. */
+.coin-sliver {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 5px;
+  height: 40px;
+  margin-left: -2.5px;
+  border-radius: 2.5px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.22) 0px,
+      rgba(255, 255, 255, 0.06) 0.7px,
+      rgba(0, 0, 0, 0.2) 1.4px
+    ),
+    linear-gradient(90deg, #5c4314 0%, #f6e4a8 40%, #c9a84c 55%, #6e5219 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.35),
+    inset -1px 0 0 rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
 }
 
-/* Swings rather than spins. A full 360 turns the coin edge on and it
-   vanishes for a beat; +/- 58 degrees keeps a readable face throughout. */
+/* Swings rather than spins. A full 360 used to turn the coin edge on and
+   vanish it for a beat; +/- 58 degrees keeps a readable face throughout
+   the idle. The insert animation is what takes it the rest of the way. */
 @keyframes turn {
   0%, 100% { transform: rotateY(-58deg); }
   50%      { transform: rotateY(58deg); }
@@ -919,7 +1016,7 @@ body {
 /* ─── Reduced motion ─────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .scanlines, .roll, .flicker, .insert,
-  .coin-bob, .coin, .coin::before, .coin-shadow {
+  .coin-bob, .coin, .coin::before, .coin-clip, .coin-sliver, .coin-shadow {
     animation: none !important;
   }
   .coin-bob { transform: translateY(-10px); }
@@ -1931,7 +2028,12 @@ html[data-phone][data-play="playing"] .vol-btn {
       <div class="coin-module">
         <button type="button" class="coin-btn" aria-label="Insert a coin to start the machine">
           <div class="coin-stage">
-            <div class="coin-bob"><div class="coin"></div></div>
+            <div class="coin-bob">
+              <div class="coin-clip">
+                <div class="coin"><span class="coin-edge" aria-hidden="true"></span></div>
+                <span class="coin-sliver" aria-hidden="true"></span>
+              </div>
+            </div>
             <div class="coin-shadow"></div>
           </div>
           <div class="plate"><div class="slot"></div></div>

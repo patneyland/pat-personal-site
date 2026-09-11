@@ -355,9 +355,9 @@ window.ArcadeGary = (function () {
     if (!build()) return;
     toCoin();
 
-    // data-inserted flips at 620ms; the drop animation is 780ms. 200ms
-    // more lets the coin finish going in before he turns. Longer than
-    // that and he stands there pointing at an empty plate.
+    // data-inserted flips at 1.5s, same as the drop. 200ms more lets
+    // the coin finish going in before he turns. Longer than that and
+    // he stands there pointing at an empty plate.
     var html = document.documentElement;
     if (html.getAttribute('data-inserted') === 'true') {
       setTimeout(toDial, 400);

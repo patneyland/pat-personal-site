@@ -513,8 +513,9 @@
     S.coin();
     coinModule.classList.add('is-inserting');
     try { sessionStorage.setItem(CREDIT_KEY, '1'); } catch (e) { /* ignore */ }
-    // The tube comes up as the coin lands, not before.
-    setTimeout(powerUp, 620);
+    // The tube comes up as the coin finishes going in, not while it is
+    // still turning onto its edge. Flip is the first 450ms of a 1.5s drop.
+    setTimeout(powerUp, 1500);
   }
 
   /* Same rule as the dial: a clicked button must not keep the keyboard, or

@@ -8,6 +8,16 @@ Last touched: 2026-09-11.
 
 ---
 
+# SHIPPED: arcade coin drops in on its edge (2026-09-11)
+
+The insert was a 40px face falling into a 9px slot and vanishing halfway
+down the cut. It now turns to `rotateY(90deg)` first — a 5px vertical
+sliver that actually fits — then falls, catches the rim, slides the
+length of the opening, and disappears at the bottom. Details in
+[docs/arcade.md](docs/arcade.md#coin-slot).
+
+---
+
 # SHIPPED: Gary points at the arcade coin (2026-09-11)
 
 He was standing centre-stage on the bezel with the pointing sheet, so the

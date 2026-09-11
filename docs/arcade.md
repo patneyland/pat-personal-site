@@ -179,6 +179,24 @@ Every browser then has to be re-armed with the new link.
 
 ---
 
+## Coin slot
+
+The idle coin is a face, swinging ±58° so it never goes edge-on and
+vanishes. On click it **turns to vertical first**, then drops.
+
+A 40px disc cannot fit a 9px slot. The insert takes it to `rotateY(90deg)`
+over the first 450ms so you are looking at the milled edge — a 5px capsule
+that does fit — then the fall, the catch on the rim, a slide the length of
+the cut, and a shrink out the **bottom** of the opening (not halfway down).
+The tube powers up at 1.5s, as the coin finishes going in.
+
+The edge is a real 3D child (`.coin-edge`). Once the flip finishes we swap
+it for a 2D sliver of the same capsule: `clip-path` flattens `preserve-3d`
+and would make the edge-on coin vanish, so the eat is a height shrink of
+that sliver with its bottom pinned to the slot floor.
+
+---
+
 ## Gary
 
 Same drawings and the same walk as the Gary on `/fun`, off the same sheets in
