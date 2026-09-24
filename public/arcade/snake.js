@@ -40,7 +40,8 @@ window.ArcadeGames.snake = (function () {
   function opposite(a, b) { return a.x + b.x === 0 && a.y + b.y === 0; }
   function key(x, y) { return x + ',' + y; }
 
-  function mount(host, api) {
+  function mount(host, api, options) {
+    var controlled = !!(options && options.controlled);
     var canvas = document.createElement('canvas');
     canvas.className = 'game-canvas';
     host.appendChild(canvas);
@@ -124,6 +125,7 @@ window.ArcadeGames.snake = (function () {
     }
 
     function onKey(e) {
+      if (controlled) return;
       var tag = e.target && e.target.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
@@ -153,11 +155,13 @@ window.ArcadeGames.snake = (function () {
     /* Tap or swipe on the screen itself */
     var touchStart = null;
     function onPointerDown(e) {
+      if (controlled) return;
       if (state === 'idle') start();
       else if (state === 'paused') resume();
       touchStart = { x: e.clientX, y: e.clientY };
     }
     function onPointerUp(e) {
+      if (controlled) return;
       if (!touchStart || state !== 'playing') { touchStart = null; return; }
       var dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
       touchStart = null;
@@ -228,9 +232,10 @@ window.ArcadeGames.snake = (function () {
         tickMs = Math.max(MIN_TICK_MS, tickMs - TICK_STEP_PER_FOOD);
         spawnFood();
         report();
+        if (!food) gameOver();
       } else {
         var gone = snake.pop();
-        occupied.delete(key(gone.x, gone.y));
+        if (gone.x !== nx || gone.y !== ny) occupied.delete(key(gone.x, gone.y));
       }
     }
 
@@ -278,7 +283,7 @@ window.ArcadeGames.snake = (function () {
 
     function frame(now) {
       raf = requestAnimationFrame(frame);
-      if (state === 'playing') {
+      if (state === 'playing' && !controlled) {
         var dt = Math.min(now - last, MAX_DT);
         last = now;
         acc += dt;
@@ -299,6 +304,19 @@ window.ArcadeGames.snake = (function () {
 
     return {
       start: start,
+      snapshot: function () {
+        return { grid: GRID, snake: snake.map(function (p) { return { x: p.x, y: p.y }; }),
+          food: food && { x: food.x, y: food.y },
+          direction: Object.keys(DIRS).filter(function (k) { return DIRS[k] === dir; })[0],
+          score: score, state: state };
+      },
+      move: function (name) {
+        if (!controlled || state !== 'playing' || !Object.prototype.hasOwnProperty.call(DIRS, name) || opposite(DIRS[name], dir)) return false;
+        dir = DIRS[name];
+        step();
+        draw();
+        return true;
+      },
       repaint: draw,
       resize: resize,
       destroy: function () {
