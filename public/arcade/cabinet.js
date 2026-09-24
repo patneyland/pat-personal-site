@@ -184,9 +184,12 @@
         game: game.id,
         mode: game.mode,
         score: result.score == null ? null : result.score,
-        time_ms: result.time_ms == null ? null : result.time_ms
+        time_ms: result.time_ms == null ? null : result.time_ms,
+        player: result.player || null
       };
-      if (net.isOwnerMode()) {
+      if (result.player) {
+        ovInput.value = result.player; ovInput.readOnly = true; ovLabel.textContent = 'PLAYING AS';
+      } else if (net.isOwnerMode()) {
         // Pat always plays as himself. The field is filled and locked so a
         // run cannot land under a typo.
         ovInput.value = net.OWNER_NAME;
@@ -220,14 +223,15 @@
     // Owner runs go through submit_owner_score, which keeps one row per game
     // and only moves it when the run was actually better. Everyone else
     // inserts a fresh row the ordinary way.
-    var sending = net.isOwnerMode()
+    var jevPlayer = pending.player;
+    var sending = !jevPlayer && net.isOwnerMode()
       ? net.submitOwnerScore(run).then(function (r) {
           return r.improved
             ? (r.first ? 'ON THE BOARD' : 'NEW PERSONAL BEST')
             : 'NOT YOUR BEST — BOARD UNCHANGED';
         })
       : net.submitScore(Object.assign({ player: name }, run)).then(function () {
-          net.savePlayer(name);
+          if (!jevPlayer) net.savePlayer(name);
           return 'ON THE BOARD';
         });
 

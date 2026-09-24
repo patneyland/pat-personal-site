@@ -21,6 +21,18 @@ function request(body) { return { headers: new Headers({ host: 'localhost:3217',
   assert.equal((await response.json()).direction, 'up');
   assert.equal(payload.model, 'jev-latest');
   assert.deepEqual(Object.keys(payload.questions.move.criteria), ['up', 'down', 'right']);
+  answer = { answers: { move: { choice: 'up_2' } } };
+  const planned = await exportsObject.POST(request({ ...board, plan: true }));
+  const plan = await planned.json();
+  assert.equal(plan.direction, 'up'); assert.equal(plan.steps, 2);
+  assert.ok(payload.questions.move.criteria.up_2.alignedForNextTurn);
+  assert.equal(payload.questions.move.criteria.right_2.progressTowardApple, 2);
+  assert.ok(!Object.keys(payload.questions.move.criteria).some(k => k.startsWith('left_')));
+  answer = { answers: { move: { choice: 'right_2' } } };
+  const appleBoard = { ...board, plan: true, food: {x:10,y:12} };
+  assert.equal((await exportsObject.POST(request(appleBoard))).status,200);
+  assert.equal(payload.questions.move.criteria.right_2.eatsApple,true);
+  assert.equal(payload.questions.move.criteria.right_3,undefined,'Cannot plan through random new food');
   answer = { answers: { move: { choice: 'left' } } };
   assert.equal((await exportsObject.POST(request(board))).status, 502);
   answer = { answers: { move: { choice: 'up' } } };

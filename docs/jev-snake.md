@@ -1,34 +1,45 @@
-# Jev Snake recording view
+# Jev on the original arcade
 
-Path: `/arcade/jev.html`. Standalone recording screen using the same 24×24 Snake engine as the arcade. Nothing links to it from the public arcade yet.
+Pat's final direction (2026-09-24): **/arcade-jev looks identical to /arcade, with Jev in a floating window over it.** The separate recording-page redesign was rejected.
 
-## What is built
+## Implementation
 
-- Large board and side console with keyboard-layout arrow indicators.
-- Every applied Jev choice flashes its key and adds a numbered command with elapsed time.
-- Start, pause/resume, restart, fullscreen, sound, and JSON download of all runs.
-- Latest 1,000 commands remain visible; the download retains the full session, including board state, model, confidence, probabilities, usage, and decision latency.
-- Completed-run best saved in this browser, separate from the classic public leaderboard.
-- API key stays on the server. The endpoint calls TypeSafe directly using Choice and excludes only the forbidden 180-degree reverse. No pathfinding or fallback bot chooses production moves.
+Both routes rewrite to the same public/arcade/index.html. The Jev controller exits immediately on /arcade. On /arcade-jev it adds a draggable, collapsible window with keyboard-layout arrow indicators and a scrolling command history. It does not resize the cabinet, move the leaderboard, or mount a second game. The former /arcade/jev.html redirects here.
 
-## Timing and recording
+Jev runs the original real-time Snake engine, at 130ms per cell accelerating to 60ms. There is no wait for the API and no automatic pause on slow or failed inference. A turn changes direction once; the engine keeps moving. Commands log only direction changes.
 
-This is **decision-paced Snake**, not a normal-speed arcade leaderboard attempt. Each response advances one cell. There is a 220ms minimum interval so key presses read on camera. Network delays slow the board; the game does not make up moves while waiting. The page labels this timing and the downloaded log records it.
+Default planned mode forecasts the board at an upcoming tick. Jev classifies all legal straight segments (direction plus distance) for that board, and its selected turn is queued for that exact tick. A request for the next segment runs while the current segment plays. Forecasts simulate the original body/tail movement, but never invent future random food. After eating, planning uses a fresh observation. The code enumerates choices; Jev selects direction and distance. It does not secretly choose a route, prevent an actual crash, or slow the clock.
 
-The game pauses when the tab is hidden. Pause, restart, and navigation abort the browser request and invalidate late replies. An already-running provider request may still finish server-side. API failures pause with a retry control. The API has a 15-second timeout and a per-instance 360-request/minute/IP speed limit. This rate limit is not an account-wide spending cap.
+Late or mismatched plans are discarded. Pause, restart, game over, or switching games invalidates queued plans. A slow model can miss its turn and lose. Reactive mode also runs in real time. The planned segment is visible in the window; exported JSON includes all plans and applied/late/stale/cancelled outcomes, actual turns, boards, and provider costs. Completed runs use the original classic result/save flow with the JEV name. Human input labels JEV + HUMAN. No test writes real leaderboard scores.
 
-## Connect the model
+## OpenRouter key in the window
 
-Set `TYPESAFE_API_KEY` in `.env.local` for local use, and in the Vercel **Preview** environment for a hosted preview. Optional `JEV_MODEL` defaults to `jev-latest`; the response's actual model version is saved in every move. Redeploy after adding preview variables. Do not put keys in client code or Git.
+Save an OpenRouter key in the floating window. The field is masked, cleared after saving, and collapsed after successful verification. The key is stored only in localStorage for this browser and origin. Forget key removes it and pauses the game. The key is sent in a request header over HTTPS to this site's API and forwarded to OpenRouter; the server neither persists nor logs it. Downloads never contain it. A new Vercel preview origin requires saving the key again.
 
-No TypeSafe key was present at implementation time. **No real Jev gameplay, latency, skill, cost, or high score has been measured yet.** Browser tests use explicitly labeled fixture responses, not model results. No scores have been posted to Supabase. The recording page retains Jev's best locally only.
+The server verifies the key with OpenRouter's read-only key endpoint. Decisions use POST https://openrouter.ai/api/alpha/decisions with typesafe/jev-1.13, confirmed against /api/v1/models?output_modalities=decisions. Every inference requests usage.include and reports actual usage.cost. The window totals reported costs; unavailable costs are labeled unknown, never estimated. Late replies after pause or game over cannot control the game, but their costs still count. Download produces the commands JSON and a .cost.json sidecar.
+
+An existing server TYPESAFE_API_KEY remains an optional fallback when no browser key is provided. No workspace OpenRouter key is embedded in the page, persisted by tests, or deployed as a shared player credential.
+
+One real smoke request through this site's API succeeded on 2026-09-24: Jev chose right toward food, model typesafe/jev-1.13-20260917, 174ms, actual cost $0.000018648. This verifies connectivity and the Decisions contract, not full-game performance. No public score was submitted.
 
 ## Validation
 
-- `node scripts/dev/test-jev.cjs` against a local dev server (default port 3217). Browser checks: disconnected state, commands, pause, stale replies, restart, collision, downloads, desktop/mobile geometry. Test images go to `tmp/jev-test/`.
-- `node scripts/dev/test-jev-api.cjs`: input validation, server-only missing-key behavior, Choice payload, reverse exclusion, provider errors. No paid API calls.
-- TypeScript `tsc --noEmit --incremental false`.
+Browser checks compare /arcade and /arcade-jev cabinet geometry, verify a single original canvas, continuing game movement while responses are delayed, arrow input, stale-response cancellation, classic/JEV score payloads (mocked), and draggable/collapsible controls. See scripts/dev/test-jev-overlay.cjs. API contract tests: scripts/dev/test-jev-api.cjs. Existing cabinet-flow suite also passed.
 
-Snake now accepts an optional `{ controlled: true }` mount option and exposes `snapshot()` and `move(direction)`. Ordinary arcade mounting keeps its timed loop and touch controls. Tail-cell occupancy is preserved when moving into the vacating tail cell, and filling the board ends the run.
+The earlier scripts/dev/test-jev.cjs tests the rejected prototype and is retained as history, not the current acceptance suite. Its standalone assets are unused by the original arcade.
 
-Remaining: add the key, play and record an actual run, decide whether its earned score should be published on a separate Jev board, then approve production deployment. Do not claim test-fixture screenshots show Jev playing.
+Saved locally; preview only. Production deployment still needs Pat's approval. The user can now supply an OpenRouter key directly in the floating window.
+
+Key-window acceptance checks: node scripts/dev/test-jev-openrouter.cjs. Uses a fake key and mocked billing; tests masking, verification, persistence, reload, forgetting/rejection, late-response charges, and secret-free downloads.
+
+## First-apple investigation (2026-09-24)
+
+Pat reported Jev could not reach the first apple. Three real normal-speed baseline runs scored 0, 0, and 20. One kept steering right with the apple left, proving a decision-quality problem as well as delay. Explicit action facts alone still scored 0, 0, 0 at normal speed: e.g. a request sent at column 17 was acted on at column 20.
+
+With one decision per cell, two isolated first-apple cases succeeded in 14 and 13 decisions. On the actual original arcade, a real synchronized run then reached 3 apples / score 30 in 31 decisions before being deliberately stopped. Returned cost for that run was $0.001094058. An earlier paced run got one apple before a provider timeout; one request's cost is unknown. Total reported cost across this investigation: $0.006015786, plus that unknown request. No real leaderboard score was submitted. This is evidence for the first-apple fix, not a claim of long-game mastery.
+
+Tests: node scripts/dev/test-jev-paced.cjs verifies exact per-cell application despite delay, pause cancellation, mode locking, paced-score exclusion, and classic-mode selection. API, touch-game, cabinet-flow suites and TypeScript checks also pass. Test outputs and actual cost sidecars are in pat_agent/output/jev-build/.
+
+## Real-time planned turns (2026-09-24)
+
+Pat rejected the slowed, one-cell-per-response mode as an unfair test. It has been removed from the UI. A real-time run collected 3 apples / score 30 with 5 direction changes before being deliberately stopped, returned cost $0.000921732 with no unknown costs. This short run verifies live timing and basic planning, not mastery. The old paced test and investigation above are historical. Current acceptance: scripts/dev/test-jev-realtime.cjs.

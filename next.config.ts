@@ -9,7 +9,10 @@ const nextConfig: NextConfig = {
      public files at their literal path, which would leave the page reachable
      only as /arcade/index.html. This rewrite gives it the clean URL. */
   async rewrites() {
-    return [{ source: "/arcade", destination: "/arcade/index.html" }];
+    return [
+      { source: "/arcade", destination: "/arcade/index.html" },
+      { source: "/arcade-jev", destination: "/arcade/index.html" },
+    ];
   },
   async redirects() {
     return [

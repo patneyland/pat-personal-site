@@ -42,6 +42,7 @@ window.ArcadeGames.snake = (function () {
 
   function mount(host, api, options) {
     var controlled = !!(options && options.controlled);
+    var ticks = 0;
     var canvas = document.createElement('canvas');
     canvas.className = 'game-canvas';
     host.appendChild(canvas);
@@ -77,6 +78,7 @@ window.ArcadeGames.snake = (function () {
     /* ------------------------------- state ------------------------------- */
 
     function reset() {
+      ticks = 0;
       snake = [];
       occupied = new Set();
       var cy = Math.floor(GRID / 2);
@@ -204,6 +206,8 @@ window.ArcadeGames.snake = (function () {
     /* ------------------------------- tick ------------------------------- */
 
     function step() {
+      if (api.beforeStep) api.beforeStep();
+      ticks++;
       if (dirQueue.length) dir = dirQueue.shift();
 
       var head = snake[0];
@@ -305,7 +309,7 @@ window.ArcadeGames.snake = (function () {
     return {
       start: start,
       snapshot: function () {
-        return { grid: GRID, snake: snake.map(function (p) { return { x: p.x, y: p.y }; }),
+        return { grid: GRID, tick: ticks, tickMs: tickMs, snake: snake.map(function (p) { return { x: p.x, y: p.y }; }),
           food: food && { x: food.x, y: food.y },
           direction: Object.keys(DIRS).filter(function (k) { return DIRS[k] === dir; })[0],
           score: score, state: state };
@@ -317,6 +321,8 @@ window.ArcadeGames.snake = (function () {
         draw();
         return true;
       },
+      pause: pause,
+      resume: resume,
       repaint: draw,
       resize: resize,
       destroy: function () {
