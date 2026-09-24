@@ -28,15 +28,60 @@ function request(body) { return { headers: new Headers({ host: 'localhost:3217',
   assert.ok(payload.questions.move.criteria.up_2.alignedForNextTurn);
   assert.equal(payload.questions.move.criteria.right_2.progressTowardApple, 2);
   assert.ok(!Object.keys(payload.questions.move.criteria).some(k => k.startsWith('left_')));
-  answer = { answers: { move: { choice: 'right_2' } } };
-  const appleBoard = { ...board, plan: true, food: {x:10,y:12} };
-  assert.equal((await exportsObject.POST(request(appleBoard))).status,200);
-  assert.equal(payload.questions.move.criteria.right_2.eatsApple,true);
-  assert.equal(payload.questions.move.criteria.right_3,undefined,'Cannot plan through random new food');
+  // Segments now stop before the apple; eating is a route with a chosen escape.
+  answer = { answers: { move: { choice: 'eat_right2_then_up' } } };
+  const appleBoard = { ...board, plan: true, food: {x:10,y:12}, decisionDelayTicks: 3 };
+  const eat = await (await exportsObject.POST(request(appleBoard))).json();
+  assert.deepEqual(eat.turns, [{ direction: 'right', steps: 2 }]); assert.equal(eat.eats, true); assert.equal(eat.escape, 'up');
+  let c = payload.questions.move.criteria;
+  assert.equal(c.right_2, undefined, 'Straight segments never run through the apple');
+  assert.ok(c.right_1 && c.eat_right2_then_right && c.eat_right2_then_up && c.eat_right2_then_down);
+  assert.equal(c.eat_right2_then_up.afterEating.bodyLength, 4, 'Growth is simulated');
+  assert.equal(JSON.parse(payload.state).decisionDelayTicks, 3);
+  // Wall apple: travelling right into (23,12) leaves only up/down after eating.
+  answer = { answers: { move: { choice: 'eat_right15_then_down' } } };
+  await exportsObject.POST(request({ ...board, plan: true, food: {x:23,y:12}, decisionDelayTicks: 4 }));
+  c = payload.questions.move.criteria;
+  assert.equal(c.eat_right15_then_right, undefined, 'No escape through the wall');
+  assert.equal(c.eat_right15_then_up.afterEating.clearCellsAhead, 12);
+  assert.equal(c.eat_right15_then_up.afterEating.safeForNextDecision, true);
+  // Corner apple arrived at heading up: only left remains.
+  const corner = { grid: 24, snake: [{x:23,y:3},{x:23,y:4},{x:23,y:5}], food: {x:23,y:0}, direction: 'up', plan: true, decisionDelayTicks: 4 };
+  answer = { answers: { move: { choice: 'eat_up3_then_left' } } };
+  await exportsObject.POST(request(corner));
+  c = payload.questions.move.criteria;
+  assert.deepEqual(Object.keys(c).filter(k => k.startsWith('eat_up3_')), ['eat_up3_then_left']);
+  // Body-blocked exit: a hook of body beside the apple removes that escape.
+  const hook = { grid: 24, snake: [{x:5,y:5},{x:4,y:5},{x:4,y:4},{x:5,y:4},{x:6,y:4},{x:7,y:4},{x:8,y:4},{x:9,y:4},{x:10,y:4}], food: {x:7,y:5}, direction: 'right', plan: true };
+  answer = { answers: { move: { choice: 'eat_right2_then_down' } } };
+  await exportsObject.POST(request(hook));
+  c = payload.questions.move.criteria;
+  assert.equal(c.eat_right2_then_up, undefined, 'Body above the apple blocks up');
+  assert.ok(c.eat_right2_then_down && c.eat_right2_then_right);
+  // Growth versus departing tail: without eating the tail cell is free, after eating it is not.
+  const loop = { grid: 24, snake: [{x:5,y:5},{x:6,y:5},{x:6,y:6},{x:5,y:6}], food: {x:20,y:20}, direction: 'up', plan: true };
+  answer = { answers: { move: { choice: 'up_1' } } };
+  await exportsObject.POST(request(loop));
+  assert.ok(payload.questions.move.criteria.down_1 === undefined && payload.questions.move.criteria.left_1, 'Tail cell handling');
+  const tailFood = { grid: 24, snake: [{x:5,y:6},{x:5,y:5},{x:6,y:5},{x:6,y:6},{x:6,y:7},{x:5,y:7}], food: {x:4,y:6}, direction: 'down', plan: true };
+  answer = { answers: { move: { choice: 'eat_left1_then_down' } } };
+  await exportsObject.POST(request(tailFood));
+  c = payload.questions.move.criteria;
+  assert.ok(c.eat_left1_then_down && c.eat_left1_then_left && c.eat_left1_then_up, 'Escapes after a grown body');
+  // A route whose every escape crashes is still offered, marked as trapped.
+  const trap = { grid: 24, snake: [{x:1,y:1},{x:2,y:1},{x:2,y:0}], food: {x:0,y:1}, direction: 'left', plan: true };
+  answer = { answers: { move: { choice: 'eat_left1_then_up' } } };
+  await exportsObject.POST(request(trap));
+  c = payload.questions.move.criteria;
+  assert.ok(c.eat_left1_then_up && c.eat_left1_then_down && !c.eat_left1_then_left);
+  const box = { grid: 24, snake: [{x:1,y:0},{x:2,y:0},{x:2,y:1},{x:1,y:1},{x:0,y:1},{x:0,y:2}], food: {x:0,y:0}, direction: 'left', plan: true };
+  answer = { answers: { move: { choice: 'eat_left1_then_trapped' } } };
+  const trapped = await (await exportsObject.POST(request(box))).json();
+  assert.equal(trapped.escape, null); assert.equal(payload.questions.move.criteria.eat_left1_then_trapped.afterEating.crashesNextStep, true);
   answer = { answers: { move: { choice: 'left' } } };
   assert.equal((await exportsObject.POST(request(board))).status, 502);
   answer = { answers: { move: { choice: 'up' } } };
   context.fetch = async () => { throw Error('fixture failure'); };
   assert.equal((await exportsObject.POST(request(board))).status, 504);
-  console.log('PASS: missing key, invalid input, Choice payload, reverse exclusion, invalid provider result, upstream failure. No external API calls.');
+  console.log('PASS: missing key, invalid input, Choice payload, reverse exclusion, apple routes with escapes, wall/corner/body-blocked exits, growth vs tail, trapped route, invalid provider result, upstream failure. No external API calls.');
 })().catch(e => { console.error(e); process.exit(1); });

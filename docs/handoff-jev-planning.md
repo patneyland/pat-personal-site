@@ -1,6 +1,6 @@
 # Jev Snake: real-time planning handoff
 
-Prepared September 24, 2026. This is a handoff for implementation by the next agent, not a claim that the planning issue is fixed.
+Prepared September 24, 2026. **Implemented the same day; see "Multi-turn planning" in docs/jev-snake.md.** The text below is the original handoff.
 
 ## Start here
 

@@ -20,9 +20,13 @@
   var keys = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight' };
   var instance = null, enabled = false, ready = false, generation = 0, timer = null, request = null, flash = null;
   var runs = [], run = null, runPlayer = null;
-  var pace = 'plan', best = 0, queuedPlan = null, leadMs = 400;
+  var pace = 'plan', best = 0, leadMs = 400, lastScore = 0, latencies = [];
+  // Planned mode keeps a schedule of turns keyed by engine tick, plus the
+  // predicted board at the end of everything scheduled (the horizon).
+  var schedule = [], horizon = null, expected = {};
   var planView = document.createElement('p'); planView.id = 'j-plan'; planView.setAttribute('aria-live', 'polite'); $('j-notice').before(planView);
-  try { best = Number(localStorage.getItem('jev-snake-realtime-best-v1')) || 0; } catch (_) {}
+  var bestKey = 'jev-snake-realtime-best-v1';
+  try { best = Number(localStorage.getItem(bestKey)) || 0; } catch (_) {}
   $('j-best').textContent = best;
   var keyStorage = 'arcade-jev-openrouter-key', savedKey = '', checkVersion = 0;
   var charges = [], spend = 0, unknownCharges = 0;
@@ -38,7 +42,12 @@
     $('j-export').disabled = false;
   }
   function status(text) { $('j-status').textContent = text; }
-  function clearRequest() { generation++; clearTimeout(timer); request = null; if (queuedPlan) queuedPlan.entry.outcome = 'cancelled'; queuedPlan = null; }
+  function dropSchedule(outcome) {
+    schedule.forEach(function (turn) { if (turn.plan.outcome === 'queued') turn.plan.outcome = outcome; else if (turn.plan.outcome === 'applied') turn.plan.dropped = outcome; });
+    if (horizon && horizon.plan && horizon.plan.outcome === 'queued') horizon.plan.outcome = outcome;
+    schedule = []; horizon = null; expected = {}; showPlan();
+  }
+  function clearRequest() { generation++; clearTimeout(timer); request = null; dropSchedule('cancelled'); }
   function buttons() {
     var state = instance && instance.snapshot().state;
     $('j-pace').disabled = state === 'playing' || state === 'paused';
@@ -50,18 +59,18 @@
   function beginRun() {
     clearRequest();
     run = { startedAt: new Date().toISOString(), timing: 'Original arcade timed loop, 130ms accelerating to 60ms; ' + pace, plans: [], commands: [] };
-    runs.push(run); runPlayer = 'JEV';
+    runs.push(run); runPlayer = 'JEV'; lastScore = 0;
     planView.textContent = '';
     $('j-log').replaceChildren(); $('j-count').textContent = '0'; $('j-notice').textContent = '';
     status('PLAYING'); timer = setTimeout(next, 0);
   }
-  function addCommand(answer, before, atInput) {
-    var entry = { n: run.commands.length + 1, direction: answer.direction, at: new Date().toISOString(),
+  function addCommand(answer, before, atInput, extra) {
+    var entry = Object.assign({ n: run.commands.length + 1, direction: answer.direction, at: new Date().toISOString(), tick: atInput.tick,
       latencyMs: answer.latencyMs, model: answer.model, confidence: answer.confidence, usage: answer.usage,
-      boardAtRequest: before, boardAtInput: atInput };
+      boardAtRequest: before, boardAtInput: atInput }, extra || {});
     run.commands.push(entry);
     var row = document.createElement('li');
-    [String(entry.n).padStart(4, '0'), arrows[entry.direction], entry.direction.toUpperCase(), entry.latencyMs + 'ms'].forEach(function (text) {
+    [String(entry.n).padStart(4, '0'), arrows[entry.direction], entry.direction.toUpperCase() + (entry.role === 'escape' ? ' · ESCAPE' : ''), entry.role ? 'T' + entry.tick : entry.latencyMs + 'ms'].forEach(function (text) {
       var span = document.createElement('span'); span.textContent = text; row.appendChild(span);
     });
     var list = $('j-log'), oldTop = list.scrollTop, height = list.scrollHeight;
@@ -73,79 +82,165 @@
     $('j-count').textContent = run.commands.length; $('j-latency').textContent = entry.latencyMs + 'ms';
     $('j-model').textContent = answer.model || 'JEV'; $('j-export').disabled = false;
   }
-  function sameBoard(a, b) {
-    return a.tick === b.tick && a.direction === b.direction && JSON.stringify(a.snake) === JSON.stringify(b.snake) && JSON.stringify(a.food) === JSON.stringify(b.food);
-  }
-  function forecast(board, direction, count) {
-    var result = JSON.parse(JSON.stringify(board));
-    var vector = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] }[direction];
-    for (var i = 0; i < count; i++) {
-      var head = { x: result.snake[0].x + vector[0], y: result.snake[0].y + vector[1] };
-      // New food is random. Never predict through it or silently dodge a crash.
-      if (head.x < 0 || head.y < 0 || head.x >= 24 || head.y >= 24 ||
-          (head.x === result.food.x && head.y === result.food.y) ||
-          result.snake.slice(0,-1).some(function(p){ return p.x === head.x && p.y === head.y; })) return null;
-      result.snake.unshift(head); result.snake.pop(); result.tick++; result.direction = direction;
-    }
+  var vectors = { up: [0,-1], down: [0,1], left: [-1,0], right: [1,0] };
+  function copyBoard(b) { return JSON.parse(JSON.stringify(b)); }
+  // One engine step, mirroring snake.js. Food becomes unknown (null) once eaten.
+  function advance(board, direction) {
+    var v = vectors[direction], head = { x: board.snake[0].x + v[0], y: board.snake[0].y + v[1] };
+    if (head.x < 0 || head.y < 0 || head.x >= 24 || head.y >= 24) return null;
+    var eats = !!board.food && head.x === board.food.x && head.y === board.food.y;
+    var body = eats ? board.snake : board.snake.slice(0, -1);
+    if (body.some(function (p) { return p.x === head.x && p.y === head.y; })) return null;
+    var result = copyBoard(board);
+    result.snake.unshift(head); if (!eats) result.snake.pop();
+    result.tick++; result.direction = direction;
+    if (eats) { result.food = null; result.score = (result.score || 0) + 10; result.ate = true; } else delete result.ate;
     return result;
   }
-  async function planNext(target) {
-    if (!enabled || !instance || instance.snapshot().state !== 'playing') return;
+  // Holding the heading needs no key. Stop before a crash or a known apple, so
+  // the request board is the last one that is certain to happen.
+  function hold(board, targetTick, path) {
+    var result = board;
+    while (result.tick < targetTick) { var moved = advance(result, result.direction); if (!moved || moved.ate) break; result = moved; if (path) path.push(result); }
+    return result;
+  }
+  // Every forecast tick is checked as it happens, so a human key or a dropped
+  // input is caught on the next step instead of at the next planned turn.
+  function expect(board) { expected[board.tick] = board.snake[0].x + ',' + board.snake[0].y + ',' + board.direction; }
+  function mismatch(now, expect, checkFood) {
+    if (now.tick !== expect.tick) return 'tick ' + now.tick + ' not ' + expect.tick;
+    if (now.direction !== expect.direction) return 'heading changed';
+    if (JSON.stringify(now.snake) !== JSON.stringify(expect.snake)) return 'body differs from forecast';
+    if (checkFood && JSON.stringify(now.food) !== JSON.stringify(expect.food)) return 'apple moved';
+    return '';
+  }
+  function showPlan() {
+    var waiting = horizon && horizon.awaitingFood && !schedule.some(function (t) { return t.role === 'escape'; });
+    if (!schedule.length && !waiting) { planView.textContent = ''; return; }
+    var tick = instance ? instance.snapshot().tick : 0;
+    var parts = schedule.map(function (turn) {
+      return (turn.role === 'escape' ? 'EAT → ' : '') + arrows[turn.direction] + ' in ' + Math.max(0, turn.tick - tick);
+    });
+    if (waiting) parts.push('EAT → hold');
+    planView.textContent = 'PLAN ' + parts.join(' · ');
+  }
+  function invalidate(reason) {
+    dropSchedule('invalidated: ' + reason);
+    generation++; if (request) request.abort(); request = null; clearTimeout(timer);
+    if (run) run.discarded = (run.discarded || 0) + 1;
+    $('j-notice').textContent = 'Plan dropped: ' + reason + '. Replanning; clock keeps running.';
+    timer = setTimeout(planNext, 0);
+  }
+  // Turn a chosen trajectory into keypresses scheduled on exact engine ticks.
+  function queuePlan(answer, board, entry) {
+    var b = copyBoard(board), turns = [];
+    for (var i = 0; i < answer.turns.length; i++) {
+      var leg = answer.turns[i], last = i === answer.turns.length - 1;
+      turns.push({ tick: b.tick, direction: leg.direction, expect: b, checkFood: true, role: i ? 'turn' : 'start', plan: entry });
+      for (var k = 0; k < leg.steps; k++) {
+        var moved = advance(b, leg.direction);
+        if (!moved || (moved.ate && !(answer.eats && last && k === leg.steps - 1))) throw new Error('Plan does not match this board.');
+        b = moved; expect(b);
+      }
+    }
+    if (answer.eats) {
+      if (!b.ate) throw new Error('Plan does not reach the apple.');
+      entry.eatTick = b.tick;
+      if (answer.escape) turns.push({ tick: b.tick, direction: answer.escape, expect: b, checkFood: false, role: 'escape', plan: entry });
+      b = Object.assign(copyBoard(b), { direction: answer.escape || b.direction });
+    }
+    schedule = schedule.concat(turns);
+    horizon = { board: b, awaitingFood: !!answer.eats, plan: entry };
+    entry.endTick = b.tick; showPlan();
+  }
+  async function planNext() {
+    if (!enabled || pace !== 'plan' || !instance || request || !run || instance.snapshot().state !== 'playing') return;
+    if (horizon && horizon.awaitingFood) return; // resumes when the apple is eaten
     var active = instance, token = generation, current = active.snapshot();
-    var before = target || forecast(current, current.direction, Math.max(2, Math.ceil(leadMs / current.tickMs)));
-    if (!before || before.tick < current.tick) { timer = setTimeout(function(){ planNext(); }, 40); return; }
+    var delay = Math.max(1, Math.ceil(leadMs / current.tickMs) + 1);
+    if (horizon && horizon.board.tick < current.tick) dropSchedule('expired');
+    var base = horizon ? horizon.board : current;
+    // Enough is already decided; look again shortly instead of planning far ahead.
+    if (horizon && base.tick - current.tick > 2 * delay + 4) { timer = setTimeout(planNext, 40); return; }
+    var holdPath = [], target = hold(base, current.tick + delay, holdPath);
+    // A new apple right in front of the escape: let the engine eat it, then replan.
+    if (target.tick === base.tick && schedule.some(function (t) { return t.tick === base.tick; })) { timer = setTimeout(planNext, 40); return; }
     var requestRun = run, provider = savedKey ? 'OpenRouter' : 'TypeSafe', charged = false, started = performance.now();
     var abort = new AbortController(), timeout = setTimeout(function(){abort.abort();},20000); request = abort;
+    var entry = { at:new Date().toISOString(), observed:current, board:target, decisionDelayTicks:delay, outcome:'pending' };
+    requestRun.plans.push(entry);
     status('PLANNING');
     try {
-      var response = await fetch('/api/jev', { method:'POST', headers:Object.assign({'Content-Type':'application/json'},headers()), body:JSON.stringify(Object.assign({},before,{plan:true})), signal:abort.signal });
+      var response = await fetch('/api/jev', { method:'POST', headers:Object.assign({'Content-Type':'application/json'},headers()), body:JSON.stringify(Object.assign({},target,{plan:true,decisionDelayTicks:delay})), signal:abort.signal });
       var answer = await response.json(); recordCharge(answer,requestRun,provider); charged = true;
-      if (token !== generation || instance !== active || active.snapshot().state !== 'playing') return;
-      leadMs = Math.max(250, Math.min(1500, (performance.now() - started) * 1.3));
+      entry.latencyMs = Math.round(performance.now()-started);
+      if (token !== generation || instance !== active || active.snapshot().state !== 'playing') { entry.outcome = 'cancelled'; return; }
+      // Size the lead from the slow end of recent responses, not the last one:
+      // one latency spike at 60ms ticks is enough to miss a wall.
+      latencies = latencies.concat(performance.now() - started).slice(-12);
+      var sorted = latencies.slice().sort(function (a, b) { return b - a; });
+      leadMs = Math.max(250, Math.min(1500, sorted[Math.min(1, sorted.length - 1)] * 1.2));
       if (!response.ok) throw new Error(answer.error || 'Jev request failed.');
-      if (!Object.prototype.hasOwnProperty.call(keys,answer.direction) || !Number.isInteger(answer.steps) || answer.steps < 1 || answer.steps > 23) throw new Error('Invalid plan.');
-      var entry = { at:new Date().toISOString(), board:before, direction:answer.direction, steps:answer.steps, latencyMs:Math.round(performance.now()-started), outcome:'queued' };
-      requestRun.plans.push(entry); $('j-export').disabled = false;
-      if (active.snapshot().tick > before.tick) {
-        entry.outcome = 'late'; $('j-notice').textContent = 'Plan arrived late. Clock kept running.';
-        timer = setTimeout(function(){planNext();},0); return;
+      if (!Array.isArray(answer.turns) || !answer.turns.length || !answer.turns.every(function (t) { return Object.prototype.hasOwnProperty.call(keys, t.direction) && Number.isInteger(t.steps) && t.steps >= 1 && t.steps <= 23; }) ||
+        (answer.escape != null && !Object.prototype.hasOwnProperty.call(keys, answer.escape))) throw new Error('Invalid plan.');
+      Object.assign(entry, { choice:answer.choice, turns:answer.turns, eats:!!answer.eats, escape:answer.escape || null, candidates:answer.candidates, confidence:answer.confidence, model:answer.model, generationId:answer.generationId });
+      $('j-latency').textContent = entry.latencyMs + 'ms'; $('j-model').textContent = answer.model || 'JEV'; $('j-export').disabled = false;
+      var now = active.snapshot();
+      if (now.tick > target.tick) {
+        entry.outcome = 'late'; entry.lateByTicks = now.tick - target.tick;
+        $('j-notice').textContent = 'Plan arrived ' + entry.lateByTicks + ' ticks late and was discarded. Clock kept running.';
+        request = null; timer = setTimeout(planNext,0); return;
       }
-      queuedPlan = { answer:answer, before:before, entry:entry };
-      planView.textContent = 'PLAN ' + arrows[answer.direction] + ' ' + answer.direction.toUpperCase() + ' · ' + answer.steps + ' CELLS';
+      entry.outcome = 'queued';
+      queuePlan(answer, target, entry);
+      holdPath.forEach(expect);
       status('PLAN READY');
+      request = null; timer = setTimeout(planNext,0);
     } catch(error) {
       if (!charged) recordCharge({},requestRun,provider);
+      if (entry.outcome === 'pending') { entry.outcome = 'failed'; entry.error = error.message; }
       if (token !== generation) return;
-      $('j-notice').textContent = error.message + ' Game clock continues.'; status('RETRYING');
-      timer = setTimeout(function(){planNext();},500);
+      $('j-notice').textContent = (error.name === 'AbortError' ? 'Request timed out.' : error.message) + ' Game clock continues.'; status('RETRYING');
+      request = null; timer = setTimeout(planNext,500);
     } finally { clearTimeout(timeout); if(request === abort) request = null; }
   }
+  // Runs inside the engine right before each step, so a turn lands on its tick.
   function applyPlannedTurn() {
-    if (!enabled || pace !== 'plan' || !queuedPlan || !instance) return;
-    var now = instance.snapshot(), plan = queuedPlan;
-    if (now.tick < plan.before.tick) return;
-    queuedPlan = null;
-    if (!sameBoard(now,plan.before)) {
-      plan.entry.outcome = 'stale'; timer = setTimeout(function(){planNext();},0); return;
-    }
-    plan.entry.outcome = 'applied'; plan.entry.appliedAt = new Date().toISOString();
+    if (!enabled || pace !== 'plan' || !instance) return;
+    var now = instance.snapshot(), seen = expected[now.tick];
+    delete expected[now.tick - 1];
+    if (seen && (horizon || schedule.length) && seen !== now.snake[0].x + ',' + now.snake[0].y + ',' + now.direction) return invalidate('snake left the forecast path');
+    if (!schedule.length) return;
+    if (schedule[0].tick < now.tick) return invalidate('missed tick ' + schedule[0].tick);
+    if (schedule[0].tick !== now.tick) return;
+    var turn = schedule[0], reason = mismatch(now, turn.expect, turn.checkFood);
+    if (reason) return invalidate(reason);
+    schedule.shift();
+    if (turn.role === 'start') turn.plan.outcome = 'applied';
+    turn.plan.appliedTurns = (turn.plan.appliedTurns || 0) + 1;
     // A direction stays held by the original game. Send and log only real turns.
-    if (plan.answer.direction !== now.direction) {
-      document.dispatchEvent(new KeyboardEvent('keydown',{key:keys[plan.answer.direction],code:keys[plan.answer.direction],bubbles:true,cancelable:true}));
-      document.dispatchEvent(new KeyboardEvent('keyup',{key:keys[plan.answer.direction],code:keys[plan.answer.direction],bubbles:true}));
-      addCommand(plan.answer,plan.before,now);
+    if (turn.direction !== now.direction) {
+      document.dispatchEvent(new KeyboardEvent('keydown',{key:keys[turn.direction],code:keys[turn.direction],bubbles:true,cancelable:true}));
+      document.dispatchEvent(new KeyboardEvent('keyup',{key:keys[turn.direction],code:keys[turn.direction],bubbles:true}));
+      addCommand({ direction:turn.direction, latencyMs:turn.plan.latencyMs, model:turn.plan.model, confidence:turn.plan.confidence }, turn.plan.board, now,
+        { role:turn.role, choice:turn.plan.choice, decidedAt:turn.plan.at, decidedForTick:turn.plan.board.tick });
     }
-    status('PLAYING'); $('j-notice').textContent = '';
-    var endpoint = forecast(now,plan.answer.direction,plan.answer.steps);
-    var token = generation, endTick = now.tick + plan.answer.steps;
-    // Think while the existing game travels. After food, wait only for the new
-    // board observation, never stop or slow the game clock.
-    function continuePlanning() {
-      if (token !== generation || !instance || instance.snapshot().state !== 'playing') return;
-      if (!endpoint && instance.snapshot().tick < endTick) { timer = setTimeout(continuePlanning,20); return; }
-      planNext(endpoint);
-    }
-    timer = setTimeout(continuePlanning,0);
+    if (!request) status('PLAYING');
+    showPlan();
+  }
+  // snake.js reports status when it eats. That is the moment the next apple
+  // becomes known, so the planned escape keeps running while Jev looks again.
+  function onScore() {
+    if (!enabled || pace !== 'plan' || !instance || !run) return;
+    var now = instance.snapshot();
+    if (now.state !== 'playing' || now.score <= lastScore) { lastScore = now.score; return; }
+    lastScore = now.score;
+    if (!horizon || !horizon.awaitingFood) return invalidate('unplanned apple');
+    var reason = now.tick !== horizon.board.tick ? 'ate on tick ' + now.tick : JSON.stringify(now.snake) !== JSON.stringify(horizon.board.snake) ? 'body differs after eating' : '';
+    if (reason) return invalidate(reason);
+    horizon.board.food = now.food && { x: now.food.x, y: now.food.y }; horizon.board.score = now.score;
+    horizon.board.tickMs = now.tickMs; horizon.awaitingFood = false; showPlan();
+    clearTimeout(timer); timer = setTimeout(planNext, 0);
   }
   async function next() {
     if (pace === 'plan') return planNext();
@@ -182,6 +277,7 @@
   window.ArcadeGames.snake.mount = function (host, api) {
     var proxy = Object.assign({}, api);
     proxy.beforeStep = applyPlannedTurn;
+    proxy.setStatus = function (value) { api.setStatus(value); onScore(); };
     proxy.setState = function (state) {
       api.setState(state);
       if (enabled && instance) {
@@ -195,7 +291,7 @@
       if (runPlayer) result = Object.assign({}, result, { player: runPlayer });
       if (runPlayer === 'JEV' && result.score > best) {
         best = result.score; $('j-best').textContent = best;
-        try { localStorage.setItem('jev-snake-decision-best-v1', String(best)); } catch (_) {}
+        try { localStorage.setItem(bestKey, String(best)); } catch (_) {}
       }
       if (run) { run.score = result.score; run.finishedAt = new Date().toISOString(); run.player = runPlayer; }
       api.gameOver(result);
@@ -216,7 +312,7 @@
   $('j-pace').addEventListener('change', function () {
     pace = $('j-pace').value;
     if (instance && instance.setControlled) instance.setControlled(false);
-    $('j-timing-label').textContent = pace === 'jev' ? 'ONE DECISION / CELL' : 'ORIGINAL GAME SPEED';
+    $('j-timing-label').textContent = pace === 'plan' ? 'REAL TIME / PLANNED TURNS' : 'REAL TIME / REACTIVE';
   });
   $('j-start').addEventListener('click', function () {
     if (!ready || !instance) return;
@@ -268,6 +364,7 @@
     setTimeout(function () { URL.revokeObjectURL(costUrl); }, 1000);
   });
   window.addEventListener('pagehide', clearRequest);
+  window.__jevRuns = runs; // read-only view for local test scripts
   function paintKey() {
     $('j-key-state').textContent = savedKey ? 'SAVED' : 'NOT SAVED';
     $('j-api-key').value = '';
