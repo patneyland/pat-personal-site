@@ -567,25 +567,6 @@ body {
   color: #9a938a;
 }
 
-/* --- The break. Reads as "everything below is a different
-       class of thing." ---------------------------------------- */
-.break {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin: 0.4rem 0 -0.2rem;
-}
-.break span {
-  font-family: var(--font-arcade);
-  font-size: 0.5rem;
-  line-height: 1.6;
-  letter-spacing: 0;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-.break i { display: none; }
-
 /* --- The table ------------------------------------------- */
 .board {
   list-style: none;
@@ -1091,7 +1072,6 @@ body {
 .champion-initials { color: var(--sc-name);  text-shadow: 0 0 18px var(--ink-glow); }
 .champion-score    { color: var(--sc-score); text-shadow: 0 0 20px var(--ink-glow); }
 .champion-meta     { color: var(--sc-meta); }
-.break span        { color: var(--sc-label); }
 .b-rank            { color: var(--sc-rank); }
 .b-name            { color: var(--sc-name);  text-shadow: 0 0 14px var(--ink-glow); }
 .b-score           { color: var(--sc-score); text-shadow: 0 0 14px var(--ink-glow); }
@@ -2053,10 +2033,6 @@ html[data-phone][data-play="playing"] .vol-btn {
           <span data-slot-game>SNAKE</span>
           <span class="champion-date"></span>
         </div>
-      </div>
-
-      <div class="break">
-        <i></i><span>THE REST</span><i></i>
       </div>
 
       <ol class="board">

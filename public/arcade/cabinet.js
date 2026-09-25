@@ -56,20 +56,6 @@
   var runInProgress = false;
   var boardRequest = 0;
   var sendingIds = new Set();
-  var QUEUE_KEY = 'arcade_unsaved_results_v1';
-  var unsaved = [];
-  try {
-    var stored = JSON.parse(sessionStorage.getItem(QUEUE_KEY) || '[]');
-    if (Array.isArray(stored)) unsaved = stored.filter(function (r) {
-      return r && ORDER.indexOf(r.game) >= 0 && typeof r.id === 'string' &&
-        (r.game === 'minesweeper' ? Number.isFinite(r.time_ms) && r.time_ms > 0 : Number.isFinite(r.score) && r.score > 0);
-    });
-  } catch (e) { /* Keep results in memory if storage is unavailable. */ }
-
-  function persistUnsaved() {
-    try { sessionStorage.setItem(QUEUE_KEY, JSON.stringify(unsaved)); } catch (e) { /* keep in memory */ }
-    paintUnsaved();
-  }
 
   /* ------------------------------- palette ------------------------------- */
 
@@ -97,7 +83,6 @@
     '<div class="challenge-bar">' +
       '<div class="game-choices" aria-label="Choose game"></div></div>' +
     '<button type="button" class="pause-btn" hidden>PAUSE</button>' +
-    '<button type="button" class="unsaved-btn" hidden>SAVE PREVIOUS SCORE</button>' +
     '<div class="overlay" data-ov="pause" hidden role="dialog" aria-modal="true" aria-label="Game paused">' +
       '<div class="ov-title ov-title-sm">PAUSED</div><div class="pause-note"></div>' +
       '<button type="button" class="resume-btn">RESUME</button></div>' +
@@ -184,10 +169,7 @@
   if (window.ResizeObserver) new ResizeObserver(placeDemoPlay).observe(stage);
   window.addEventListener('resize', placeDemoPlay);
   var pauseBtn = screen.querySelector('.pause-btn');
-  var unsavedBtn = screen.querySelector('.unsaved-btn');
   var challenge = screen.querySelector('.challenge-bar');
-  var rail = document.querySelector('.rail');
-  if (rail) rail.appendChild(unsavedBtn);
 
   challenge.querySelector('.game-choices').innerHTML = ORDER.map(function (id) {
     return '<button type="button" data-game-choice="' + id + '" aria-pressed="false">' + games[id].name + '</button>';
@@ -206,12 +188,6 @@
       btn.disabled = screen.dataset.state === 'playing' || (screen.dataset.state === 'paused' && !phoneMenuOpen());
     });
   }
-  function paintUnsaved() {
-    if (!unsavedBtn || !game) return;
-    var entries = unsaved.filter(function (r) { return r.game === game.id && r !== pending; });
-    unsavedBtn.hidden = !entries.length || ['playing', 'paused'].indexOf(screen.dataset.state) >= 0;
-    unsavedBtn.textContent = 'SAVE PREVIOUS SCORE' + (entries.length > 1 ? ' (' + entries.length + ')' : '');
-  }
   function paintUtilities() {
     var state = screen.dataset.state;
     pauseBtn.hidden = state !== 'playing' && state !== 'paused';
@@ -219,7 +195,6 @@
     pauseOverlay.hidden = state !== 'paused';
     pauseOverlay.querySelector('.pause-note').textContent = game && game.id === 'minesweeper' ? 'TIMER KEEPS RUNNING' : '';
     stage.inert = state === 'paused' || state === 'over';
-    paintUnsaved();
     paintChallenge();
   }
 
@@ -306,7 +281,6 @@
         owner: !result.player && net.isOwnerMode(), player: result.player || null,
         jev: result.player === 'JEV', replay: result.player === 'JEV' ? result.replay || null : null
       } : null;
-      if (pending) { unsaved.push(pending); persistUnsaved(); }
       showResult(result, pending);
     }
   };
@@ -333,7 +307,6 @@
     ovInput.readOnly = !!(entry && (entry.owner || entry.player));
     ovInput.value = entry && entry.player ? entry.player : entry && entry.owner ? net.OWNER_NAME : net.getSavedPlayer();
     ovLabel.textContent = entry && (entry.owner || entry.player) ? 'PLAYING AS' : 'ENTER YOUR NAME';
-    paintUnsaved();
   }
 
   ovSave.addEventListener('click', function () {
@@ -341,14 +314,6 @@
     ovForm.hidden = false;
     ovSave.hidden = true;
     ovInput.focus();
-  });
-  unsavedBtn.addEventListener('click', function () {
-    if (['playing', 'paused'].indexOf(screen.dataset.state) >= 0) return;
-    var entry = unsaved.find(function (r) { return r.game === game.id && r !== pending; });
-    if (!entry) return;
-    if (window.ArcadePhone && window.ArcadePhone.closeSheet) window.ArcadePhone.closeSheet();
-    runBenchmark = entry.benchmark || null;
-    showResult(entry, entry);
   });
 
   ovForm.addEventListener('submit', function (e) {
@@ -370,8 +335,6 @@
       : net.submitScore(Object.assign({ player: name }, run)).then(function () { if (!entry.player) net.savePlayer(name); return 'ON THE BOARD'; });
     sending.then(function (msg) {
       sendingIds.delete(entry.id);
-      unsaved = unsaved.filter(function (r) { return r.id !== entry.id; });
-      persistUnsaved();
       if (game.id === entry.game) loadBoard();
       if (pending !== entry || screen.dataset.state !== 'over') return;
       S.submit();
@@ -380,7 +343,6 @@
       pending = null;
       ovMsg.textContent = msg;
       ovMsg.className = 'ov-msg is-good';
-      paintUnsaved();
     }).catch(function (err) {
       sendingIds.delete(entry.id);
       if (pending !== entry || screen.dataset.state !== 'over') return;

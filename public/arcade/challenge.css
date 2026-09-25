@@ -2,14 +2,12 @@
 .challenge-bar { position:absolute; top:10%; left:5%; right:5%; z-index:5; display:flex; flex-direction:column; align-items:center; gap:8px; }
 .challenge-target,.ph-gate-target,.ph-gate-game,.ov-comparison,.pause-note { font-family:var(--font-arcade); font-size:10px; line-height:1.8; color:var(--sc-score); }
 .game-choices { display:flex; align-items:stretch; justify-content:center; gap:6px; width:100%; }
-.game-choices button,.pause-btn,.resume-btn,.unsaved-btn,.ov-save { min-height:44px; border:1px solid var(--sc-rule); border-radius:3px; background:#111; color:var(--sc-rank); font-family:var(--font-arcade); font-size:9px; line-height:1.5; padding:8px 12px; cursor:pointer; touch-action:manipulation; }
+.game-choices button,.pause-btn,.resume-btn,.ov-save { min-height:44px; border:1px solid var(--sc-rule); border-radius:3px; background:#111; color:var(--sc-rank); font-family:var(--font-arcade); font-size:9px; line-height:1.5; padding:8px 12px; cursor:pointer; touch-action:manipulation; }
 .game-choices button { flex:1; max-width:180px; }
 .game-choices button[aria-pressed="true"] { border-color:var(--sc-score); color:var(--sc-score); background:#202020; }
 .game-choices button:disabled { cursor:default; }
 button:focus-visible { outline:2px solid var(--sc-score); outline-offset:3px; }
 .pause-btn { position:absolute; bottom:8px; left:5%; z-index:8; }
-.unsaved-btn { position:absolute; bottom:10px; z-index:8; }
-.unsaved-btn { right:5%; max-width:230px; font-size:8px; }
 .screen-ui .stage { top:26%; bottom:58px; }
 .screen-ui .overlay { top:26%; bottom:58px; z-index:6; }
 .screen-ui .overlay[data-ov="attract"] { z-index:3; }
@@ -27,9 +25,6 @@ button:focus-visible { outline:2px solid var(--sc-score); outline-offset:3px; }
 .screen-ui .ov-btn { min-height:44px; }
 .screen-ui [hidden],.ph-hud [hidden] { display:none !important; }
 .screen-ui .vol-btn { z-index:8; }
-/* Unsaved results stay with scores. */
-.rail .unsaved-btn { position:static; width:100%; max-width:none; margin-top:12px; flex-shrink:0; }
-.rail .unsaved-btn[hidden] { display:none; }
 /* The desktop already has a labeled cabinet dial. Keep its original game area. */
 html:not([data-phone]) .challenge-bar { top:3.2%; left:25%; right:25%; }
 html:not([data-phone]) .challenge-bar .game-choices { display:none; }
@@ -109,7 +104,6 @@ html[data-phone] .ph-hud .ph-board svg { width:20px; height:20px; }
 html[data-phone] .screen-ui .challenge-bar,
 html[data-phone] .screen-ui > .pause-btn,
 html[data-phone] .screen-ui > .vol-btn,
-html[data-phone] .screen-ui > .unsaved-btn { display:none; }
 
 /* The sheet owns scores, the game picker, and optional controls. */
 html[data-phone] .ph-sheet {
@@ -169,7 +163,6 @@ html[data-phone] .ph-sheet .vol-btn {
 html[data-phone] .ph-sheet .vol-btn { display:inline-flex; align-items:center; gap:8px; width:auto; height:44px; padding:10px; }
 html[data-phone] .ph-sheet .vol-btn svg { width:22px; height:22px; }
 html[data-phone] .ph-sheet .ph-arrows[aria-pressed="true"] { border-color:var(--sc-score); color:var(--sc-score); }
-html[data-phone] .ph-sheet .unsaved-btn { position:static; transform:none; max-width:none; width:100%; margin-top:16px; }
 html[data-phone] .ph-sheet [hidden],html[data-phone] .ph-hud [hidden],html[data-phone] .screen-ui [hidden] { display:none !important; }
 
 /* Small instructions, and scrollable results without opening a keyboard. */

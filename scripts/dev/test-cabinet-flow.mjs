@@ -160,11 +160,9 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
   vm.runInContext(source, runtime);
   const find = s => { const el = document.querySelector(s); assert(el, `Missing ${s}`); return el; };
   return { window, document, find, mounted, requests, boardRequests, best, storage,
-    queued: () => JSON.parse(storage.get('arcade_unsaved_results_v1') || '[]'),
     score(value, id = window.ArcadeCabinet.currentGame()) { mounted[id].finish({ score: value, display: String(value) }); },
     submit() { find('.ov-save').emit('click'); find('.ov-input').value = 'tester'; find('.ov-form').emit('submit'); },
-    retry() { find('.ov-again').emit('click'); },
-    previous() { find('.unsaved-btn').emit('click'); }
+    retry() { find('.ov-again').emit('click'); }
   };
 }
 
@@ -178,16 +176,16 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
   assert.equal(h.document.querySelector('.practice-btn'), null, 'there is only one game mode');
   h.mounted.asteroids.start();
   h.mounted.asteroids.finish({ score: 900, display: '900' });
-  assert.equal(h.queued().length, 1, 'ordinary Asteroids results may be saved');
-  assert.equal(h.find('.ov-save').hidden, false);
+  assert.equal(h.find('.ov-save').hidden, false, 'ordinary Asteroids results may be saved');
   assert.equal(h.find('.ov-form').hidden, true, 'name entry is opt-in');
   assert.equal(h.document.querySelector('.ov-share'), null, 'result sharing is absent');
   assert.equal(h.requests.length, 0, 'game over never submits automatically');
   h.retry();
   assert.equal(h.requests.length, 0, 'players can replay without submitting');
-  h.mounted.asteroids.finish({ score: 0, display: '0' });
-  h.previous(); h.submit();
+  h.mounted.asteroids.finish({ score: 800, display: '800' });
+  h.submit();
   assert.equal(h.requests.length, 1, 'players can choose to submit their score');
+  assert.equal(h.document.querySelector('.unsaved-btn'), null, 'no save-previous-score button');
 }
 
 {
@@ -202,25 +200,19 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
   assert.equal(h.document.querySelector('.challenge-target'), null, 'owner high score is only displayed in the scoreboard');
   h.score(350);
   assert.equal(h.find('.ov-comparison').textContent, 'YOU BEAT PAT!', 'result uses starting target without repeating its value');
-  assert.equal(h.queued().at(-1).benchmark.value, 310);
-  assert.equal(h.queued().length, 1, 'only submitted previous result is removed');
 }
 
 {
-  const h = fixture(); await flush(); h.mounted.snake.start(); h.score(50); h.retry(); h.score(70);
-  h.previous(); // A = 50, B = 70 retained in queue.
-  assert.equal(h.find('.ov-result').textContent, 'YOU: 50');
-  h.submit(); h.previous(); h.previous();
-  assert.equal(h.find('.ov-btn').disabled, true, 'reopened sending result stays locked');
+  const h = fixture(); await flush(); h.mounted.snake.start(); h.score(50);
+  h.submit();
+  assert.equal(h.find('.ov-btn').disabled, true, 'sending result stays locked');
   h.requests[0].reject(new Error('offline')); await flush();
-  assert.equal(h.find('.ov-btn').disabled, false, 'failed request unlocks same result reopened in another view');
+  assert.equal(h.find('.ov-btn').disabled, false, 'failed request unlocks the result');
   assert.match(h.find('.ov-msg').textContent, /OFFLINE/);
-  assert.equal(h.queued().length, 2, 'failed score is retained');
-  h.submit(); h.previous(); h.previous(); h.requests[1].resolve({}); await flush();
-  assert.equal(h.find('.ov-save').hidden, true, 'success updates same reopened result');
+  h.find('.ov-form').emit('submit'); h.requests[1].resolve({}); await flush();
+  assert.equal(h.find('.ov-save').hidden, true, 'success updates the result');
   assert.equal(h.find('.ov-form').hidden, true);
   assert.match(h.find('.ov-msg').textContent, /ON THE BOARD/);
-  assert.equal(h.queued().length, 1);
 }
 
 {
@@ -231,7 +223,7 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
   h.boardRequests[0].resolve({ status: 'ready', row: { score: 50 } });
   h.boardRequests[1].resolve({ status: 'ready', row: { score: 1200 } }); await flush();
   h.mounted.snake.start(); h.score(350);
-  assert.equal(h.queued().at(-1).benchmark.value, 310, 'late prior board reads cannot overwrite the selected game');
+  assert.equal(h.find('.ov-comparison').textContent, 'YOU BEAT PAT!', 'late prior board reads cannot overwrite the selected game');
 }
 
 {
@@ -243,8 +235,7 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
   h.window.ArcadeCabinet.selectGame('asteroids');
   assert.equal(h.window.ArcadeCabinet.currentGame(), 'minesweeper', 'timed run locks selection');
   h.mounted.minesweeper.finish({ time_ms: 30000, display: '30000' });
-  assert.equal(h.find('.ov-comparison').textContent, 'YOU BEAT PAT!');
-  assert.equal(h.queued().at(-1).benchmark.value, 40000, 'Minesweeper compares against its loaded benchmark');
+  assert.equal(h.find('.ov-comparison').textContent, 'YOU BEAT PAT!', 'Minesweeper compares against its loaded benchmark');
 }
 
 {
@@ -294,20 +285,6 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
 }
 
 {
-  const h = fixture('?game=snake&phone=1', false, { phone: true, credited: false }); await flush();
-  h.mounted.snake.start(); h.score(50); h.retry(); h.find('.ph-board').emit('click');
-  h.window.ArcadeCabinet.selectGame('asteroids'); h.window.ArcadeCabinet.selectGame('snake'); await flush();
-  assert.equal(h.queued().length, 1, 'game switching preserves completed unsaved results');
-  assert.equal(h.find('.unsaved-btn').hidden, false);
-  h.previous();
-  assert.equal(h.find('.ph-sheet').hidden, true, 'reopening old result closes settings');
-  assert.equal(h.find('.ov-result').textContent, 'YOU: 50');
-  assert.equal(h.find('.screen-ui').dataset.state, 'over');
-  h.submit(); h.requests[0].reject(new Error('offline')); await flush();
-  assert.equal(h.queued().length, 1, 'phone result survives failed submission after game switch');
-}
-
-{
   const h = fixture('?game=minesweeper&phone=1', false, { phone: true, credited: false }); await flush();
   h.find('.ph-board').emit('click'); h.find('.ph-close').emit('click');
   assert.equal(h.find('.screen-ui').dataset.state, 'ready', 'opening settings does not start Minesweeper timer');
@@ -327,8 +304,7 @@ function fixture(search = '?game=snake', deferBoards = false, options = {}) {
 {
   const h = fixture(); await flush(); h.mounted.snake.start();
   h.mounted.snake.finish({ score: 900, display: '900', player: 'JEV', practice: true });
-  assert.equal(h.queued().length, 0, 'separate decision-paced Jev runs remain ineligible');
-  assert.equal(h.find('.ov-save').hidden, true);
+  assert.equal(h.find('.ov-save').hidden, true, 'separate decision-paced Jev runs remain ineligible');
 }
 
 console.log('Cabinet/phone checks passed: optional submission, submission recovery, frozen benchmarks, URL preservation, credit rules, settings pause/resume/switch, keyboard isolation and focus trapping.');

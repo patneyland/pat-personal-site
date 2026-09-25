@@ -44,7 +44,7 @@ integration review. Details and real-device checklist: [arcade mobile challenge]
 - Practice removed. Every run uses normal rules; score/name submission remains optional.
 - Persistent pause/mute, pause on backgrounding, explicit resume. Ranked Minesweeper
   time continues while its board is hidden.
-- Optional score saving and retained failed/unsaved attempts. Result sharing removed; social preview remains.
+- Optional score saving on the game-over screen only (Save Previous Score button and unsaved-score queue removed 2026-09-25). Result sharing removed; social preview remains.
 - Four focused logic suites pass. Local browser checks cover 320x568, 375x500,
   390x844, 844x390 and desktop. Failed and retried submissions used an in-memory
   service, not the real leaderboard. Real phones and LinkedIn's embedded browser
