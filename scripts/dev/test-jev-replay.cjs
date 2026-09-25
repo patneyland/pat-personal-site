@@ -54,8 +54,7 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     await instrumentSnake(view);
     const started = Date.now();
     await view.goto(base + '/arcade-jev?game=snake');
-    await view.waitForFunction(() => document.querySelector('.jev-panel .j-mode').dataset.mode === 'replay');
-    assert.equal(await view.locator('.ov-demo-play').isVisible(), false, 'No TRY TO BEAT JEV AND PAT button on the Jev page');
+    await view.locator('.ov-demo-play').waitFor({ state: 'visible' });
     assert.match(await view.locator('.ov-demo-tag').textContent(), new RegExp('JEV.*' + replay.score.toLocaleString('en-US')));
     await view.waitForFunction(() => window.__testSnake.snapshot().score >= 20);
     const mid = await view.evaluate(() => window.__testSnake.snapshot());
@@ -67,6 +66,10 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     console.log(`PASS replay reproduced the game exactly (score ${end.score}, tick ${end.tick}) in ${((Date.now() - started) / 1000).toFixed(0)}s at game speed`);
     // Loops after the recorded death.
     await view.waitForFunction(() => window.__testSnake.snapshot().tick < 20, null, { timeout: 8000 });
+    // 3. From Jev's page the button sends the visitor to the real arcade.
+    await view.locator('.ov-demo-play').click();
+    await view.waitForURL(u => new URL(u).pathname === '/arcade', { timeout: 5000 });
+    console.log('PASS TRY TO BEAT JEV AND PAT leaves the watching page for the real arcade');
     await view.close();
 
     // 4. The plain arcade is the plain game. Jev's best run is on offer from

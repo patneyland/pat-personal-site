@@ -132,6 +132,6 @@ html.jev-enabled .ov-demo-tag{display:none!important}
 .jev-panel:has(.j-mode[data-mode=replay]) #j-start:not(:disabled),.jev-panel:has(.j-mode[data-mode=start]) #j-start:not(:disabled){box-shadow:0 0 0 3px #c6f28a33,0 0 24px #c6f28a44}
 @media (prefers-reduced-motion:reduce){.j-mode-tag{animation:none!important}}
 
-/* Jev's scores save themselves (jev-controller.js, autoSave), and the page is
-   for watching him, so no save button, name form, or play-it-yourself button. */
-html.jev-enabled .ov-save,html.jev-enabled .ov-form,html.jev-enabled .ov-demo-play{display:none!important}
+/* Jev's scores save themselves (jev-controller.js, autoSave), so no save
+   button or name form. TRY TO BEAT JEV AND PAT stays: Pat wants that invitation. */
+html.jev-enabled .ov-save,html.jev-enabled .ov-form{display:none!important}
