@@ -78,18 +78,21 @@ const alive = s => s.state === 'playing';
       console.log('PASS two failed requests retried, apple eaten, clock never paused');
       await t.page.close();
     }
-    // 4. Human intervention mid-plan invalidates the schedule and labels the run.
+    // 4. A Jev run is watch-only: human keys and clicks on the game are blocked.
     {
       const t = await setup(browser, [{ x: 20, y: 2 }, { x: 12, y: 12 }]);
       await t.page.locator('#j-start').click();
       await t.until(() => window.__jevRuns.length && window.__jevRuns[window.__jevRuns.length - 1].commands.length >= 1);
       const s0 = await t.snap();
       await t.page.keyboard.press(s0.direction === 'up' || s0.direction === 'down' ? 'ArrowRight' : 'ArrowDown');
-      await t.until(() => { const r = window.__jevRuns[window.__jevRuns.length - 1]; return r.plans.some(p => /invalidated/.test(p.outcome + ' ' + (p.dropped || ''))); });
+      await t.page.locator('.snake-view').click({ position: { x: 40, y: 40 } });
+      await t.page.mouse.move(300, 300); await t.page.mouse.down(); await t.page.mouse.move(300, 450, { steps: 5 }); await t.page.mouse.up();
       await t.until(() => { const s = window.__testSnake.snapshot(); return s.state === 'over' || s.score >= 10; });
-      const hs = await t.snap(); if (!alive(hs)) console.log(JSON.stringify({ s0, hs, plans: (await t.run()).plans.map(p => [p.outcome, p.dropped, p.choice, p.board && p.board.tick, p.observed.tick, p.latencyMs]) }));
-      assert.ok(alive(hs), 'Replanned after the human key');
-      console.log('PASS human key invalidated the queued plan; Jev replanned and ate');
+      const r = await t.run();
+      assert.ok(alive(await t.snap()), 'Human input had no effect');
+      assert.ok(!r.plans.some(p => /invalidated/.test(p.outcome + ' ' + (p.dropped || ''))), 'No plan was disturbed');
+      await t.page.locator('#j-pause').click(); await t.page.locator('#j-pause').click();
+      console.log('PASS human key, click and swipe blocked during a Jev run; plans undisturbed');
       await t.page.close();
     }
     // 5. Pause and resume during a queued multi-turn plan.
