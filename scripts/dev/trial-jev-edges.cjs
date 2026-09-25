@@ -26,15 +26,16 @@ const scenarios = mode === 'free' ? Array.from({ length: Number(process.env.RUNS
       await page.route('**/*.supabase.co/**', r => r.fulfill({ json: [] })); // never write real scores
       await instrumentSnake(page);
       await page.route('**/api/jev', async r => {
-        const res = await r.fetch();
+        // The controller aborts requests it no longer needs; that is not a failure.
+        let res; try { res = await r.fetch(); } catch (e) { requests.push({ scenario: name, aborted: true, cost: null }); unknown++; return r.abort().catch(() => {}); }
         if (r.request().method() === 'POST') {
           const json = await res.json().catch(() => ({}));
           const cost = json.usage && json.usage.cost;
           if (typeof cost === 'number') total += cost; else unknown++;
           requests.push({ scenario: name, status: res.status(), cost: typeof cost === 'number' ? cost : null, generationId: json.generationId || null, choice: json.choice || null, latencyMs: json.latencyMs, candidates: json.candidates });
-          return r.fulfill({ response: res, json });
+          return r.fulfill({ response: res, json }).catch(() => {});
         }
-        return r.fulfill({ response: res });
+        return r.fulfill({ response: res }).catch(() => {});
       });
       await page.goto(base + '/arcade-jev'); await page.getByText('READY', { exact: true }).waitFor({ timeout: 20000 });
       await page.evaluate(f => { window.__foods = f ? [f] : []; window.__spawned = []; }, food);

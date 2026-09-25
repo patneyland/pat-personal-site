@@ -11,7 +11,7 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     // 1. Record: let the fixture eat a few apples, then slow it so it dies for real.
     const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.addInitScript(() => { sessionStorage.setItem('arcade_credited', '1'); localStorage.setItem('arcade_owner_secret', 'fixture-owner'); });
+    await page.addInitScript(() => { sessionStorage.setItem('arcade_credited', '1'); });
     const posts = [];
     await page.route('**/*.supabase.co/**', r => {
       if (r.request().method() === 'POST') { posts.push({ url: r.request().url(), body: r.request().postDataJSON() }); return r.fulfill({ json: { ok: true, improved: true, first: false } }); }
@@ -41,6 +41,8 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     await page.getByText('NEW PERSONAL BEST', { exact: true }).waitFor();
     assert.ok(posts[0].url.endsWith('/rpc/submit_jev_score'));
     assert.deepEqual(posts[0].body.p_replay, replay, 'Recording is posted with the score');
+    assert.equal(posts[0].body.p_secret, undefined, 'No owner key needed');
+    require('node:fs').writeFileSync('tmp/jev-replay-sample.json', JSON.stringify(replay));
     const kb = Buffer.byteLength(JSON.stringify(replay)) / 1024;
     console.log(`PASS recorded Jev game: score ${final.score}, ${final.tick} ticks, ${replay.moves.length} turns, ${kb.toFixed(1)} KB, posted with the score`);
     await page.close();

@@ -8,7 +8,7 @@ const artifacts=path.resolve(__dirname,'../../tmp/jev-overlay');require('node:fs
  try {
   const page=await browser.newPage({viewport:{width:1600,height:900}});
   const errors=[]; page.on('pageerror',e=>errors.push(e.message));
-  await page.addInitScript(()=>{sessionStorage.setItem('arcade_credited','1'); localStorage.setItem('arcade_owner_secret','fixture-owner'); Math.random=()=>0.529;});
+  await page.addInitScript(()=>{sessionStorage.setItem('arcade_credited','1'); Math.random=()=>0.529;});
   const submissions=[];
   await page.route('**/*.supabase.co/**',route=>{
     if(route.request().method()==='POST'){const url=route.request().url();submissions.push({url,body:route.request().postDataJSON()});return route.fulfill({json:url.includes('/rpc/submit_jev_score')?{ok:true,improved:true,first:true}:[{id:99}]});}
@@ -51,7 +51,8 @@ const artifacts=path.resolve(__dirname,'../../tmp/jev-overlay');require('node:fs
   assert.equal(submissions.length,1);
   assert.ok(submissions[0].url.endsWith('/rest/v1/rpc/submit_jev_score'));
   assert.equal(submissions[0].body.p_game,'snake'); assert.equal(submissions[0].body.p_mode,'classic');
-  assert.equal(submissions[0].body.p_secret,'fixture-owner');
+  assert.equal(submissions[0].body.p_secret,undefined,'No owner key needed');
+  assert.ok(Array.isArray(submissions[0].body.p_replay.moves),'Posted as a recording');
   const header=await page.locator('.jev-panel header').boundingBox();
   await page.mouse.move(header.x+20,header.y+15);await page.mouse.down();await page.mouse.move(280,130);await page.mouse.up();
   assert.ok((await page.locator('.jev-panel').boundingBox()).x<400,'Window is movable');
