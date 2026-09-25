@@ -23,6 +23,8 @@ const key='sk-or-test-fixture-not-a-real-key';
   await page.goto('http://127.0.0.1:3217/arcade-jev');
   await page.getByText('NOT CONNECTED',{exact:true}).waitFor();
   assert.equal(await page.locator('#j-api-key').getAttribute('type'),'password');
+  // Docked in the arcade screen, the key form starts folded; a visitor opens it.
+  if(await page.locator('#j-settings').getAttribute('open')===null) await page.locator('#j-settings summary').click();
   await page.locator('#j-api-key').fill(key);await page.locator('#j-save-key').click();
   await page.getByText('READY',{exact:true}).waitFor();
   assert.equal(await page.locator('#j-settings').getAttribute('open'),null);
