@@ -1,14 +1,15 @@
 // REAL Jev trials (costs money). Runs the actual /api/jev route against
-// OpenRouter with the key in OPENROUTER_API_KEY (never printed or saved), on
-// the real engine at normal speed. Only the first apple position is placed by
+// OpenRouter on the real engine at normal speed. The browser holds no key any
+// more, so the dev server needs JEV_OPENROUTER_KEY in its environment; this
+// script only checks the key is there before spending time on a run. Only the first apple position is placed by
 // the harness; everything after is the engine's own random food.
 //   node scripts/dev/trial-jev-edges.cjs <out.json> [edges|free] [seconds]
 const { chromium } = require('playwright');
 const fs = require('node:fs');
 const { instrumentSnake } = require('./jev-fixture.cjs');
 const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
-const key = process.env.OPENROUTER_API_KEY;
-if (!/^sk-or-[A-Za-z0-9_-]{10,250}$/.test(key || '')) { console.error('OPENROUTER_API_KEY missing or malformed.'); process.exit(1); }
+const key = process.env.JEV_OPENROUTER_KEY || process.env.OPENROUTER_API_KEY;
+if (!/^sk-or-[A-Za-z0-9_-]{10,250}$/.test(key || '')) { console.error('JEV_OPENROUTER_KEY missing or malformed; the dev server needs it too.'); process.exit(1); }
 const [out, mode = 'edges', seconds = '45'] = process.argv.slice(2);
 const edges = [
   ['right edge', { x: 23, y: 12 }], ['top edge', { x: 15, y: 0 }], ['bottom edge', { x: 15, y: 23 }], ['left edge', { x: 0, y: 12 }],
@@ -22,7 +23,7 @@ const scenarios = mode === 'free' ? Array.from({ length: Number(process.env.RUNS
   try {
     for (const [name, food] of scenarios) {
       const page = await browser.newPage({ viewport: { width: 1600, height: 900 } });
-      await page.addInitScript(k => { sessionStorage.setItem('arcade_credited', '1'); localStorage.setItem('arcade-jev-openrouter-key', k); }, key);
+      await page.addInitScript(() => { sessionStorage.setItem('arcade_credited', '1'); });
       await page.route('**/*.supabase.co/**', r => r.fulfill({ json: [] })); // never write real scores
       await instrumentSnake(page);
       await page.route('**/api/jev', async r => {

@@ -4,15 +4,17 @@
   var style = document.createElement('link'); style.rel = 'stylesheet'; style.href = '/arcade/jev-controller.css'; document.head.appendChild(style);
   document.documentElement.classList.add('jev-enabled');
   var panel = document.createElement('aside'); panel.className = 'jev-panel'; panel.setAttribute('aria-label', 'Jev live controls and command log');
-  panel.innerHTML = '<header><b>JEV</b><span id="j-status" role="status">CONNECTING</span><button id="j-collapse" aria-label="Collapse Jev log">−</button></header>' +
-    '<div class="j-body"><details id="j-settings" open><summary>OPENROUTER KEY <span id="j-key-state">NOT SAVED</span></summary>' +
-    '<form id="j-key-form"><label for="j-api-key">OpenRouter API key</label><input id="j-api-key" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-…" />' +
-    '<div><button type="submit" id="j-save-key">SAVE KEY</button><button type="button" id="j-forget-key">FORGET KEY</button></div><small>Saved in this browser. Sent securely through this site to OpenRouter.</small></form></details><div class="j-keys" role="img" aria-label="Jev arrow keys">' +
+  panel.innerHTML = '<header><i class="j-lamp" aria-hidden="true"></i><b>JEV</b><span class="j-sub">AI PLAYER</span><span id="j-status" role="status">CONNECTING</span><button id="j-collapse" aria-label="Collapse Jev log">−</button></header>' +
+    '<div class="j-body"><div class="j-top"><div class="j-keys" role="img" aria-label="Jev arrow keys">' +
     '<div class="j-key j-up" data-direction="up">↑<small>UP</small></div><div class="j-key j-left" data-direction="left">←<small>LEFT</small></div>' +
     '<div class="j-key j-down" data-direction="down">↓<small>DOWN</small></div><div class="j-key j-right" data-direction="right">→<small>RIGHT</small></div></div>' +
-    '<label class="j-timing" for="j-pace">TIMING<select id="j-pace"><option value="plan">Real time · planned turns</option><option value="arcade">Real time · reactive</option></select></label><div class="j-best">JEV BEST <b id="j-best">0</b></div><div class="j-controls"><button id="j-start" disabled>START JEV</button><button id="j-pause" disabled>PAUSE</button></div>' +
+    '<div class="j-readout"><div class="j-best">JEV BEST <b id="j-best">0</b></div>' +
     '<div class="j-stats"><span>COMMANDS <b id="j-count">0</b></span><span>RESPONSE <b id="j-latency">···</b></span></div>' +
-    '<div class="j-spend">SESSION SPEND <b id="j-spend">$0.000000</b></div><p id="j-notice" role="status"></p><div class="j-log-head"><span>COMMAND LOG</span><button id="j-export" disabled>↓ SAVE</button></div>' +
+    '<div class="j-spend">SESSION SPEND <b id="j-spend">$0.000000</b></div></div></div>' +
+    '<div id="j-mode" class="j-mode" role="status"><span class="j-mode-tag"></span><span class="j-mode-text"></span></div>' +
+    '<div class="j-controls"><button id="j-start" disabled>START JEV</button><button id="j-pause" disabled>PAUSE</button></div>' +
+    '<label class="j-timing" for="j-pace">TIMING<select id="j-pace"><option value="plan">Real time · planned turns</option><option value="arcade">Real time · reactive</option></select></label>' +
+    '<p id="j-notice" role="status"></p><div class="j-log-head"><span>COMMAND LOG</span><button id="j-export" disabled>↓ SAVE</button></div>' +
     '<ol id="j-log" tabindex="0" aria-label="Jev commands, newest first"></ol><footer><span id="j-model">JEV</span><span id="j-timing-label">REAL TIME / PLANNED TURNS</span></footer></div>';
   document.body.appendChild(panel);
   var $ = function (id) { return document.getElementById(id); };
@@ -35,10 +37,10 @@
   var bestKey = 'jev-snake-realtime-best-v1';
   try { best = Number(localStorage.getItem(bestKey)) || 0; } catch (_) {}
   $('j-best').textContent = best;
-  var keyStorage = 'arcade-jev-openrouter-key', savedKey = '', checkVersion = 0;
+  var checkVersion = 0;
   var charges = [], spend = 0, unknownCharges = 0;
-  try { savedKey = localStorage.getItem(keyStorage) || ''; } catch (_) {}
-  function headers() { return savedKey ? { 'x-openrouter-key': savedKey } : {}; }
+  /* Pat pays for Jev. The site's own key is the only one there is, so the
+     browser never holds, sends or asks for one. */
   function recordCharge(answer, requestRun, provider) {
     // Requests paid by the site's own Jev key report their cost too.
     if ((answer && answer.provider) === 'OpenRouter' || answer.paidBy === 'site') provider = 'OpenRouter';
@@ -50,7 +52,7 @@
     $('j-spend').textContent = '$' + spend.toFixed(6) + (unknownCharges ? ' + unknown' : '');
     $('j-export').disabled = false;
   }
-  function status(text) { $('j-status').textContent = text; }
+  function status(text) { $('j-status').textContent = text; panel.classList.toggle('j-live', text === 'PLAYING'); }
   function dropSchedule(outcome) {
     schedule.forEach(function (turn) { if (turn.plan.outcome === 'queued') turn.plan.outcome = outcome; else if (turn.plan.outcome === 'applied') turn.plan.dropped = outcome; });
     if (horizon && horizon.plan && horizon.plan.outcome === 'queued') horizon.plan.outcome = outcome;
@@ -64,6 +66,17 @@
     $('j-start').textContent = state === 'over' ? 'RESTART JEV' : 'START JEV';
     $('j-pause').disabled = !enabled || (state !== 'playing' && state !== 'paused');
     $('j-pause').textContent = state === 'paused' ? 'RESUME' : 'PAUSE';
+    mode(state);
+  }
+  // Says what is on the glass: Jev's best game on replay, or Jev playing now.
+  function mode(state) {
+    var live = enabled && runPlayer === 'JEV', view = 'start', tag = 'WATCH LIVE', text = 'Press START JEV to watch him play a live game.';
+    if (live && (state === 'playing' || state === 'paused')) { view = 'live'; tag = 'LIVE'; text = 'Jev is playing this game now. Every key he presses lands in the log.'; }
+    else if (live && state === 'over') { view = 'over'; tag = 'FINISHED'; text = 'Press RESTART JEV to watch another live game.'; }
+    else if (replayScore != null && (!state || state === 'idle')) { view = 'replay'; tag = 'REPLAY'; text = 'You are watching Jev’s best game (' + Number(replayScore).toLocaleString('en-US') + '). Press START JEV to watch him play a live one.'; }
+    if (panel.classList.contains('j-narrow')) text = { start: 'Start him to watch live.', live: 'Jev is playing now.', over: 'Restart to watch again.', replay: 'Jev’s best game. Start him to watch live.' }[view];
+    var box = $('j-mode'); box.dataset.mode = view;
+    box.querySelector('.j-mode-tag').textContent = tag; box.querySelector('.j-mode-text').textContent = text;
   }
   function beginRun() {
     clearRequest();
@@ -178,13 +191,13 @@
     var holdPath = [], target = hold(base, current.tick + delay, holdPath);
     // A new apple right in front of the escape: let the engine eat it, then replan.
     if (target.tick === base.tick && schedule.some(function (t) { return t.tick === base.tick; })) { timer = setTimeout(planNext, 40); return; }
-    var requestRun = run, provider = savedKey ? 'OpenRouter' : 'TypeSafe', charged = false, started = performance.now();
+    var requestRun = run, provider = 'OpenRouter', charged = false, started = performance.now();
     var abort = new AbortController(), timeout = setTimeout(function(){abort.abort();},20000); request = abort;
     var entry = { at:new Date().toISOString(), observed:current, board:target, decisionDelayTicks:delay, outcome:'pending' };
     requestRun.plans.push(entry);
     status('PLANNING');
     try {
-      var response = await fetch('/api/jev', { method:'POST', headers:Object.assign({'Content-Type':'application/json'},headers()), body:JSON.stringify(Object.assign({},target,{plan:true,decisionDelayTicks:delay})), signal:abort.signal });
+      var response = await fetch('/api/jev', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(Object.assign({},target,{plan:true,decisionDelayTicks:delay})), signal:abort.signal });
       var answer = await response.json(); recordCharge(answer,requestRun,provider); charged = true;
       entry.latencyMs = Math.round(performance.now()-started);
       if (token !== generation || instance !== active || active.snapshot().state !== 'playing') { entry.outcome = 'cancelled'; return; }
@@ -259,12 +272,12 @@
     if (pace === 'plan') return planNext();
     if (!enabled || !instance || instance.snapshot().state !== 'playing') return;
     var token = generation, active = instance, before = active.snapshot(), started = performance.now();
-    var requestRun = run, provider = savedKey ? 'OpenRouter' : 'TypeSafe', charged = false;
+    var requestRun = run, provider = 'OpenRouter', charged = false;
     var abort = new AbortController(); request = abort;
     var timeout = setTimeout(function () { abort.abort(); }, 20000);
     status('DECIDING');
     try {
-      var response = await fetch('/api/jev', { method: 'POST', headers: Object.assign({ 'Content-Type': 'application/json' }, headers()), body: JSON.stringify(before), signal: abort.signal });
+      var response = await fetch('/api/jev', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(before), signal: abort.signal });
       var answer = await response.json();
       recordCharge(answer, requestRun, provider); charged = true;
       if (token !== generation || instance !== active || active.snapshot().state !== 'playing') return;
@@ -291,7 +304,7 @@
   var replayCount = 0, replayScore = null;
   function replayStarted() {
     replayCount = 0; $('j-log').replaceChildren(); $('j-count').textContent = '0';
-    planView.textContent = 'REPLAY' + (replayScore ? ' · ' + replayScore : '');
+    planView.textContent = ''; mode(instance && instance.snapshot().state);
   }
   function replayKey(direction) {
     var tick = instance ? instance.snapshot().tick : 0, row = document.createElement('li');
@@ -303,23 +316,21 @@
     clearTimeout(flash); flash = setTimeout(function () { panel.querySelectorAll('.j-key').forEach(function (key) { key.classList.remove('active'); }); }, 120);
     $('j-count').textContent = replayCount;
   }
-  // Docked in the empty screen between the play field and the scoreboard,
-  // the play field being snake.js's square: 92% of the view's shorter side,
-  // in whole cells. Dragging the window takes it out of the dock.
+  // Desktop: the play field sits on the left of the glass (jev-controller.css
+  // pins .stage there) and the window fills the glass to its right, top to
+  // bottom of the play field. Narrow screens get the floating window.
   var dragged = false, docked = null;
+  function undock() { panel.classList.remove('j-docked', 'j-narrow'); panel.removeAttribute('style'); }
   function dock() {
-    var view = document.querySelector('.snake-view');
-    if (dragged || !view) return;
-    var r = view.getBoundingClientRect(), side = Math.floor(Math.min(r.width, r.height) * 0.92 / 24) * 24;
-    var gapLeft = r.left + Math.round((r.width - side) / 2) + side, gap = r.right - gapLeft;
-    if (!side || gap < 150) { panel.classList.remove('j-docked'); panel.removeAttribute('style'); return; }
-    var width = Math.min(264, gap - 12);
-    // Keep the log in view: the key form starts folded when docked.
-    if (!panel.classList.contains('j-docked')) $('j-settings').open = false;
-    panel.classList.add('j-docked');
-    panel.style.left = Math.round(gapLeft + (gap - width) / 2) + 'px';
-    panel.style.top = Math.round(r.top + (r.height - side) / 2) + 'px';
-    panel.style.width = width + 'px'; panel.style.height = side + 'px';
+    var glass = document.querySelector('.screen'), stage = document.querySelector('.stage');
+    if (dragged || !glass || !stage) return;
+    var s = glass.getBoundingClientRect(), st = stage.getBoundingClientRect();
+    var left = st.right + Math.round(s.width * 0.025), width = Math.round(s.right - s.width * 0.035 - left);
+    if (innerWidth <= 1000 || !st.width || width < 260) { undock(); return; }
+    document.documentElement.style.setProperty('--jev-play', Math.round(st.width) + 'px');
+    panel.classList.add('j-docked'); panel.classList.remove('j-collapsed'); panel.classList.toggle('j-narrow', width < 400); mode(instance && instance.snapshot().state);
+    panel.style.left = Math.round(left) + 'px'; panel.style.top = Math.round(st.top) + 'px';
+    panel.style.width = width + 'px'; panel.style.height = Math.round(st.height) + 'px';
     panel.style.right = 'auto'; panel.style.bottom = 'auto';
   }
   window.addEventListener('resize', dock); window.addEventListener('scroll', dock, true);
@@ -364,7 +375,7 @@
     };
     var mounted = mount(host, proxy, { controlled: false }); instance = mounted;
     var view = host.querySelector('.snake-view');
-    if (view && window.ResizeObserver) { docked = new ResizeObserver(dock); docked.observe(view); }
+    if (view && window.ResizeObserver) { docked = new ResizeObserver(dock); docked.observe(view); docked.observe(document.querySelector('.screen')); }
     dock();
     var start = mounted.start, destroy = mounted.destroy;
     mounted.start = function () {
@@ -374,7 +385,7 @@
       if (enabled && mounted.snapshot().state === 'playing') beginRun();
       buttons();
     };
-    mounted.destroy = function () { if (docked) docked.disconnect(); docked = null; panel.classList.remove('j-docked'); if (!dragged) panel.removeAttribute('style'); clearRequest(); enabled = false; runPlayer = null; instance = null; destroy(); status('SELECT SNAKE'); buttons(); };
+    mounted.destroy = function () { if (docked) docked.disconnect(); docked = null; if (!dragged) undock(); else panel.classList.remove('j-docked'); clearRequest(); enabled = false; runPlayer = null; instance = null; destroy(); status('SELECT SNAKE'); buttons(); };
     buttons(); return mounted;
   };
   $('j-pace').addEventListener('change', function () {
@@ -416,7 +427,7 @@
   });
   var drag = null, header = panel.querySelector('header');
   header.addEventListener('pointerdown', function (e) {
-    if (e.target.closest('button') || e.button !== 0) return;
+    if (e.target.closest('button') || e.button !== 0 || panel.classList.contains('j-docked')) return;
     var rect = panel.getBoundingClientRect(); drag = { x: e.clientX - rect.left, y: e.clientY - rect.top, id: e.pointerId };
     header.setPointerCapture(e.pointerId); e.preventDefault();
   });
@@ -439,48 +450,20 @@
   });
   window.addEventListener('pagehide', clearRequest);
   window.__jevRuns = runs; // read-only view for local test scripts
-  function paintKey() {
-    $('j-key-state').textContent = savedKey ? 'SAVED' : 'NOT SAVED';
-    $('j-api-key').value = '';
-    $('j-api-key').placeholder = savedKey ? 'Key saved · enter to replace' : 'sk-or-…';
-    $('j-forget-key').disabled = !savedKey;
-  }
-  async function verify(candidate, save) {
+  async function verify() {
     var version = ++checkVersion; ready = false; buttons(); status('CONNECTING');
-    $('j-save-key').disabled = true;
     try {
-      var response = await fetch('/api/jev', { cache: 'no-store', headers: candidate ? { 'x-openrouter-key': candidate } : {} });
+      var response = await fetch('/api/jev', { cache: 'no-store' });
       var data = await response.json();
       if (version !== checkVersion) return;
-      if (!response.ok) throw new Error(data.error || 'Could not verify key.');
+      if (!response.ok) throw new Error(data.error || 'Could not reach Jev.');
       ready = !!data.ready;
-      if (save && ready) {
-        savedKey = candidate;
-        try { localStorage.setItem(keyStorage, candidate); } catch (_) { $('j-notice').textContent = 'Key works for this page; browser storage is unavailable.'; }
-      }
-      paintKey(); status(ready ? 'READY' : 'NOT CONNECTED');
-      // Fold after a working key; open for a missing one, except in the dock,
-      // where it stays however the visitor left it.
-      if (ready) $('j-settings').open = false; else if (!panel.classList.contains('j-docked')) $('j-settings').open = true;
-      if (ready) $('j-notice').textContent = '';
-      else $('j-notice').textContent = 'Add your OpenRouter key to connect Jev.';
+      status(ready ? 'READY' : 'NOT CONNECTED');
+      $('j-notice').textContent = '';
     } catch (error) {
       if (version !== checkVersion) return;
-      ready = false; status('NOT CONNECTED'); $('j-notice').textContent = error.message; $('j-settings').open = true;
-    } finally { if (version === checkVersion) { $('j-save-key').disabled = false; buttons(); } }
+      ready = false; status('NOT CONNECTED');
+    } finally { if (version === checkVersion) buttons(); }
   }
-  $('j-key-form').addEventListener('submit', function (e) {
-    e.preventDefault();
-    var candidate = $('j-api-key').value.trim();
-    if (!/^sk-or-[A-Za-z0-9_-]{10,250}$/.test(candidate)) { $('j-notice').textContent = 'Enter a valid OpenRouter key.'; return; }
-    if (instance && instance.snapshot().state === 'playing') instance.pause();
-    clearRequest(); verify(candidate, true);
-  });
-  $('j-forget-key').addEventListener('click', function () {
-    if (instance && instance.snapshot().state === 'playing') instance.pause();
-    clearRequest(); if (runPlayer) runPlayer = 'JEV + HUMAN'; savedKey = ''; ready = false; enabled = false;
-    try { localStorage.removeItem(keyStorage); } catch (_) {}
-    paintKey(); verify('', false);
-  });
-  paintKey(); verify(savedKey, false);
+  verify();
 })();

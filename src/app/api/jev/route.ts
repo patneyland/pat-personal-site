@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     for (const [id, h] of siteHits) if (now - h.start > 3_600_000) siteHits.delete(id);
     const site = siteHits.get(ip) || { start: now, count: 0 };
     siteHits.set(ip, site);
-    if (++site.count > SITE_PER_HOUR) return reply({ error: 'Free Jev games are used up for this hour. Add your own OpenRouter key to keep watching.' }, 429);
+    if (++site.count > SITE_PER_HOUR) return reply({ error: 'Free Jev games are used up for this hour. Try again later.' }, 429);
   }
   let body;
   try {
@@ -233,7 +233,7 @@ export async function POST(req: NextRequest) {
     const result = await upstream.json().catch(() => ({}));
     // Record actual returned cost, including responses whose move is rejected or arrives late.
     if (orKey) console.info('Jev OpenRouter usage', JSON.stringify({ paidBy: siteKey ? 'site' : 'visitor', id: result.id || null, cost: result.usage?.cost ?? null, usage: result.usage || null, status: upstream.status }));
-    if (!upstream.ok && siteKey && (upstream.status === 401 || upstream.status === 402)) return reply({ error: 'Free Jev play is paused. Add your own OpenRouter key to keep watching.', usage: result.usage, generationId: result.id }, 503);
+    if (!upstream.ok && siteKey && (upstream.status === 401 || upstream.status === 402)) return reply({ error: 'Jev is off right now. Try again later.', usage: result.usage, generationId: result.id }, 503);
     if (!upstream.ok) return reply({ error: upstream.status === 401 ? 'OpenRouter rejected this key. Save a new key.' : upstream.status === 402 ? 'OpenRouter credits are exhausted.' : `Jev request failed (${upstream.status}).`, usage: result.usage, generationId: result.id }, upstream.status === 401 || upstream.status === 402 ? upstream.status : 502);
     const answer = result.answers?.move;
     if (!answer || !Object.hasOwn(criteria, answer.choice)) return reply({ error: 'Jev returned an invalid move.', usage: result.usage, generationId: result.id }, 502);

@@ -1,7 +1,7 @@
 .jev-panel{position:fixed;right:20px;top:90px;width:264px;height:min(620px,calc(100dvh - 110px));box-shadow:0 12px 42px #0009;min-height:0;align-self:stretch;display:flex;flex-direction:column;background:#161616;border:1px solid #38382f;color:#e8e2d9;font-family:"JetBrains Mono",monospace;z-index:100}.jev-panel header{cursor:move;touch-action:none;user-select:none;display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid #38382f;font-size:12px}.jev-panel button{font:inherit;color:inherit;cursor:pointer;background:none;border:1px solid #48483b;padding:9px;font-size:10px}.jev-panel button:disabled{opacity:.35;cursor:default}.jev-panel button:hover:not(:disabled){color:#c6f28a;border-color:#c6f28a}.jev-panel button:focus-visible,.jev-panel ol:focus-visible{outline:2px solid #c6f28a;outline-offset:2px}#j-status{margin-left:auto;font-size:8px;color:#b2b2a5}#j-collapse{border:0;padding:0;font-size:20px}.j-body{display:flex;flex-direction:column;flex:1;min-height:0}.j-keys{display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(2,54px);justify-content:center;gap:7px;padding:20px 0}.j-key{display:flex;flex-direction:column;align-items:center;justify-content:center;font:25px/1.1 monospace;background:#242421;border:1px solid #4b4b40;border-bottom-width:4px;border-radius:4px;color:#a8aa9e}.j-key small{font:8px/1.6 "JetBrains Mono",monospace}.j-up{grid-column:2}.j-left{grid-column:1;grid-row:2}.j-down{grid-column:2;grid-row:2}.j-right{grid-column:3;grid-row:2}.j-key.active{background:#c6f28a;color:#142009;border-color:#8ea85d;transform:translateY(2px)}.j-controls{display:flex;gap:8px;padding:0 16px 18px}#j-start{background:#c6f28a;color:#142009;border-color:#c6f28a}.j-stats{display:flex;justify-content:space-between;padding:0 16px;font-size:8px;color:#aaa99c}.j-stats b{display:block;color:#e8e2d9;font-size:13px;padding-top:5px;font-weight:400}#j-notice{color:#ffb545;font-size:10px;line-height:1.7;padding:10px 16px;min-height:20px}.j-log-head{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #38382f;border-bottom:1px solid #38382f;padding:10px 16px;font-size:9px}.j-log-head button{border:0;padding:0;font-size:9px}#j-log{flex:1;min-height:75px;overflow:auto;list-style:none;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:#555548 transparent}#j-log li{display:grid;grid-template-columns:34px 22px 1fr auto;gap:5px;align-items:center;padding:10px 14px;border-bottom:1px solid #2b2b25;font-size:10px}#j-log li:first-child{color:#c6f28a;background:#c6f28a09}#j-log li span:first-child,#j-log li span:last-child{font-size:8px;color:#9c9e8d}#j-log li span:nth-child(2){font-size:18px}.jev-panel footer{display:flex;justify-content:space-between;padding:12px 14px;border-top:1px solid #38382f;font-size:7px;color:#aaa99c;gap:8px}.jev-panel.j-collapsed{flex-basis:150px;align-self:flex-start}.j-collapsed .j-body{display:none}
 @media(max-width:720px){.jev-panel{position:fixed;right:8px;top:70px;bottom:auto;width:232px;height:min(560px,76dvh);z-index:80}.jev-panel.j-collapsed{height:auto;width:150px}}
 
-#j-settings{border-bottom:1px solid #38382f;font-size:9px}#j-settings summary{cursor:pointer;padding:12px 16px;color:#bbbbae}#j-key-state{float:right;font-size:8px;color:#929785}#j-key-form{padding:0 16px 12px}#j-key-form label{display:block;margin-bottom:6px}#j-api-key{box-sizing:border-box;width:100%;background:#0d0d0d;border:1px solid #48483b;border-radius:2px;padding:9px;color:#e8e2d9;font:11px monospace}#j-key-form>div{display:flex;gap:8px;margin:8px 0}#j-key-form small{font-size:8px;line-height:1.6;color:#a4a498;display:block}.j-spend{display:flex;justify-content:space-between;padding:10px 16px 0;font-size:8px;color:#aaa99c}.j-spend b{font-size:10px;color:#c6f28a;font-weight:400}.jev-panel{height:min(720px,calc(100dvh - 110px))}.j-body{overflow-y:auto}.j-keys{flex-shrink:0}
+.j-spend{display:flex;justify-content:space-between;padding:10px 16px 0;font-size:8px;color:#aaa99c}.j-spend b{font-size:10px;color:#c6f28a;font-weight:400}.jev-panel{height:min(720px,calc(100dvh - 110px))}.j-body{overflow-y:auto}.j-keys{flex-shrink:0}
 
 
 .j-timing,.j-best{display:flex;align-items:center;justify-content:space-between;padding:0 16px 12px;font-size:8px;color:#aaa99c}.j-timing select{font:10px "JetBrains Mono",monospace;background:#25251f;border:1px solid #48483b;color:#e8e2d9;padding:6px}.j-best b{color:#c6f28a;font-size:12px;font-weight:400}
@@ -10,7 +10,124 @@
 .jev-panel.j-docked{box-shadow:0 0 0 1px #38382f,0 8px 30px #0008}.jev-panel.j-docked.j-collapsed{height:auto!important}
 #j-plan{margin:0;padding:8px 16px 0;font:9px/1.5 "JetBrains Mono",monospace;color:#c6f28a;letter-spacing:.05em}#j-plan:empty{display:none}
 .j-body>*:not(#j-log){flex-shrink:0}
-.j-docked header{padding:10px 12px}.j-docked .j-keys{grid-template-columns:repeat(3,minmax(0,50px));grid-template-rows:repeat(2,44px);gap:6px;padding:12px 0}.j-docked .j-key{font-size:20px}.j-docked .j-timing,.j-docked .j-best{padding:0 12px 8px;gap:6px}.j-docked .j-timing select{min-width:0;max-width:64%}.j-docked .j-controls{padding:0 12px 10px}.j-docked .j-stats,.j-docked .j-spend{padding-left:12px;padding-right:12px}.j-docked #j-plan{padding:6px 12px 0}.j-docked #j-notice{padding:6px 12px;min-height:0}.j-docked .j-log-head{padding:8px 12px}.j-docked #j-log{min-height:60px}.j-docked #j-log li{padding:7px 10px;grid-template-columns:30px 18px 1fr auto}.j-docked #j-settings summary{padding:10px 12px}.j-docked #j-key-form{padding:0 12px 10px}.j-docked footer{padding:8px 10px}
+.j-docked header{padding:10px 12px}.j-docked .j-keys{grid-template-columns:repeat(3,minmax(0,50px));grid-template-rows:repeat(2,44px);gap:6px;padding:12px 0}.j-docked .j-key{font-size:20px}.j-docked .j-timing,.j-docked .j-best{padding:0 12px 8px;gap:6px}.j-docked .j-timing select{min-width:0;max-width:64%}.j-docked .j-controls{padding:0 12px 10px}.j-docked .j-stats,.j-docked .j-spend{padding-left:12px;padding-right:12px}.j-docked #j-plan{padding:6px 12px 0}.j-docked #j-notice{padding:6px 12px;min-height:0}.j-docked .j-log-head{padding:8px 12px}.j-docked #j-log{min-height:60px}.j-docked #j-log li{padding:7px 10px;grid-template-columns:30px 18px 1fr auto}.j-docked footer{padding:8px 10px}
 /* Jev's viewing page: the Jev window is the only control. No Gary, no coin,
    no dial or game choices, and no way to start a human game from here. */
 html.jev-enabled .gary,html.jev-enabled .coin-module,html.jev-enabled .dial,html.jev-enabled .dial-ticks,html.jev-enabled .challenge-bar,html.jev-enabled .pause-btn,html.jev-enabled .screen-ui .ov-again{display:none!important}
+
+/* ═══ Jev's page, desktop: Jev is the show ═══════════════════════════════
+   A compact scoreboard, a wider tube, the play field pinned to the left of
+   the glass, and the Jev window filling the glass beside it (jev-controller.js
+   docks it to the .stage). Below 1001px the page keeps the floating window. */
+.j-top,.j-readout{display:contents}
+.j-lamp{width:7px;height:7px;border-radius:50%;background:#5c5d52;flex-shrink:0}
+.j-sub{display:none}
+/* Nobody but Jev plays here, so the human controls hint and start prompt go. */
+html.jev-enabled .ov-controls,html.jev-enabled .insert{display:none}
+@media (min-width:1001px){
+  html.jev-enabled .rail{flex-basis:228px;min-width:0;gap:.9rem}
+  html.jev-enabled .back-link{font-size:.5rem;padding:.6rem .8rem;letter-spacing:.08em}
+  html.jev-enabled .layout{gap:1.75rem}
+  html.jev-enabled .rail-head h2{font-size:.52rem}
+  html.jev-enabled .rail-head span{font-size:.55rem}
+  html.jev-enabled .champion{padding:0 0 .9rem}
+  html.jev-enabled .champion-label{font-size:.48rem;margin-bottom:.75rem}
+  html.jev-enabled .champion-body{gap:.45rem}
+  html.jev-enabled .champion-initials{font-size:.8rem}
+  html.jev-enabled .champion-score{font-size:1.25rem}
+  html.jev-enabled .champion-meta{margin-top:.75rem;font-size:.44rem}
+  html.jev-enabled .break span{font-size:.44rem}
+  html.jev-enabled .board li{padding:.4rem .2rem;gap:.6rem}
+  html.jev-enabled .b-rank{font-size:.56rem}
+  html.jev-enabled .b-name,html.jev-enabled .b-score{font-size:.58rem}
+
+  /* 16:10 glass instead of 4:3: the room goes to Jev's window. */
+  /* No dial on this page, so the chin under the glass shrinks: 70px is the
+     bezel's vertical padding here, where the arcade's is 118px. */
+  html.jev-enabled .crt-stage{width:min(100%,calc((100vh - 122px) * 16 / 10 + 52px))}
+  html.jev-enabled .bezel{width:min(100%,calc((100cqh - 70px) * 16 / 10 + 52px));padding-bottom:44px}
+  html.jev-enabled .screen{aspect-ratio:16/10}
+
+  /* The play field: a square on the left. Overlays and the score line
+     follow it, so the title and game-over sit over the snake, not the window. */
+  html.jev-enabled .stage,html.jev-enabled .screen-ui .overlay{inset:11% auto 7% 4.5%;aspect-ratio:1/1}
+  html.jev-enabled .screen-ui .overlay{padding:6%;gap:.9rem}
+  html.jev-enabled .status{left:5%;right:auto;width:var(--jev-play,52%)}
+  html.jev-enabled .vol-btn{bottom:auto;top:3%}
+
+  .jev-panel.j-docked{background:linear-gradient(180deg,#171815,#121310);border:1px solid #3a4031;border-radius:6px;box-shadow:0 0 0 1px #000,0 18px 50px #000c,inset 0 1px 0 #ffffff0d;overflow:hidden}
+  .j-docked header{cursor:default;padding:14px 18px;gap:10px;font-size:15px;letter-spacing:.14em;background:#0f100d}
+  .j-docked header b{font-family:'Press Start 2P',monospace;font-size:13px;font-weight:400;color:#c6f28a}
+  .j-docked .j-sub{display:inline;font-size:9px;letter-spacing:.14em;color:#8d9080}
+  .j-docked #j-status{font-size:9px;letter-spacing:.1em;padding:5px 9px;border:1px solid #3a3b33;border-radius:20px;color:#c9c9bb}
+  .j-docked #j-collapse{display:none}
+  .j-docked .j-lamp{width:9px;height:9px}
+  .jev-panel.j-live .j-lamp{background:#c6f28a;box-shadow:0 0 12px #c6f28acc;animation:j-pulse 1.4s ease-in-out infinite}
+  .jev-panel.j-live #j-status{color:#c6f28a;border-color:#5d7440}
+  .j-docked .j-body{overflow-y:auto;scrollbar-width:none}
+
+  .j-docked .j-top{display:grid;grid-template-columns:auto minmax(0,1fr);gap:22px;align-items:center;padding:20px 18px 16px}
+  .j-docked .j-keys{grid-template-columns:repeat(3,62px);grid-template-rows:repeat(2,56px);gap:7px;padding:0}
+  .j-docked .j-key{font-size:24px;border-radius:6px;transition:background 70ms,color 70ms,transform 70ms}
+  .j-docked .j-key small{font-size:8px;letter-spacing:.08em}
+  .j-docked .j-key.active{box-shadow:0 0 22px #c6f28a55}
+  .j-docked .j-readout{display:grid;grid-template-columns:1fr 1fr;gap:14px 12px;align-content:center}
+  .j-docked .j-best,.j-docked .j-stats span,.j-docked .j-spend{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:0;font-size:8px;letter-spacing:.1em;color:#8d9080}
+  .j-docked .j-stats{display:contents}
+  .j-docked .j-best b{font:400 18px/1 'Press Start 2P',monospace;color:#c6f28a;padding:0}
+  .j-docked .j-stats b{font-size:17px;line-height:1;padding:0;color:#e8e2d9}
+  .j-docked .j-spend b{font-size:13px;line-height:1.3;color:#c6f28a}
+
+  .j-docked .j-controls{padding:0 18px 12px;gap:8px}
+  .j-docked .j-controls button{padding:12px 14px;font-size:11px;letter-spacing:.1em;border-radius:3px}
+  .j-docked #j-start{flex:1;font-weight:700}
+  .j-docked #j-pause{min-width:92px}
+  .j-docked .j-timing{padding:0 18px 12px;font-size:8px;letter-spacing:.1em;color:#8d9080}
+  .j-docked .j-timing select{max-width:none;padding:7px 8px;font-size:10px;border-radius:3px}
+  .j-docked #j-plan{padding:0 18px 8px;font-size:10px}
+  .j-docked #j-notice{padding:0 18px 8px;font-size:10px}
+  .j-docked #j-notice:empty{display:none}
+  .j-docked .j-log-head{padding:10px 18px;font-size:9px;letter-spacing:.12em;background:#0f100d}
+  .j-docked #j-log{min-height:40px}
+  .j-docked #j-log li{grid-template-columns:44px 24px 1fr auto;padding:7px 18px;font-size:11px;line-height:1.3}
+  .j-docked #j-log li span:nth-child(2){font-size:17px}
+  .j-docked footer{padding:10px 18px;font-size:8px;letter-spacing:.08em;background:#0f100d}
+}
+/* Short or narrow tubes: the keys and readout tighten so the log keeps room. */
+@media (min-width:1001px) and (max-height:800px){
+  .j-docked .j-top{padding:14px 16px 12px;gap:16px}
+  .j-docked .j-keys{grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,46px);gap:6px}
+  .j-docked .j-key{font-size:20px}
+  .j-docked .j-key small{display:none}
+  .j-docked header{padding:11px 16px}
+  .j-docked .j-controls button{padding:9px 12px}
+  .j-docked .j-controls,.j-docked .j-timing{padding-bottom:9px}
+  .j-docked .j-best b{font-size:15px}.j-docked .j-stats b{font-size:14px}.j-docked .j-spend b{font-size:11px}
+}
+/* A narrow window (small laptop screens): readout drops under the keys. */
+@media (min-width:1001px){
+  .j-docked.j-narrow .j-top{grid-template-columns:1fr;gap:12px;padding:12px 14px 10px;justify-items:center}
+  .j-docked.j-narrow .j-keys{grid-template-columns:repeat(3,48px);grid-template-rows:repeat(2,40px);gap:5px}
+  .j-docked.j-narrow .j-key{font-size:18px}.j-docked.j-narrow .j-key small{display:none}
+  .j-docked.j-narrow .j-readout{width:100%;grid-template-columns:repeat(4,auto);justify-content:space-between;gap:8px}
+  .j-docked.j-narrow .j-best b{font-size:12px}.j-docked.j-narrow .j-stats b{font-size:12px}.j-docked.j-narrow .j-spend b{font-size:10px}
+  .j-docked.j-narrow .j-sub,.j-docked.j-narrow footer,.j-docked.j-narrow .j-timing{display:none}
+  .j-docked.j-narrow .j-controls,.j-docked.j-narrow .j-timing{padding-left:14px;padding-right:14px}
+}
+@keyframes j-pulse{50%{opacity:.45}}
+@media (prefers-reduced-motion:reduce){.jev-panel.j-live .j-lamp{animation:none}}
+
+/* What is on the glass right now: a replay of Jev's best, or Jev live. The
+   board's own JEV tag is dropped here; this banner says it more plainly. */
+html.jev-enabled .ov-demo-tag{display:none!important}
+.j-mode{display:flex;align-items:flex-start;gap:10px;margin:0 16px 12px;padding:10px 12px;border:1px solid #3a3b33;border-radius:4px;background:#1b1c18;font-size:10px;line-height:1.55;color:#c9c9bb}
+.j-mode-tag{flex-shrink:0;padding:3px 7px;border-radius:3px;font-size:9px;font-weight:700;letter-spacing:.12em;background:#3a3b33;color:#e8e2d9}
+.j-mode[data-mode=replay]{border-color:#6b5426;background:#211b10}
+.j-mode[data-mode=replay] .j-mode-tag{background:#ffb545;color:#1d1405}
+.j-mode[data-mode=live]{border-color:#5d7440;background:#161d10}
+.j-mode[data-mode=live] .j-mode-tag{background:#c6f28a;color:#142009;animation:j-pulse 1.4s ease-in-out infinite}
+.j-docked .j-mode{margin:0 18px 12px;font-size:11px}
+.j-docked.j-narrow .j-mode{margin:0 14px 9px;padding:7px 10px;font-size:10px;align-items:center}
+/* While a replay runs, START JEV is the thing to press. */
+.jev-panel:has(.j-mode[data-mode=replay]) #j-start:not(:disabled),.jev-panel:has(.j-mode[data-mode=start]) #j-start:not(:disabled){box-shadow:0 0 0 3px #c6f28a33,0 0 24px #c6f28a44}
+@media (prefers-reduced-motion:reduce){.j-mode-tag{animation:none!important}}
