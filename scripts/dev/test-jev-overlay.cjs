@@ -48,12 +48,11 @@ const artifacts=path.resolve(__dirname,'../../tmp/jev-overlay');require('node:fs
   await page.locator('#j-pause').click();
   await page.waitForFunction(()=>document.querySelector('.screen-ui').dataset.state==='over');
   assert.ok(boards.some(b=>b.snake[0].x>=12),'Original game keeps moving while Jev awaits a response');
-  assert.ok(await page.locator('.ov-result').textContent() !== 'YOU: 0');
-  await page.locator('.ov-save').click();
-  assert.equal(await page.locator('#ac-name').inputValue(),'JEV');
-  assert.equal(await page.locator('#ac-name').getAttribute('readonly'),'');
-  await page.locator('.ov-btn').click();
-  await page.getByText('ON THE BOARD',{exact:true}).waitFor();
+  assert.match(await page.locator('.ov-result').textContent(),/^JEV: [1-9]/);
+  // A new Jev best saves itself: no save button, no name form.
+  await page.getByText('NEW JEV BEST · SAVED TO THE BOARD',{exact:true}).waitFor();
+  assert.equal(await page.locator('.ov-save').isVisible(),false,'No save button on the Jev page');
+  assert.equal(await page.locator('.ov-form').isVisible(),false,'No name form on the Jev page');
   // Jev keeps one verified best row: the owner-gated RPC, never a plain insert.
   assert.equal(submissions.length,1);
   assert.ok(submissions[0].url.endsWith('/rest/v1/rpc/submit_jev_score'));

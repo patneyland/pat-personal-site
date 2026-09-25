@@ -371,6 +371,7 @@
       }
       if (run) { run.score = result.score; run.finishedAt = new Date().toISOString(); run.player = runPlayer; }
       api.gameOver(result);
+      if (runPlayer === 'JEV') autoSave(result);
       status(enabled ? 'GAME OVER' : 'READY'); buttons();
     };
     var mounted = mount(host, proxy, { controlled: false }); instance = mounted;
@@ -388,6 +389,31 @@
     mounted.destroy = function () { if (docked) docked.disconnect(); docked = null; if (!dragged) undock(); else panel.classList.remove('j-docked'); clearRequest(); enabled = false; runPlayer = null; instance = null; destroy(); status('SELECT SNAKE'); buttons(); };
     buttons(); return mounted;
   };
+  // Nobody types a name here. A Jev run that beats his recorded best saves
+  // itself; anything less is left off the board. The save button and name
+  // form are hidden by jev-controller.css.
+  function autoSave(result) {
+    var over = document.querySelector('[data-ov="over"]') || document.querySelector('.ov-result').closest('.overlay');
+    var msg = over.querySelector('.ov-msg'), res = over.querySelector('.ov-result'), vs = over.querySelector('.ov-comparison');
+    var net = window.ArcadeNet, score = result.score || 0, record = replayScore || 0;
+    res.textContent = 'JEV: ' + (result.display || net.formatScore(score));
+    if (vs && vs.textContent) vs.textContent = vs.textContent.replace('YOU', 'JEV');
+    var say = function (text, cls) { msg.textContent = text; msg.className = 'ov-msg' + (cls ? ' ' + cls : ''); };
+    if (!(score > record) || !result.replay) { say(record ? 'JEV’S BEST IS STILL ' + net.formatScore(record) : '', ''); return; }
+    say('NEW JEV BEST · SAVING...', '');
+    var sent = run;
+    net.submitJevScore({ game: 'snake', mode: 'classic', score: score, replay: result.replay }).then(function (r) {
+      if (sent !== run) return;
+      if (!r.improved) { say('JEV’S BEST IS STILL ' + net.formatScore(record), ''); return; }
+      replayScore = score; say('NEW JEV BEST · SAVED TO THE BOARD', 'is-good');
+      // Back to the attract screen after a moment: it reloads the board and
+      // replays the new best. Skipped if a new run has started.
+      setTimeout(function () {
+        if (sent !== run || !instance || instance.snapshot().state !== 'over') return;
+        window.ArcadeCabinet.selectGame('snake'); status(ready ? 'READY' : 'NOT CONNECTED');
+      }, 5000);
+    }).catch(function (err) { if (sent === run) say(String(err.message || err).toUpperCase(), 'is-bad'); });
+  }
   $('j-pace').addEventListener('change', function () {
     pace = $('j-pace').value;
     if (instance && instance.setControlled) instance.setControlled(false);
