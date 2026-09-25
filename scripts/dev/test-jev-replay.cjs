@@ -1,6 +1,8 @@
-// Record a Jev game on the real engine, then replay it as the /arcade attract
-// screen and check the replay reproduces the same game. Choices come from the
-// FIXTURE POLICY, not Jev; nothing is written to the real leaderboard.
+// Record a Jev game on the real engine, then replay it as the /arcade-jev
+// attract screen and check the replay reproduces the same game. Also checks
+// the plain /arcade never mentions Jev outside his leaderboard row. Choices
+// come from the FIXTURE POLICY, not Jev; nothing is written to the real
+// leaderboard.
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
 const { loadRoute, fixturePolicy, instrumentSnake } = require('./jev-fixture.cjs');
@@ -47,13 +49,14 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     console.log(`PASS recorded Jev game: score ${final.score}, ${final.tick} ticks, ${replay.moves.length} turns, ${kb.toFixed(1)} KB, posted with the score`);
     await page.close();
 
-    // 2. Replay it as the attract screen on the plain arcade.
+    // 2. Replay it as the attract screen on Jev's own page.
     const view = await browser.newPage({ viewport: { width: 1600, height: 900 } });
     view.on('pageerror', e => errors.push(e.message));
-    await view.route('**/*.supabase.co/**', r => r.fulfill({ json: r.request().url().includes('replay=not.is.null') ? [{ score: replay.score, replay }] : [], headers: { 'content-range': '0-0/0' } }));
+    const replayBoard = r => r.fulfill({ json: r.request().url().includes('replay=not.is.null') ? [{ score: replay.score, replay }] : [], headers: { 'content-range': '0-0/0' } });
+    await view.route('**/*.supabase.co/**', replayBoard);
     await instrumentSnake(view);
     const started = Date.now();
-    await view.goto(base + '/arcade?game=snake');
+    await view.goto(base + '/arcade-jev?game=snake');
     await view.locator('.ov-demo-play').waitFor({ state: 'visible' });
     assert.match(await view.locator('.ov-demo-tag').textContent(), new RegExp('JEV.*' + replay.score.toLocaleString('en-US')));
     await view.waitForFunction(() => window.__testSnake.snapshot().score >= 20);
@@ -66,15 +69,33 @@ const base = process.env.JEV_TEST_URL || 'http://127.0.0.1:3217';
     console.log(`PASS replay reproduced the game exactly (score ${end.score}, tick ${end.tick}) in ${((Date.now() - started) / 1000).toFixed(0)}s at game speed`);
     // Loops after the recorded death.
     await view.waitForFunction(() => window.__testSnake.snapshot().tick < 20, null, { timeout: 8000 });
-    // 3. The button starts an ordinary game. Without a coin it inserts one first.
+    // 3. From Jev's page the button sends the visitor to the real arcade.
     await view.locator('.ov-demo-play').click();
-    await view.waitForFunction(() => window.__testSnake.snapshot().state === 'playing', null, { timeout: 5000 });
-    const game = await view.evaluate(() => window.__testSnake.snapshot());
-    assert.ok(game.tick < 12 && game.score === 0, 'Fresh game, not the replay');
-    await view.keyboard.press('ArrowUp'); await view.waitForTimeout(400);
-    assert.equal((await view.evaluate(() => window.__testSnake.snapshot())).direction, 'up', 'Visitor controls the new game');
-    console.log('PASS TRY TO BEAT JEV AND PAT inserted the coin and started a normal game the visitor controls');
-    assert.deepEqual(errors, []);
+    await view.waitForURL(u => new URL(u).pathname === '/arcade', { timeout: 5000 });
+    console.log('PASS TRY TO BEAT JEV AND PAT leaves the watching page for the real arcade');
     await view.close();
+
+    // 4. The plain arcade is the plain game. Jev's best run is on offer from
+    //    the same mocked board, and the page must still ignore it.
+    const plain = await browser.newPage({ viewport: { width: 1600, height: 900 } });
+    plain.on('pageerror', e => errors.push(e.message));
+    await plain.route('**/*.supabase.co/**', replayBoard);
+    await instrumentSnake(plain);
+    await plain.goto(base + '/arcade?game=snake');
+    await plain.locator('.insert').waitFor({ state: 'visible' });
+    await plain.waitForTimeout(4000);
+    const still = await plain.evaluate(() => window.__testSnake.snapshot());
+    assert.equal(still.state, 'idle', 'Nothing plays itself on the main arcade');
+    assert.equal(still.tick, 0, 'No replay is running');
+    assert.equal(still.score, 0);
+    assert.equal(await plain.locator('.ov-demo-tag').count(), 0, 'No Jev tag on the attract screen');
+    assert.equal(await plain.locator('.ov-demo-play').count(), 0, 'No TRY TO BEAT JEV button');
+    assert.equal(await plain.locator('.screen-ui[data-demo="on"]').count(), 0);
+    assert.ok(!(await plain.locator('.screen-ui').innerHTML()).match(/jev/i), 'The word JEV appears nowhere on the screen');
+    assert.equal(await plain.locator('[data-ov="attract"] .ov-title').textContent(), 'SNAKE', 'The ordinary attract sign is showing');
+    console.log('PASS /arcade shows the ordinary attract screen with no mention of Jev');
+    await plain.close();
+
+    assert.deepEqual(errors, []);
   } finally { await browser.close(); }
 })().catch(e => { console.error(e); process.exit(1); });

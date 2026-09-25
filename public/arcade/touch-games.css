@@ -1,0 +1,115 @@
+/* Game-specific touch controls, using the cabinet's existing phosphor palette. */
+.snake-view { position: absolute; inset: 0; }
+.snake-controls { display: none; }
+.snake-pad[hidden] { display: none; }
+.snake-pad-toggle, .snake-key {
+  appearance: none;
+  box-sizing: border-box;
+  border: 1px solid var(--sc-rule);
+  border-radius: 6px;
+  background: rgba(8, 10, 14, .9);
+  color: var(--sc-score);
+  cursor: pointer;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.snake-pad-toggle {
+  min-height: 44px;
+  padding: 10px 16px;
+  font: 9px/1.5 var(--font-arcade);
+}
+.snake-pad-toggle[aria-pressed="true"] { border-color: var(--sc-score); }
+.snake-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(2, 48px);
+  gap: 5px;
+}
+.snake-key { font: 26px/1 monospace; }
+.snake-key-up { grid-column: 2; }
+.snake-key-left { grid-column: 1; grid-row: 2; }
+.snake-key-down { grid-column: 2; grid-row: 2; }
+.snake-key-right { grid-column: 3; grid-row: 2; }
+.snake-key:active { background: rgba(255, 233, 61, .25); }
+.snake-key:focus-visible, .snake-pad-toggle:focus-visible, .ms-secondary summary:focus-visible {
+  outline: 2px solid var(--sc-score);
+  outline-offset: 3px;
+}
+@media (pointer: coarse) {
+  .has-snake .snake-view { bottom: 52px; }
+  .has-snake-pad .snake-view { bottom: 160px; }
+  .snake-controls {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+  }
+}
+html[data-phone] .has-snake .snake-view { bottom: 52px; }
+html[data-phone] .has-snake-pad .snake-view { bottom: 160px; }
+html[data-phone] .snake-controls {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+@media (max-height: 560px) {
+  .snake-pad { display: flex; gap: 6px; }
+  .snake-key { width: 48px; height: 44px; }
+  .has-snake-pad .snake-view, html[data-phone] .has-snake-pad .snake-view { bottom: 103px; }
+}
+
+.ms-wrap { container-type: size; }
+.ms-board {
+  flex: 0 0 auto;
+  width: min(100%, calc(100cqh - 58px));
+  height: auto;
+}
+.ms-marks { align-items: stretch; position: relative; }
+.ms-marks .ms-flag-btn {
+  box-sizing: border-box;
+  min-height: 44px;
+  min-width: 86px;
+  justify-content: center;
+  padding: 10px 12px;
+  font-size: 9px;
+  opacity: 1;
+}
+.ms-secondary { position: relative; }
+.ms-secondary summary {
+  box-sizing: border-box;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 10px;
+  color: var(--sc-rank);
+  cursor: pointer;
+  font: 8px/1.5 var(--font-arcade);
+}
+.ms-secondary[open] .ms-flag-btn {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  z-index: 2;
+  background: #080a0e;
+}
+.ms-wrap.is-paused .ms-board, .ms-wrap.is-paused .ms-marks { visibility: hidden; }
+.ms-cell.is-pressed {
+  background: rgba(255, 233, 61, .2);
+  outline: 2px solid var(--sc-score);
+  outline-offset: -2px;
+}
+.ms-cell:focus-visible { outline: 2px solid var(--sc-score); outline-offset: -2px; }
+html[data-phone] .ms-board { gap: 1px; }
+html[data-phone] .ms-cell {
+  font-size: clamp(9px, 3cqw, 14px);
+  text-shadow: none;
+  filter: none;
+}
+html[data-phone] .ms-marks .ms-flag-btn { padding: 10px 12px; }
+html[data-phone] .ms-flag-key { display: none; }

@@ -8,7 +8,7 @@
    of 3.5ms per food from 130ms down to a 60ms floor.
 
    What was dropped: the page chrome. No HUD elements, no submit form, no
-   mini-scoreboard, no D-pad. The cabinet owns all of that now, and the
+   mini-scoreboard. The cabinet owns all of that now, and the
    leaderboard lives in the rail.
    ========================================================================== */
 'use strict';
@@ -43,19 +43,74 @@ window.ArcadeGames.snake = (function () {
   function mount(host, api, options) {
     var controlled = !!(options && options.controlled);
     var ticks = 0;
+    var view = document.createElement('div');
+    view.className = 'snake-view';
+    host.classList.add('has-snake');
+    host.appendChild(view);
     var canvas = document.createElement('canvas');
     canvas.className = 'game-canvas';
-    host.appendChild(canvas);
+    view.appendChild(canvas);
     var ctx = canvas.getContext('2d');
 
+    var controls = document.createElement('div');
+    controls.className = 'snake-controls';
+    var toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'snake-pad-toggle';
+    toggle.textContent = 'Arrow buttons';
+    controls.appendChild(toggle);
+    var pad = document.createElement('div');
+    pad.className = 'snake-pad';
+    pad.setAttribute('role', 'group');
+    pad.setAttribute('aria-label', 'Snake direction');
+    controls.appendChild(pad);
+    host.appendChild(controls);
+    var padEnabled = false;
+    try { padEnabled = localStorage.getItem('arcade-snake-pad') === '1'; } catch (_) { /* Optional preference. */ }
+    function syncPad() {
+      pad.hidden = !padEnabled;
+      toggle.setAttribute('aria-pressed', String(padEnabled));
+      host.classList.toggle('has-snake-pad', padEnabled);
+    }
+    syncPad();
+    toggle.addEventListener('click', function () {
+      padEnabled = !padEnabled;
+      syncPad();
+      try { localStorage.setItem('arcade-snake-pad', padEnabled ? '1' : '0'); } catch (_) { /* Keep this session usable. */ }
+      resize();
+    });
+    ['up', 'left', 'down', 'right'].forEach(function (name) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'snake-key snake-key-' + name;
+      button.textContent = { up: '↑', left: '←', down: '↓', right: '→' }[name];
+      button.setAttribute('aria-label', 'Turn ' + name);
+      function turn() {
+        if (state === 'idle') start();
+        if (state === 'playing') queueDir(name);
+      }
+      button.addEventListener('pointerdown', function (e) {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        turn();
+      });
+      button.addEventListener('click', function (e) { if (e.detail === 0) turn(); });
+      pad.appendChild(button);
+    });
+
     var snake, occupied, dir, dirQueue, food, score, tickMs, acc, last, raf;
+    /* Attract-mode demo: while nobody is playing, the screen replays Jev's
+       best game through these same rules. A recording is the apple spawned
+       on each tick and the direction taken on each step that turned. Any
+       start ends the demo and resets to an ordinary game. */
+    var demo = null;
     var state = 'idle';          // idle | playing | paused | over
     var cell = 0, ox = 0, oy = 0;
 
     /* ------------------------------ sizing ------------------------------ */
 
     function resize() {
-      var r = host.getBoundingClientRect();
+      var r = view.getBoundingClientRect();
       if (!r.width || !r.height) return;
       var dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.round(r.width * dpr);
@@ -65,7 +120,8 @@ window.ArcadeGames.snake = (function () {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       // Square play area, centred, with a little breathing room
-      var side = Math.min(r.width, r.height) * 0.92;
+      var phone = !controlled && window.ArcadePhone && window.ArcadePhone.active;
+      var side = Math.min(r.width, r.height) * (phone ? 1 : 0.92);
       cell = Math.floor(side / GRID);
       ox = Math.round((r.width - cell * GRID) / 2);
       oy = Math.round((r.height - cell * GRID) / 2);
@@ -73,7 +129,7 @@ window.ArcadeGames.snake = (function () {
     }
 
     var ro = window.ResizeObserver ? new ResizeObserver(resize) : null;
-    if (ro) ro.observe(host);
+    if (ro) ro.observe(view);
 
     /* ------------------------------- state ------------------------------- */
 
@@ -103,6 +159,8 @@ window.ArcadeGames.snake = (function () {
           if (!occupied.has(key(x, y))) free.push({ x: x, y: y });
         }
       }
+      var planned = demo && demo.running && demo.foods[ticks];
+      if (planned && !occupied.has(key(planned.x, planned.y))) { food = { x: planned.x, y: planned.y }; return; }
       food = free.length ? free[Math.floor(Math.random() * free.length)] : null;
     }
 
@@ -129,7 +187,7 @@ window.ArcadeGames.snake = (function () {
     function onKey(e) {
       if (controlled) return;
       var tag = e.target && e.target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.defaultPrevented || /^(INPUT|TEXTAREA|BUTTON|SELECT|A)$/.test(tag) || (e.target && e.target.isContentEditable)) return;
 
       if (KEYMAP[e.key]) {
         e.preventDefault();
@@ -158,27 +216,43 @@ window.ArcadeGames.snake = (function () {
     var touchStart = null;
     function onPointerDown(e) {
       if (controlled) return;
+      if (e.button !== 0 || touchStart || state === 'paused' || state === 'over') return;
       if (state === 'idle') start();
-      else if (state === 'paused') resume();
-      touchStart = { x: e.clientX, y: e.clientY };
+      if (state !== 'playing') return;
+      touchStart = { id: e.pointerId, x: e.clientX, y: e.clientY, turned: false };
+      try { view.setPointerCapture(e.pointerId); } catch (_) { /* Pointer may already have ended. */ }
     }
-    function onPointerUp(e) {
-      if (controlled) return;
-      if (!touchStart || state !== 'playing') { touchStart = null; return; }
+    function onPointerMove(e) {
+      if (!touchStart || touchStart.id !== e.pointerId || touchStart.turned || state !== 'playing') return;
       var dx = e.clientX - touchStart.x, dy = e.clientY - touchStart.y;
-      touchStart = null;
       var ax = Math.abs(dx), ay = Math.abs(dy);
-      if (Math.max(ax, ay) < 24) return;
+      // Decide while the finger is moving. Ambiguous diagonals wait until one
+      // axis clearly wins; one gesture still queues at most one direction.
+      if (Math.max(ax, ay) < 18 || Math.max(ax, ay) < Math.min(ax, ay) * 1.2) return;
+      touchStart.turned = true;
       if (ax > ay) queueDir(dx > 0 ? 'right' : 'left');
       else queueDir(dy > 0 ? 'down' : 'up');
     }
-    host.addEventListener('pointerdown', onPointerDown);
-    host.addEventListener('pointerup', onPointerUp);
+    function clearPointer(e) {
+      if (!touchStart || (e && e.pointerId !== touchStart.id)) return;
+      var id = touchStart.id;
+      touchStart = null;
+      try { if (view.hasPointerCapture(id)) view.releasePointerCapture(id); } catch (_) { /* Already released. */ }
+    }
+    function onPointerUp(e) {
+      if (controlled) return; onPointerMove(e); clearPointer(e); }
+    view.addEventListener('pointerdown', onPointerDown);
+    view.addEventListener('pointermove', onPointerMove);
+    view.addEventListener('pointerup', onPointerUp);
+    view.addEventListener('pointercancel', clearPointer);
+    view.addEventListener('lostpointercapture', clearPointer);
 
     /* --------------------------- transitions --------------------------- */
 
     function start() {
       if (!api.canStart()) return;
+      if (demo) demo.running = false;
+      clearPointer();
       reset();
       state = 'playing';
       api.setState('playing');
@@ -186,11 +260,14 @@ window.ArcadeGames.snake = (function () {
     }
 
     function pause() {
+      if (state !== 'playing') return;
+      clearPointer();
       state = 'paused';
       api.setState('paused');
     }
 
     function resume() {
+      if (state !== 'paused') return;
       state = 'playing';
       acc = 0;
       last = performance.now();
@@ -198,6 +275,8 @@ window.ArcadeGames.snake = (function () {
     }
 
     function gameOver() {
+      if (demo && demo.running) { demo.running = false; demo.endedAt = performance.now(); return; }
+      clearPointer();
       state = 'over';
       S.die();
       api.gameOver({ score: score, display: window.ArcadeNet.formatScore(score) });
@@ -206,9 +285,14 @@ window.ArcadeGames.snake = (function () {
     /* ------------------------------- tick ------------------------------- */
 
     function step() {
-      if (api.beforeStep) api.beforeStep();
+      var playing = !(demo && demo.running);
+      if (playing && api.beforeStep) api.beforeStep();
       ticks++;
-      if (dirQueue.length) dir = dirQueue.shift();
+      if (!playing) {
+        var turned = demo.moves[ticks];
+        if (turned) { dir = DIRS[turned]; if (api.jevKey) api.jevKey(turned); }
+      }
+      else if (dirQueue.length) dir = dirQueue.shift();
 
       var head = snake[0];
       var nx = head.x + dir.x;
@@ -232,7 +316,7 @@ window.ArcadeGames.snake = (function () {
 
       if (eating) {
         score += 10;
-        S.eat();
+        if (playing) S.eat();
         tickMs = Math.max(MIN_TICK_MS, tickMs - TICK_STEP_PER_FOOD);
         spawnFood();
         report();
@@ -295,19 +379,52 @@ window.ArcadeGames.snake = (function () {
           acc -= tickMs;
           step();
         }
+      } else if (state === 'idle' && demo && !controlled) {
+        // Same clock as a real game. After the recorded death, hold the
+        // final frame a moment and play it again.
+        if (demo.running) {
+          acc += Math.min(now - last, MAX_DT);
+          while (acc >= tickMs && demo.running) { acc -= tickMs; step(); }
+        } else if (now - demo.endedAt > 2500) beginDemo();
+        last = now;
       } else {
         last = now;
       }
       draw();
     }
 
+    function beginDemo() {
+      if (!demo || state !== 'idle') return;
+      demo.running = true;
+      reset();
+      if (api.demoStart) api.demoStart();
+      last = performance.now();
+    }
+    function setDemo(recording) {
+      if (!recording || !Array.isArray(recording.foods) || !Array.isArray(recording.moves)) return false;
+      var foods = {}, moves = {};
+      recording.foods.forEach(function (f) { if (f && Number.isInteger(f.t) && Number.isInteger(f.x) && Number.isInteger(f.y)) foods[f.t] = { x: f.x, y: f.y }; });
+      recording.moves.forEach(function (m) { if (m && Number.isInteger(m.t) && DIRS[m.d]) moves[m.t] = m.d; });
+      demo = { foods: foods, moves: moves, running: false, endedAt: 0 };
+      beginDemo();
+      return true;
+    }
+
     reset();
     resize();
     api.setState('idle');
     raf = requestAnimationFrame(frame);
+    if (api.loadReplay) api.loadReplay().then(function (r) { if (r && setDemo(r) && api.demoReady) api.demoReady(r); }, function () {});
 
     return {
       start: start,
+      setDemo: setDemo,
+      setControlled: function (value) {
+        if (state === 'playing' || state === 'paused') return false;
+        controlled = !!value;
+        acc = 0;
+        return true;
+      },
       snapshot: function () {
         return { grid: GRID, tick: ticks, tickMs: tickMs, snake: snake.map(function (p) { return { x: p.x, y: p.y }; }),
           food: food && { x: food.x, y: food.y },
@@ -323,15 +440,22 @@ window.ArcadeGames.snake = (function () {
       },
       pause: pause,
       resume: resume,
+      getState: function () { return state; },
       repaint: draw,
       resize: resize,
       destroy: function () {
         cancelAnimationFrame(raf);
         document.removeEventListener('keydown', onKey);
-        host.removeEventListener('pointerdown', onPointerDown);
-        host.removeEventListener('pointerup', onPointerUp);
+        clearPointer();
+        view.removeEventListener('pointerdown', onPointerDown);
+        view.removeEventListener('pointermove', onPointerMove);
+        view.removeEventListener('pointerup', onPointerUp);
+        view.removeEventListener('pointercancel', clearPointer);
+        view.removeEventListener('lostpointercapture', clearPointer);
         if (ro) ro.disconnect();
-        canvas.remove();
+        view.remove();
+        controls.remove();
+        host.classList.remove('has-snake', 'has-snake-pad');
       }
     };
   }

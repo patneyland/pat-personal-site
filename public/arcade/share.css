@@ -1,0 +1,17 @@
+.result-share { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; max-width: 100%; }
+.result-share-btn, .result-share-download {
+  box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+  min-height: 44px; padding: 10px 12px; border: 1px solid #4a4a4a; border-radius: 4px;
+  background: #111; color: var(--sc-rank); font: 9px/1.7 var(--font-arcade);
+  text-decoration: none; cursor: pointer; text-align: center; touch-action: manipulation;
+}
+.result-share-download[hidden], .result-share-link[hidden] { display: none; }
+.result-share-message { flex-basis: 100%; color: var(--text-muted); font: 9px/1.7 var(--font-arcade); }
+.result-share-message:empty { display: none; }
+.result-share-link { width: 100%; min-height: 44px; font-size: 16px; user-select: text; -webkit-user-select: text; }
+.result-share button:focus-visible, .result-share a:focus-visible { outline: 2px solid var(--sc-score); outline-offset: 3px; }
+.result-share button:disabled { opacity: .6; cursor: wait; }
+@media (max-height: 500px) {
+  .result-share { gap: 4px; }
+  .result-share-btn, .result-share-download { font-size: 8px; padding: 8px; }
+}

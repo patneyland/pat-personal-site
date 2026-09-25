@@ -26,6 +26,10 @@
      ever asks it two things: which control legend to print, and who to hand
      the screen to when it is built. */
   var phone = !!(window.ArcadePhone && window.ArcadePhone.active);
+  /* Jev lives on his own page. On the main arcade he appears nowhere but his
+     row on the leaderboard - not in the markup, not on the attract screen. */
+  var jevPage = root.classList.contains('jev-enabled');
+  function phoneMenuOpen() { return phone && root.getAttribute('data-sheet') === 'open'; }
   var picture = document.querySelector('.picture');
   var dial = document.querySelector('.dial');
   var ticks = document.querySelectorAll('.dial-ticks span');
@@ -45,7 +49,27 @@
   var hasCredit = false;
   var game = null;          // the game definition
   var instance = null;      // its mounted instance
-  var pending = null;       // an unsubmitted result
+  var pending = null;
+  var benchmark = null;
+  var benchmarkState = 'loading';
+  var runBenchmark = null;
+  var runInProgress = false;
+  var boardRequest = 0;
+  var sendingIds = new Set();
+  var QUEUE_KEY = 'arcade_unsaved_results_v1';
+  var unsaved = [];
+  try {
+    var stored = JSON.parse(sessionStorage.getItem(QUEUE_KEY) || '[]');
+    if (Array.isArray(stored)) unsaved = stored.filter(function (r) {
+      return r && ORDER.indexOf(r.game) >= 0 && typeof r.id === 'string' &&
+        (r.game === 'minesweeper' ? Number.isFinite(r.time_ms) && r.time_ms > 0 : Number.isFinite(r.score) && r.score > 0);
+    });
+  } catch (e) { /* Keep results in memory if storage is unavailable. */ }
+
+  function persistUnsaved() {
+    try { sessionStorage.setItem(QUEUE_KEY, JSON.stringify(unsaved)); } catch (e) { /* keep in memory */ }
+    paintUnsaved();
+  }
 
   /* ------------------------------- palette ------------------------------- */
 
@@ -70,6 +94,13 @@
   screen.className = 'screen-ui';
   screen.innerHTML =
     '<div class="stage"></div>' +
+    '<div class="challenge-bar">' +
+      '<div class="game-choices" aria-label="Choose game"></div></div>' +
+    '<button type="button" class="pause-btn" hidden>PAUSE</button>' +
+    '<button type="button" class="unsaved-btn" hidden>SAVE PREVIOUS SCORE</button>' +
+    '<div class="overlay" data-ov="pause" hidden role="dialog" aria-modal="true" aria-label="Game paused">' +
+      '<div class="ov-title ov-title-sm">PAUSED</div><div class="pause-note"></div>' +
+      '<button type="button" class="resume-btn">RESUME</button></div>' +
     '<div class="status" hidden><span class="status-value"></span>' +
       '<span class="status-extra"></span></div>' +
     '<div class="overlay" data-ov="attract">' +
@@ -78,6 +109,10 @@
       '<div class="ov-sub"></div>' +
       '<div class="ov-controls"></div>' +
       '<div class="insert">INSERT COIN</div>' +
+      (jevPage
+        ? '<div class="ov-demo-tag" hidden></div>' +
+          '<button type="button" class="ov-demo-play" hidden>TRY TO BEAT JEV AND PAT</button>'
+        : '') +
     '</div>' +
     '<button type="button" class="vol-btn" aria-pressed="false" ' +
       'aria-label="Mute or unmute the arcade">' +
@@ -95,17 +130,18 @@
         '</g>' +
       '</svg>' +
     '</button>' +
-    '<div class="overlay" data-ov="over" hidden>' +
+    '<div class="overlay" data-ov="over" hidden role="dialog" aria-label="Game result">' +
       '<div class="ov-title ov-title-sm">GAME OVER</div>' +
       '<div class="ov-result"></div>' +
-      '<form class="ov-form" autocomplete="off">' +
+      '<div class="ov-comparison"></div>' +
+      '<button type="button" class="ov-again">TRY AGAIN</button>' +
+      '<button type="button" class="ov-save">SAVE SCORE</button>' +
+      '<form class="ov-form" autocomplete="off" hidden>' +
         '<label class="ov-label" for="ac-name">ENTER YOUR NAME</label>' +
         '<input id="ac-name" class="ov-input" maxlength="16" spellcheck="false" />' +
         '<button type="submit" class="ov-btn">SUBMIT</button>' +
       '</form>' +
-      '<div class="ov-msg"></div>' +
-      '<button type="button" class="ov-again">' +
-        (phone ? 'PLAY AGAIN' : 'PRESS R TO PLAY AGAIN') + '</button>' +
+      '<div class="ov-msg" role="status"></div>' +
     '</div>';
 
   var stage       = screen.querySelector('.stage');
@@ -124,6 +160,68 @@
   var ovLabel     = ovOver.querySelector('.ov-label');
   var ovMsg       = ovOver.querySelector('.ov-msg');
   var ovAgain     = ovOver.querySelector('.ov-again');
+  var ovComparison = screen.querySelector('.ov-comparison');
+  var ovSave = screen.querySelector('.ov-save');
+  var pauseOverlay = screen.querySelector('[data-ov="pause"]');
+  var demoTag = screen.querySelector('.ov-demo-tag');
+  var demoPlay = screen.querySelector('.ov-demo-play');
+  /* The play button sits in the strip of screen under Jev's board, never on
+     it: snake.js draws a square of 92% of its view's shorter side, in whole
+     cells, and the picture runs on below the view. */
+  function placeDemoPlay() {
+    if (!demoPlay) return;
+    var view = stage.querySelector && stage.querySelector('.snake-view');
+    var picture = screen.parentNode;
+    if (phone || !view || !view.getBoundingClientRect || !picture || !picture.getBoundingClientRect) return;
+    var r = view.getBoundingClientRect(), o = ovAttract.getBoundingClientRect(), p = picture.getBoundingClientRect();
+    var side = Math.floor(Math.min(r.width, r.height) * 0.92 / 24) * 24;
+    var below = r.top + Math.round((r.height - side) / 2) + side, room = p.bottom - below, h = demoPlay.offsetHeight || 48;
+    if (!side || room < h + 12) { demoPlay.classList.remove('is-placed'); return; }
+    demoPlay.classList.add('is-placed');
+    demoPlay.style.top = Math.round(below - o.top + (room - h) / 2) + 'px';
+    demoPlay.style.left = Math.round(r.left + r.width / 2 - o.left) + 'px';
+  }
+  if (window.ResizeObserver) new ResizeObserver(placeDemoPlay).observe(stage);
+  window.addEventListener('resize', placeDemoPlay);
+  var pauseBtn = screen.querySelector('.pause-btn');
+  var unsavedBtn = screen.querySelector('.unsaved-btn');
+  var challenge = screen.querySelector('.challenge-bar');
+  var rail = document.querySelector('.rail');
+  if (rail) rail.appendChild(unsavedBtn);
+
+  challenge.querySelector('.game-choices').innerHTML = ORDER.map(function (id) {
+    return '<button type="button" data-game-choice="' + id + '" aria-pressed="false">' + games[id].name + '</button>';
+  }).join('');
+  document.addEventListener('click', function (e) {
+    var choice = e.target.closest('[data-game-choice]');
+    if (!choice) return;
+    var id = choice.getAttribute('data-game-choice');
+    if (screen.dataset.state === 'playing' || (screen.dataset.state === 'paused' && !phoneMenuOpen())) return;
+    if (ORDER.indexOf(id) >= 0 && (!game || game.id !== id)) turn(ORDER.indexOf(id), e);
+  });
+  function paintChallenge() {
+    if (!game) return;
+    document.querySelectorAll('[data-game-choice]').forEach(function (btn) {
+      btn.setAttribute('aria-pressed', String(btn.getAttribute('data-game-choice') === game.id));
+      btn.disabled = screen.dataset.state === 'playing' || (screen.dataset.state === 'paused' && !phoneMenuOpen());
+    });
+  }
+  function paintUnsaved() {
+    if (!unsavedBtn || !game) return;
+    var entries = unsaved.filter(function (r) { return r.game === game.id && r !== pending; });
+    unsavedBtn.hidden = !entries.length || ['playing', 'paused'].indexOf(screen.dataset.state) >= 0;
+    unsavedBtn.textContent = 'SAVE PREVIOUS SCORE' + (entries.length > 1 ? ' (' + entries.length + ')' : '');
+  }
+  function paintUtilities() {
+    var state = screen.dataset.state;
+    pauseBtn.hidden = state !== 'playing' && state !== 'paused';
+    pauseBtn.textContent = state === 'paused' ? 'RESUME' : 'PAUSE';
+    pauseOverlay.hidden = state !== 'paused';
+    pauseOverlay.querySelector('.pause-note').textContent = game && game.id === 'minesweeper' ? 'TIMER KEEPS RUNNING' : '';
+    stage.inert = state === 'paused' || state === 'over';
+    paintUnsaved();
+    paintChallenge();
+  }
 
   picture.innerHTML = '';
   picture.appendChild(screen);
@@ -136,6 +234,7 @@
 
     /** Games must ask before starting. No coin, no game. */
     canStart: function () {
+      if (phone) S.unlock();
       if (!hasCredit && coinBtn) {
         // Nudge the thing they need to click.
         coinBtn.classList.remove('nudge');
@@ -146,11 +245,38 @@
     },
 
     setState: function (s) {
-      var idle = (s === 'idle');
-      ovAttract.hidden = !idle;
-      statusBar.hidden = idle;
+      var prior = screen.dataset.state;
+      if (s === 'playing' && prior !== 'playing' && prior !== 'paused') {
+        if (game.id !== 'minesweeper') {
+          runBenchmark = benchmark ? Object.assign({}, benchmark) : null;
+          runInProgress = true;
+        }
+        pending = null;
+        ovInput.blur();
+      }
+      ovAttract.hidden = s !== 'idle';
+      statusBar.hidden = s === 'idle' || s === 'ready' || s === 'over';
       if (s !== 'over') ovOver.hidden = true;
       screen.dataset.state = s;
+      root.setAttribute('data-play', s);
+      paintUtilities();
+    },
+
+    /* Snake's attract screen replays Jev's best game on Jev's own page. The
+       main arcade is the plain game: no replay, no tag, no play button. The
+       only place Jev shows up there is his row on the leaderboard. */
+    loadReplay: function () {
+      var g = game;
+      return g.id === 'snake' && jevPage
+        ? net.fetchJevReplay(g.id, g.mode).then(function (r) { return game === g ? r : null; })
+        : Promise.resolve(null);
+    },
+    demoReady: function (r) {
+      screen.dataset.demo = 'on';
+      demoTag.innerHTML = 'JEV<i class="b-verified" title="Verified: Jev, the AI player, with no human input">' + CROWN + '</i>' +
+        (r.score ? '<span>' + net.formatScore(r.score) + '</span>' : '');
+      demoTag.hidden = false; demoPlay.hidden = false;
+      placeDemoPlay();
     },
 
     setStatus: function (o) {
@@ -158,112 +284,144 @@
       statusExtra.textContent = o.extra == null ? '' : o.extra;
     },
 
+    runStarted: function () {
+      runBenchmark = benchmark ? Object.assign({}, benchmark) : null;
+      runInProgress = true;
+      paintChallenge();
+    },
+    runReset: function () {
+      runBenchmark = null;
+      runInProgress = false;
+      pending = null;
+    },
     gameOver: function (result) {
-      screen.dataset.state = 'over';
-      statusBar.hidden = false;
-      ovAttract.hidden = true;
-      ovOver.hidden = false;
-      ovMsg.textContent = '';
-      ovMsg.className = 'ov-msg';
-      ovBtn.disabled = false;
-
-      if (result.lost) {
-        // Minesweeper: hitting a mine is not a score, it is a reset.
-        ovResult.textContent = result.message || '';
-        ovForm.hidden = true;
-        pending = null;
-        return;
-      }
-
-      ovResult.textContent = result.display || '';
-      var worth = (result.score == null) ? true : result.score > 0;
-      ovForm.hidden = !worth;
-      if (!worth) { pending = null; return; }
-
-      pending = {
-        game: game.id,
-        mode: game.mode,
-        score: result.score == null ? null : result.score,
+      // The separate Jev controller marks decision-paced runs as ineligible.
+      var worth = !result.lost && !result.practice &&
+        (game.id === 'minesweeper' ? Number.isFinite(result.time_ms) && result.time_ms > 0 : Number.isFinite(result.score) && result.score > 0);
+      pending = worth ? {
+        id: Date.now().toString(36) + '-' + Math.random().toString(36).slice(2),
+        game: game.id, mode: game.mode, score: result.score == null ? null : result.score,
         time_ms: result.time_ms == null ? null : result.time_ms,
-        player: result.player || null
-      };
-      if (result.player) {
-        ovInput.value = result.player; ovInput.readOnly = true; ovLabel.textContent = 'PLAYING AS';
-      } else if (net.isOwnerMode()) {
-        // Pat always plays as himself. The field is filled and locked so a
-        // run cannot land under a typo.
-        ovInput.value = net.OWNER_NAME;
-        ovInput.readOnly = true;
-        ovLabel.textContent = 'PLAYING AS';
-      } else {
-        ovInput.readOnly = false;
-        ovLabel.textContent = 'ENTER YOUR NAME';
-        ovInput.value = net.getSavedPlayer();
-        if (!ovInput.value) setTimeout(function () { ovInput.focus(); }, 30);
-      }
+        display: result.display || '', benchmark: runBenchmark,
+        owner: !result.player && net.isOwnerMode(), player: result.player || null,
+        jev: result.player === 'JEV', replay: result.player === 'JEV' ? result.replay || null : null
+      } : null;
+      if (pending) { unsaved.push(pending); persistUnsaved(); }
+      showResult(result, pending);
     }
   };
 
+  function showResult(result, entry) {
+    pending = entry;
+    api.setState('over');
+    ovOver.hidden = false;
+    ovMsg.textContent = '';
+    ovMsg.className = 'ov-msg';
+    ovBtn.disabled = !!(entry && sendingIds.has(entry.id));
+    ovForm.hidden = true;
+    ovSave.hidden = !entry;
+    ovOver.querySelector('.ov-title').textContent = result.lost ? 'GAME OVER' : game.id === 'minesweeper' ? 'BOARD CLEARED' : 'GAME OVER';
+    ovAgain.textContent = 'TRY AGAIN';
+    ovResult.textContent = result.lost ? result.message || '' : 'YOU: ' + (result.display || '0');
+    var target = entry ? entry.benchmark : runBenchmark;
+    var actual = game.id === 'minesweeper' ? result.time_ms : result.score;
+    var beat = !result.lost && !result.practice && target && (game.id === 'minesweeper' ? actual < target.value : actual > target.value);
+    var tied = !result.lost && !result.practice && target && actual === target.value;
+    ovComparison.textContent = result.practice ? 'UNRANKED' : beat ? 'YOU BEAT PAT!' : tied ? 'TIED PAT.' : '';
+    ovComparison.hidden = !ovComparison.textContent;
+    ovComparison.classList.toggle('is-beat', !!beat);
+    ovInput.readOnly = !!(entry && (entry.owner || entry.player));
+    ovInput.value = entry && entry.player ? entry.player : entry && entry.owner ? net.OWNER_NAME : net.getSavedPlayer();
+    ovLabel.textContent = entry && (entry.owner || entry.player) ? 'PLAYING AS' : 'ENTER YOUR NAME';
+    paintUnsaved();
+  }
+
+  ovSave.addEventListener('click', function () {
+    if (!pending) return;
+    ovForm.hidden = false;
+    ovSave.hidden = true;
+    ovInput.focus();
+  });
+  unsavedBtn.addEventListener('click', function () {
+    if (['playing', 'paused'].indexOf(screen.dataset.state) >= 0) return;
+    var entry = unsaved.find(function (r) { return r.game === game.id && r !== pending; });
+    if (!entry) return;
+    if (window.ArcadePhone && window.ArcadePhone.closeSheet) window.ArcadePhone.closeSheet();
+    runBenchmark = entry.benchmark || null;
+    showResult(entry, entry);
+  });
+
   ovForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    if (!pending) return;
+    if (!pending || sendingIds.has(pending.id)) return;
+    var entry = pending;
     var name = net.cleanPlayerName(ovInput.value);
-    if (!name) {
-      ovMsg.textContent = 'NAME MUST BE 1-16 CHARACTERS';
-      ovMsg.className = 'ov-msg is-bad';
-      return;
-    }
+    if (!name) { ovMsg.textContent = 'NAME MUST BE 1-16 CHARACTERS'; ovMsg.className = 'ov-msg is-bad'; return; }
+    if (entry.owner && !net.isOwnerMode()) { ovMsg.textContent = 'OWNER MODE REQUIRED TO SAVE THIS SCORE'; return; }
+    sendingIds.add(entry.id);
     ovBtn.disabled = true;
     ovMsg.textContent = 'SENDING...';
     ovMsg.className = 'ov-msg';
-
-    var run = { game: pending.game, mode: pending.mode,
-                score: pending.score, time_ms: pending.time_ms };
-
-    // Owner runs go through submit_owner_score, which keeps one row per game
-    // and only moves it when the run was actually better. Everyone else
-    // inserts a fresh row the ordinary way.
-    var jevPlayer = pending.player;
-    var sending = !jevPlayer && net.isOwnerMode()
-      ? net.submitOwnerScore(run).then(function (r) {
-          return r.improved
-            ? (r.first ? 'ON THE BOARD' : 'NEW PERSONAL BEST')
-            : 'NOT YOUR BEST — BOARD UNCHANGED';
-        })
-      : net.submitScore(Object.assign({ player: name }, run)).then(function () {
-          if (!jevPlayer) net.savePlayer(name);
-          return 'ON THE BOARD';
-        });
-
+    var run = { game: entry.game, mode: entry.mode, score: entry.score, time_ms: entry.time_ms };
+    // Pat and Jev each keep one row, their best; a worse run changes nothing.
+    var best = function (r) { return r.improved ? (r.first ? 'ON THE BOARD' : 'NEW PERSONAL BEST') : 'NOT YOUR BEST. BOARD UNCHANGED'; };
+    var sending = entry.owner ? net.submitOwnerScore(run).then(best)
+      : entry.jev ? net.submitJevScore(Object.assign({ replay: entry.replay }, run)).then(function (r) { return best(r).replace('YOUR', 'JEV’S'); })
+      : net.submitScore(Object.assign({ player: name }, run)).then(function () { if (!entry.player) net.savePlayer(name); return 'ON THE BOARD'; });
     sending.then(function (msg) {
+      sendingIds.delete(entry.id);
+      unsaved = unsaved.filter(function (r) { return r.id !== entry.id; });
+      persistUnsaved();
+      if (game.id === entry.game) loadBoard();
+      if (pending !== entry || screen.dataset.state !== 'over') return;
       S.submit();
       ovForm.hidden = true;
+      ovSave.hidden = true;
       pending = null;
       ovMsg.textContent = msg;
       ovMsg.className = 'ov-msg is-good';
-      loadBoard();
+      paintUnsaved();
     }).catch(function (err) {
+      sendingIds.delete(entry.id);
+      if (pending !== entry || screen.dataset.state !== 'over') return;
       ovBtn.disabled = false;
       ovMsg.textContent = String(err.message || err).toUpperCase();
       ovMsg.className = 'ov-msg is-bad';
     });
   });
 
-  // The same restart the R key does, for a thumb.
-  ovAgain.addEventListener('click', function (e) {
+  ovAgain.addEventListener('click', function () {
     if (instance && instance.start) instance.start();
-    if (e && e.detail > 0) ovAgain.blur();
+    ovAgain.blur();
   });
+  function pause() { if (instance && instance.pause && screen.dataset.state === 'playing') instance.pause(); }
+  function resume() { if (instance && instance.resume && screen.dataset.state === 'paused') { instance.resume(); pauseBtn.blur(); } }
+  pauseBtn.addEventListener('click', function () { if (screen.dataset.state === 'paused') resume(); else pause(); });
+  pauseOverlay.querySelector('.resume-btn').addEventListener('click', resume);
+  window.addEventListener('blur', pause);
+  document.addEventListener('visibilitychange', function () { if (document.hidden) pause(); });
 
-  // R restarts from the game-over screen without stealing the name field.
+  // Preserve native button activation while blocking document game shortcuts.
   document.addEventListener('keydown', function (e) {
-    if (screen.dataset.state !== 'over') return;
-    if (e.target === ovInput) return;
-    if (e.key === 'r' || e.key === 'R') {
+    if (e.key === 'Tab') return;
+    if (root.getAttribute('data-sheet') === 'open') return;
+    if (stage.contains(e.target) && screen.dataset.state !== 'paused') return;
+    var interactive = e.target.closest && e.target.closest('button,input,select,textarea,a,[contenteditable="true"]');
+    if (interactive || !hasCredit) {
+      e.stopImmediatePropagation();
+      return;
+    }
+    if (screen.dataset.state === 'paused') {
+      e.stopImmediatePropagation();
+      if (e.key === ' ' || e.key === 'Escape') { e.preventDefault(); resume(); }
+      return;
+    }
+    if (screen.dataset.state === 'over' && (e.key === 'r' || e.key === 'R')) {
       e.preventDefault();
+      e.stopImmediatePropagation();
       if (instance && instance.start) instance.start();
     }
-  });
+  }, true);
 
   /* ------------------------------ the rail ------------------------------ */
 
@@ -282,12 +440,14 @@
     '</svg>';
 
   function rowHtml(g, row, rank, extraClass) {
-    var cls = (row.is_owner ? ' is-owner' : '') + (extraClass ? ' ' + extraClass : '');
+    var cls = (row.is_owner ? ' is-owner' : '') + (row.is_jev ? ' is-jev' : '') + (extraClass ? ' ' + extraClass : '');
     return '<li class="' + cls.trim() + '">' +
              '<span class="b-rank">' + ('0' + rank).slice(-2) + '</span>' +
              '<span class="b-name">' + esc(row.player) +
                (row.is_owner ? '<i class="b-verified" title="Verified: Pat’s own score">' +
                                  CROWN + '</i>' : '') +
+               (row.is_jev ? '<i class="b-verified" title="Verified: Jev, the AI player, with no human input">' +
+                               CROWN + '</i>' : '') +
              '</span>' +
              '<span class="b-score">' + net.rowValue(g.id, row) + '</span>' +
            '</li>';
@@ -337,13 +497,17 @@
      is top and says so. */
   function loadBoard() {
     var g = game;
+    var request = ++boardRequest;
     return Promise.all([
       net.fetchScores(g.id, g.mode, 10),
-      net.fetchOwnerBest(g.id, g.mode)
+      net.fetchOwnerBestStatus ? net.fetchOwnerBestStatus(g.id, g.mode) : net.fetchOwnerBest(g.id, g.mode).then(function (row) { return { row: row, status: row ? 'ready' : 'error' }; })
     ]).then(function (res) {
-      if (game !== g) return;                 // dial moved while we waited
+      if (game !== g || request !== boardRequest) return;
       var rows = res[0] || [];
-      var mine = res[1];
+      var mine = res[1].row;
+      benchmarkState = res[1].status;
+      benchmark = mine ? { value: mine[net.metricCol(g.id)], display: net.rowValue(g.id, mine) } : null;
+      paintChallenge();
 
       if (!rows.length) {
         champLabel.textContent = 'ALL-TIME HIGH';
@@ -369,7 +533,7 @@
 
       if (mine && !inTop) {
         net.fetchRank(g.id, g.mode, mine[net.metricCol(g.id)]).then(function (rank) {
-          if (game !== g || !lastBoard) return;
+          if (game !== g || request !== boardRequest || !lastBoard) return;
           lastBoard.rank = rank;
           paintBoard();
         });
@@ -401,16 +565,17 @@
      a screenshot. ?owner=off forgets it again. Nothing about owner mode
      ships in the page: without the secret these calls just return false. */
   (function initOwnerMode() {
-    var m = /[?&]owner=([^&]+)/.exec(window.location.search);
-    if (!m) return;
-    var value = decodeURIComponent(m[1]);
+    var url = new URL(window.location.href);
+    if (!url.searchParams.has('owner')) return;
+    var value = url.searchParams.get('owner');
     if (value === 'off') {
       net.setOwnerSecret('');
     } else {
       net.setOwnerSecret(value);
     }
     if (window.history && window.history.replaceState) {
-      window.history.replaceState({}, '', window.location.pathname);
+      url.searchParams.delete('owner');
+      window.history.replaceState({}, '', url.pathname + url.search + url.hash);
     }
     root.setAttribute('data-owner', net.isOwnerMode() ? 'true' : 'false');
   })();
@@ -419,12 +584,21 @@
   /* ------------------------------- the dial ----------------------------- */
 
   function select(i) {
+    if (screen.dataset.state === 'playing' || (screen.dataset.state === 'paused' && !phoneMenuOpen())) return;
     index = ((i % ORDER.length) + ORDER.length) % ORDER.length;
     var next = games[ORDER[index]];
     if (!next) return;
 
     if (instance) { instance.destroy(); instance = null; }
     game = next;
+    benchmark = null;
+    runBenchmark = null;
+    runInProgress = false;
+    benchmarkState = 'loading';
+    var url = new URL(window.location.href);
+    url.searchParams.set('game', game.id);
+    url.searchParams.delete('owner');
+    window.history.replaceState({}, '', url.pathname + url.search + url.hash);
 
     root.setAttribute('data-game', game.id);
     if (dial) dial.style.transform = 'rotate(' + DETENT[index] + 'deg)';
@@ -441,8 +615,12 @@
 
     pending = null;
     ovOver.hidden = true;
+    delete screen.dataset.demo;
+    if (demoTag) demoTag.hidden = true;
+    if (demoPlay) demoPlay.hidden = true;
     instance = game.mount(stage, api);
     loadBoard();
+    paintUtilities();
 
   }
 
@@ -509,6 +687,7 @@
     root.setAttribute('data-inserted', 'true');
     S.powerOn();
     paintCredit();
+    paintUtilities();
   }
 
   function insertCoin() {
@@ -527,6 +706,17 @@
   function releaseKeys(btn, e) {
     if (btn && e && e.detail > 0) btn.blur();
   }
+
+  // Starting from the replay puts the coin in on the visitor's behalf.
+  if (demoPlay) demoPlay.addEventListener('click', function (e) {
+    releaseKeys(demoPlay, e);
+    // From Jev's viewing page, the challenge happens on the real arcade.
+    if (jevPage) { window.location.href = '/arcade?game=snake'; return; }
+    if (!instance || screen.dataset.state !== 'idle') return;
+    if (hasCredit) { instance.start(); return; }
+    insertCoin();
+    setTimeout(function () { if (instance && screen.dataset.state === 'idle') instance.start(); }, 1600);
+  });
 
   if (coinBtn) coinBtn.addEventListener('click', function (e) {
     insertCoin();
@@ -550,14 +740,22 @@
 
   // Attract mode runs either way. The only difference a credit makes is
   // whether pressing a key does anything.
-  hasCredit = credited();
+  // The Jev page is for watching, not playing: no coin to put in.
+  hasCredit = phone || jevPage || credited();
   root.setAttribute('data-inserted', hasCredit ? 'true' : 'false');
-  if (hasCredit && coinModule) coinModule.classList.add('is-inserting');
-  select(0);
+  if (!phone && hasCredit && coinModule) coinModule.classList.add('is-inserting');
+  var initialGame = new URL(window.location.href).searchParams.get('game');
+  window.ArcadeCabinet = {
+    selectGame: function (id) { var i = ORDER.indexOf(id); if (i >= 0) select(i); },
+    currentGame: function () { return game && game.id; }, pause: pause, resume: resume,
+    refreshUI: paintUtilities
+  };
+  select(Math.max(0, ORDER.indexOf(initialGame)));
 
   /* The phone shell is built before this file runs, but the screen and the
      state it publishes only exist once the cabinet has assembled them. */
   if (window.ArcadePhone && window.ArcadePhone.attach) {
-    window.ArcadePhone.attach({ screen: screen, dial: dial });
+    window.ArcadePhone.attach({ screen: screen, dial: dial, pauseBtn: pauseBtn, challenge: challenge });
+    paintChallenge();
   }
 })();

@@ -6,6 +6,11 @@ const directions = ['up', 'down', 'left', 'right'] as const;
 const opposite = { up: 'down', down: 'up', left: 'right', right: 'left' } as const;
 type Point = { x: number; y: number };
 const hits = new Map<string, { start: number; count: number }>();
+// Pat pays for visitors who watch Jev without their own key. That key is
+// JEV_OPENROUTER_KEY, never Gary's; give it an OpenRouter credit limit, which
+// is the hard cap. These per-visitor limits only stop one visitor burning it.
+const siteHits = new Map<string, { start: number; count: number }>();
+const SITE_PER_HOUR = 600;
 function reply(body: unknown, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } });
 }
@@ -67,7 +72,7 @@ function appleRoutes(head: Point, heading: Dir, food: Point) {
 }
 export async function GET(req: NextRequest) {
   const key = req.headers.get('x-openrouter-key');
-  if (!key) return reply({ ready: !!process.env.TYPESAFE_API_KEY });
+  if (!key) return reply({ ready: !!(process.env.JEV_OPENROUTER_KEY || process.env.TYPESAFE_API_KEY), provider: process.env.JEV_OPENROUTER_KEY ? 'site' : undefined });
   if (!/^sk-or-[A-Za-z0-9_-]{10,250}$/.test(key)) return reply({ error: 'Enter a valid OpenRouter key.' }, 400);
   try {
     const response = await fetch('https://openrouter.ai/api/v1/key', {
@@ -80,7 +85,9 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const openrouterKey = req.headers.get('x-openrouter-key');
   if (openrouterKey && !/^sk-or-[A-Za-z0-9_-]{10,250}$/.test(openrouterKey)) return reply({ error: 'Enter a valid OpenRouter key.' }, 400);
-  const key = openrouterKey || process.env.TYPESAFE_API_KEY;
+  const siteKey = openrouterKey ? undefined : process.env.JEV_OPENROUTER_KEY;
+  const orKey = openrouterKey || siteKey;
+  const key = orKey || process.env.TYPESAFE_API_KEY;
   if (!key) return reply({ error: 'Jev API key is not configured.' }, 503);
   const origin = req.headers.get('origin');
   if (origin) {
@@ -96,7 +103,13 @@ export async function POST(req: NextRequest) {
   if (!hits.has(ip) && hits.size >= 1000) return reply({ error: 'Please try again shortly.' }, 429);
   const hit = hits.get(ip) || { start: now, count: 0 };
   hits.set(ip, hit);
-  if (++hit.count > 360) return reply({ error: 'Move limit reached. Pause for a minute.' }, 429);
+  if (++hit.count > (siteKey ? 120 : 360)) return reply({ error: 'Move limit reached. Pause for a minute.' }, 429);
+  if (siteKey) {
+    for (const [id, h] of siteHits) if (now - h.start > 3_600_000) siteHits.delete(id);
+    const site = siteHits.get(ip) || { start: now, count: 0 };
+    siteHits.set(ip, site);
+    if (++site.count > SITE_PER_HOUR) return reply({ error: 'Free Jev games are used up for this hour. Add your own OpenRouter key to keep watching.' }, 429);
+  }
   let body;
   try {
     const raw = await req.text();
@@ -210,16 +223,17 @@ export async function POST(req: NextRequest) {
     : 'Choose the next arrow key to eat the apple and survive. Use the supplied actionFacts instead of doing coordinate arithmetic. Never choose a collision when a non-colliding choice exists. Prefer EATS THE APPLE, then CLOSER TO APPLE. If the apple is behind and reversing is forbidden, turn perpendicular now so you can turn toward it next; do not keep moving away. Leave room to turn before a wall or body. The game keeps moving during network delay, so avoid continuing toward an obstacle with very few clear cells. Return one direction.';
   const started = performance.now();
   try {
-    const upstream = await fetch(openrouterKey ? 'https://openrouter.ai/api/alpha/decisions' : 'https://api.typesafe.ai/v1/systemone', {
+    const upstream = await fetch(orKey ? 'https://openrouter.ai/api/alpha/decisions' : 'https://api.typesafe.ai/v1/systemone', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(15_000),
-      body: JSON.stringify({ model: openrouterKey ? 'typesafe/jev-1.13' : process.env.JEV_MODEL || 'jev-latest', ...(openrouterKey ? { usage: { include: true } } : {}), state, questions: {
+      body: JSON.stringify({ model: orKey ? 'typesafe/jev-1.13' : process.env.JEV_MODEL || 'jev-latest', ...(orKey ? { usage: { include: true } } : {}), state, questions: {
         move: { type: 'choice', instructions, criteria }
       } })
     });
     const result = await upstream.json().catch(() => ({}));
     // Record actual returned cost, including responses whose move is rejected or arrives late.
-    if (openrouterKey) console.info('Jev OpenRouter usage', JSON.stringify({ id: result.id || null, cost: result.usage?.cost ?? null, usage: result.usage || null, status: upstream.status }));
+    if (orKey) console.info('Jev OpenRouter usage', JSON.stringify({ paidBy: siteKey ? 'site' : 'visitor', id: result.id || null, cost: result.usage?.cost ?? null, usage: result.usage || null, status: upstream.status }));
+    if (!upstream.ok && siteKey && (upstream.status === 401 || upstream.status === 402)) return reply({ error: 'Free Jev play is paused. Add your own OpenRouter key to keep watching.', usage: result.usage, generationId: result.id }, 503);
     if (!upstream.ok) return reply({ error: upstream.status === 401 ? 'OpenRouter rejected this key. Save a new key.' : upstream.status === 402 ? 'OpenRouter credits are exhausted.' : `Jev request failed (${upstream.status}).`, usage: result.usage, generationId: result.id }, upstream.status === 401 || upstream.status === 402 ? upstream.status : 502);
     const answer = result.answers?.move;
     if (!answer || !Object.hasOwn(criteria, answer.choice)) return reply({ error: 'Jev returned an invalid move.', usage: result.usage, generationId: result.id }, 502);
@@ -227,6 +241,6 @@ export async function POST(req: NextRequest) {
     return reply({ choice: answer.choice, direction: plan ? plan.turns[0].direction : answer.choice, steps: plan ? plan.turns[0].steps : 1,
       turns: plan ? plan.turns : [{ direction: answer.choice, steps: 1 }], eats: plan ? plan.eats : false, escape: plan ? plan.escape : null,
       candidates: Object.keys(criteria).length, confidence: answer.confidence, probabilities: answer.probabilities,
-      model: result.model, generationId: result.id, provider: openrouterKey ? 'OpenRouter' : 'TypeSafe', latencyMs: Math.round(performance.now() - started), usage: result.usage });
+      model: result.model, generationId: result.id, provider: orKey ? 'OpenRouter' : 'TypeSafe', paidBy: siteKey ? 'site' : openrouterKey ? 'visitor' : undefined, latencyMs: Math.round(performance.now() - started), usage: result.usage });
   } catch { return reply({ error: 'Jev did not respond. Retrying while the game keeps moving.' }, 504); }
 }

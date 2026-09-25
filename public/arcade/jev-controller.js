@@ -23,7 +23,14 @@
   var pace = 'plan', best = 0, leadMs = 400, lastScore = 0, latencies = [];
   // Planned mode keeps a schedule of turns keyed by engine tick, plus the
   // predicted board at the end of everything scheduled (the horizon).
-  var schedule = [], horizon = null, expected = {};
+  var schedule = [], horizon = null, expected = {}, recordedDir = null;
+  // Engine-level recording: the apple spawned on each tick and the direction
+  // actually taken on each step that turned. Replaying both through snake.js
+  // reproduces the game exactly.
+  function recording() { return run && run.replay && runPlayer === 'JEV' && instance && instance.snapshot(); }
+  function recordMove(now) {
+    if (now.tick > 0 && now.direction !== recordedDir) { run.replay.moves.push({ t: now.tick, d: now.direction }); recordedDir = now.direction; }
+  }
   var planView = document.createElement('p'); planView.id = 'j-plan'; planView.setAttribute('aria-live', 'polite'); $('j-notice').before(planView);
   var bestKey = 'jev-snake-realtime-best-v1';
   try { best = Number(localStorage.getItem(bestKey)) || 0; } catch (_) {}
@@ -33,6 +40,8 @@
   try { savedKey = localStorage.getItem(keyStorage) || ''; } catch (_) {}
   function headers() { return savedKey ? { 'x-openrouter-key': savedKey } : {}; }
   function recordCharge(answer, requestRun, provider) {
+    // Requests paid by the site's own Jev key report their cost too.
+    if ((answer && answer.provider) === 'OpenRouter' || answer.paidBy === 'site') provider = 'OpenRouter';
     if (provider !== 'OpenRouter') return;
     var cost = answer.usage && answer.usage.cost;
     var known = typeof cost === 'number' && Number.isFinite(cost);
@@ -60,6 +69,10 @@
     clearRequest();
     run = { startedAt: new Date().toISOString(), timing: 'Original arcade timed loop, 130ms accelerating to 60ms; ' + pace, plans: [], commands: [] };
     runs.push(run); runPlayer = 'JEV'; lastScore = 0;
+    // The recording that becomes the attract-screen replay if this run is Jev's best.
+    var first = instance.snapshot();
+    run.replay = { v: 1, game: 'snake', mode: 'classic', foods: first.food ? [{ t: 0, x: first.food.x, y: first.food.y }] : [], moves: [] };
+    recordedDir = first.direction;
     planView.textContent = '';
     $('j-log').replaceChildren(); $('j-count').textContent = '0'; $('j-notice').textContent = '';
     status('PLAYING'); timer = setTimeout(next, 0);
@@ -273,11 +286,61 @@
       status('RETRYING'); timer = setTimeout(next, 500);
     } finally { clearTimeout(timeout); if (request === abort) request = null; }
   }
+  // Replay: with nobody playing, the screen replays Jev's best game. The
+  // window plays along, lighting each key and logging each turn by tick.
+  var replayCount = 0, replayScore = null;
+  function replayStarted() {
+    replayCount = 0; $('j-log').replaceChildren(); $('j-count').textContent = '0';
+    planView.textContent = 'REPLAY' + (replayScore ? ' · ' + replayScore : '');
+  }
+  function replayKey(direction) {
+    var tick = instance ? instance.snapshot().tick : 0, row = document.createElement('li');
+    [String(++replayCount).padStart(4, '0'), arrows[direction], direction.toUpperCase(), 'T' + tick].forEach(function (text) {
+      var span = document.createElement('span'); span.textContent = text; row.appendChild(span);
+    });
+    var list = $('j-log'); list.prepend(row); if (list.children.length > 1000) list.lastElementChild.remove();
+    panel.querySelectorAll('.j-key').forEach(function (key) { key.classList.toggle('active', key.dataset.direction === direction); });
+    clearTimeout(flash); flash = setTimeout(function () { panel.querySelectorAll('.j-key').forEach(function (key) { key.classList.remove('active'); }); }, 120);
+    $('j-count').textContent = replayCount;
+  }
+  // Docked in the empty screen between the play field and the scoreboard,
+  // the play field being snake.js's square: 92% of the view's shorter side,
+  // in whole cells. Dragging the window takes it out of the dock.
+  var dragged = false, docked = null;
+  function dock() {
+    var view = document.querySelector('.snake-view');
+    if (dragged || !view) return;
+    var r = view.getBoundingClientRect(), side = Math.floor(Math.min(r.width, r.height) * 0.92 / 24) * 24;
+    var gapLeft = r.left + Math.round((r.width - side) / 2) + side, gap = r.right - gapLeft;
+    if (!side || gap < 150) { panel.classList.remove('j-docked'); panel.removeAttribute('style'); return; }
+    var width = Math.min(264, gap - 12);
+    // Keep the log in view: the key form starts folded when docked.
+    if (!panel.classList.contains('j-docked')) $('j-settings').open = false;
+    panel.classList.add('j-docked');
+    panel.style.left = Math.round(gapLeft + (gap - width) / 2) + 'px';
+    panel.style.top = Math.round(r.top + (r.height - side) / 2) + 'px';
+    panel.style.width = width + 'px'; panel.style.height = side + 'px';
+    panel.style.right = 'auto'; panel.style.bottom = 'auto';
+  }
+  window.addEventListener('resize', dock); window.addEventListener('scroll', dock, true);
+
   var mount = window.ArcadeGames.snake.mount;
   window.ArcadeGames.snake.mount = function (host, api) {
     var proxy = Object.assign({}, api);
-    proxy.beforeStep = applyPlannedTurn;
-    proxy.setStatus = function (value) { api.setStatus(value); onScore(); };
+    proxy.demoStart = function () { if (api.demoStart) api.demoStart(); replayStarted(); };
+    proxy.demoReady = function (r) { if (api.demoReady) api.demoReady(r); replayScore = r && r.score; replayStarted(); };
+    proxy.jevKey = function (direction) { if (instance && instance.snapshot().state === 'idle') replayKey(direction); };
+    proxy.beforeStep = function () {
+      var now = recording();
+      if (now && now.state === 'playing') recordMove(now);
+      applyPlannedTurn();
+    };
+    proxy.setStatus = function (value) {
+      api.setStatus(value);
+      var now = recording();
+      if (now && now.state === 'playing' && now.tick > 0 && now.food) run.replay.foods.push({ t: now.tick, x: now.food.x, y: now.food.y });
+      onScore();
+    };
     proxy.setState = function (state) {
       api.setState(state);
       if (enabled && instance) {
@@ -288,7 +351,9 @@
     };
     proxy.gameOver = function (result) {
       clearRequest();
-      if (runPlayer) result = Object.assign({}, result, { player: runPlayer });
+      var end = recording();
+      if (end) { recordMove(end); run.replay.score = result.score; run.replay.ticks = end.tick; }
+      if (runPlayer) result = Object.assign({}, result, { player: runPlayer }, runPlayer === 'JEV' && run && run.replay ? { replay: run.replay } : {});
       if (runPlayer === 'JEV' && result.score > best) {
         best = result.score; $('j-best').textContent = best;
         try { localStorage.setItem(bestKey, String(best)); } catch (_) {}
@@ -298,6 +363,9 @@
       status(enabled ? 'GAME OVER' : 'READY'); buttons();
     };
     var mounted = mount(host, proxy, { controlled: false }); instance = mounted;
+    var view = host.querySelector('.snake-view');
+    if (view && window.ResizeObserver) { docked = new ResizeObserver(dock); docked.observe(view); }
+    dock();
     var start = mounted.start, destroy = mounted.destroy;
     mounted.start = function () {
       clearRequest(); runPlayer = null;
@@ -306,7 +374,7 @@
       if (enabled && mounted.snapshot().state === 'playing') beginRun();
       buttons();
     };
-    mounted.destroy = function () { clearRequest(); enabled = false; runPlayer = null; instance = null; destroy(); status('SELECT SNAKE'); buttons(); };
+    mounted.destroy = function () { if (docked) docked.disconnect(); docked = null; panel.classList.remove('j-docked'); if (!dragged) panel.removeAttribute('style'); clearRequest(); enabled = false; runPlayer = null; instance = null; destroy(); status('SELECT SNAKE'); buttons(); };
     buttons(); return mounted;
   };
   $('j-pace').addEventListener('change', function () {
@@ -329,14 +397,19 @@
     if (instance.snapshot().state === 'paused') instance.resume(); else instance.pause();
     $('j-pause').blur();
   });
-  // Human intervention is labeled, so a mixed run never becomes a claimed Jev-only score.
+  // This page is for watching Jev: people never steer or start the game here
+  // (the Jev window is the only control). Blocking, not labelling, means a
+  // stray click or key can never turn Jev's run into a mixed one.
+  function block(e) { e.preventDefault(); e.stopImmediatePropagation(); }
   document.addEventListener('keydown', function (e) {
     if (e.target.closest && e.target.closest('input,textarea,button,select')) return;
-    if (e.isTrusted && enabled && /^Arrow|^[wasdWASD]$/.test(e.key)) runPlayer = 'JEV + HUMAN';
+    if (e.isTrusted && /^Arrow|^[wasdWASDrRpP ]$|^Enter$/.test(e.key)) block(e);
   }, true);
-  document.addEventListener('pointerdown', function (e) {
-    if (enabled && e.target.closest && e.target.closest('.snake-view,.snake-controls')) runPlayer = 'JEV + HUMAN';
-  }, true);
+  ['pointerdown', 'pointermove', 'pointerup', 'click'].forEach(function (type) {
+    document.addEventListener(type, function (e) {
+      if (e.isTrusted && e.target.closest && e.target.closest('.snake-view,.snake-controls')) block(e);
+    }, true);
+  });
   $('j-collapse').addEventListener('click', function () {
     var closed = panel.classList.toggle('j-collapsed'); $('j-collapse').textContent = closed ? '+' : '−';
     $('j-collapse').setAttribute('aria-label', closed ? 'Expand Jev log' : 'Collapse Jev log');
@@ -352,6 +425,7 @@
     panel.style.left = Math.max(0, Math.min(innerWidth - panel.offsetWidth, e.clientX - drag.x)) + 'px';
     panel.style.top = Math.max(0, Math.min(innerHeight - header.offsetHeight, e.clientY - drag.y)) + 'px';
     panel.style.right = 'auto'; panel.style.bottom = 'auto';
+    dragged = true; panel.classList.remove('j-docked');
   });
   function endDrag() { drag = null; }
   header.addEventListener('pointerup', endDrag); header.addEventListener('pointercancel', endDrag);
@@ -385,7 +459,9 @@
         try { localStorage.setItem(keyStorage, candidate); } catch (_) { $('j-notice').textContent = 'Key works for this page; browser storage is unavailable.'; }
       }
       paintKey(); status(ready ? 'READY' : 'NOT CONNECTED');
-      $('j-settings').open = !ready;
+      // Fold after a working key; open for a missing one, except in the dock,
+      // where it stays however the visitor left it.
+      if (ready) $('j-settings').open = false; else if (!panel.classList.contains('j-docked')) $('j-settings').open = true;
       if (ready) $('j-notice').textContent = '';
       else $('j-notice').textContent = 'Add your OpenRouter key to connect Jev.';
     } catch (error) {

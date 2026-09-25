@@ -4,7 +4,92 @@
 waiting on Pat. Specs for individual pieces live in `docs/`; this file is the state of
 the whole thing.
 
-Last touched: 2026-09-11.
+Last touched: 2026-09-25.
+
+
+# PREVIEW: Jev on the original arcade (2026-09-24)
+
+Pat rejected the separate recording-page redesign. **/arcade-jev** now serves the
+same arcade page with a floating, draggable Jev window over it. The original
+cabinet geometry, real Snake input queue, game speed and classic score flow remain.
+The old /arcade/jev.html redirects here. See [docs/jev-snake.md](docs/jev-snake.md).
+Browser checks confirm identical cabinet geometry and original game control with
+fixture API responses. The floating window now accepts and remembers an OpenRouter key in this browser.
+One real Jev decision succeeded (174ms, $0.000018648); full games and public scores
+have not been run. Preview only; production was not changed.
+
+Multi-turn planning (2026-09-24): Jev now chooses a whole trajectory, the route to the apple plus the escape arrow for the step after eating, before it starts moving. Real Jev ate and escaped all 4 edges and 4 corners (16 of 16 over two passes). Full games at real speed reached 620 and 500, then died when a slow response (about 550ms) arrived late at the 60ms top speed. Trial spend was $0.100481. Details are in docs/jev-snake.md under "Multi-turn planning".
+
+LIVE in production 2026-09-24 (dpl_GZAotJpFBVVL4zi8xZ3a8WJPJcht), approved by Pat. /arcade-jev still needs the visitor's own OpenRouter key; the server has no fallback key. JEV gets the blue verified badge and keeps ONE row per game, its best: Supabase migration `site_arcade_jev_verified_best` added `is_jev`, reserved the name JEV, and added `submit_jev_score` (owner key required, so only Pat's owner browser can post Jev scores). The existing 410 row was adopted as Jev's. Mixed runs (JEV + HUMAN) post as ordinary rows without the badge.
+
+Also live (dpl_2Qu4cE3ko74ccsVXH13Jycs9qirL): Jev runs are watch-only (human keys, clicks and swipes on the game are blocked). Every Jev run is recorded (apple spawns + turns per tick); a new best posts the recording with `submit_jev_score(p_replay)` into `site_arcade_scores.replay` (migration `site_arcade_jev_replay`). The Snake attract screen replays Jev's best game through the real engine with a TRY TO BEAT JEV AND PAT button. Jev's current 500 was posted by hand on Pat's word (his run was wrongly flagged JEV + HUMAN by a click), so it has no recording; the replay appears once Jev beats 500. Test: scripts/dev/test-jev-replay.cjs.
+
+Update (dpl_BkkqFN5PtsAiEo2WyrHaNxPiqZPb): Jev scores no longer need owner mode. Anyone watching Jev with their own OpenRouter key can save his run, but only as a recording: `submit_jev_score(p_game, p_mode, p_replay)` replays it in SQL (`jev_replay_score`) under Snake's rules and derives the score; best only. Without a key, /arcade and /arcade-jev play Jev's recorded best. Pat's rule 2026-09-24: Jev's next score is his record, so a real run (400, 920 ticks, $0.016218) replaced the hand-posted 500 with its recording. Limit: apple positions in a recording cannot be proven random, so a hand-built recording could still pass.
+
+Free Jev play LIVE (dpl_GwqzNKZV2os2jhaRSSGnF4vFs7hF): visitors without a key play Jev on Pat's `JEV_OPENROUTER_KEY` (Vercel Production; also in pat_agent/.env). OpenRouter caps that key at $5/month (Pat asked for at most $10). Per visitor: 120 moves/min, 600/hour. A visitor's own key still takes priority. If the key runs dry, visitors are told to add their own. Same deploy: Jev window docked between the play field and the scoreboard on /arcade-jev and playing along with the replay; full-brightness replay; TRY TO BEAT JEV AND PAT button moved under the board.
+
+Jev is off the main arcade (2026-09-25). Pat: "the main page should just be the normal game, with jev just on the leader board. zero other mention of it." The attract-screen replay, the JEV tag and the TRY TO BEAT JEV AND PAT button now exist only on /arcade-jev. cabinet.js builds that markup only when the page is jev-enabled, so on /arcade the string JEV is absent from the cabinet DOM rather than hidden in it, and loadReplay never fetches a recording. Snake's attract screen is the plain sign again. Jev keeps his leaderboard row and badge. test-jev-replay.cjs records and replays on /arcade-jev, then checks /arcade ignores the recording it is served. Cabinet-flow, jev-overlay, arcade-share, touch-game suites and tsc pass.
+
+---
+
+# SHIPPED: arcade mobile challenge (2026-09-24)
+
+Implemented the approved phone challenge plan with three sub-agents and an
+integration review. Details and real-device checklist: [arcade mobile challenge](docs/arcade-mobile-challenge.md).
+
+- Revised mobile layout: full-viewport game surface, no TV effects/header/coin gate.
+- One scoreboard icon opens scores, game choices and settings. Direct game links remain.
+- Snake swipe response and optional arrows; Minesweeper Reveal/Flag, cancelled gestures,
+  accessible cell labels; Asteroids thumb joystick with separate Fire/Hyperspace.
+- Practice removed. Every run uses normal rules; score/name submission remains optional.
+- Persistent pause/mute, pause on backgrounding, explicit resume. Ranked Minesweeper
+  time continues while its board is hidden.
+- Optional score saving and retained failed/unsaved attempts. Result sharing removed; social preview remains.
+- Four focused logic suites pass. Local browser checks cover 320x568, 375x500,
+  390x844, 844x390 and desktop. Failed and retried submissions used an in-memory
+  service, not the real leaderboard. Real phones and LinkedIn's embedded browser
+  still need hands-on sign-off.
+
+Pat approved production on 2026-09-24. Deployment `dpl_DJ2wMFwfy41S6npqjWnA6KfRFZyM`
+passed build, lint and type checks, then was promoted to patrickneyland.com.
+Live phone layout, joystick, scores and game menu verified. No scores submitted.
+The release preserved existing recovery fixes and excluded unfinished Jev work.
+Release: https://pat-personal-site-aglk9dm25-neyland-solutions.vercel.app
+
+---
+# SHIPPED: chat safety and recovery fixes (2026-09-12)
+
+Live in production after Pat approved the tested preview:
+
+- Gary renders reply links as React elements, so generated URLs cannot inject
+  HTML attributes. Ordinary internal and external links still work.
+- The shared provider owns Gary's streaming request, error and send lock.
+  Closing or moving the panel keeps the reply running and prevents another
+  request from overwriting it. Failed requests release the lock for retry.
+- Arcade leaderboard reads retry after failures, including the owner row and
+  rank. A successful board read clears the disconnected state.
+- The pull-up dashboard stays mounted after a failed initial server read,
+  retries immediately and every 20 seconds while visible, and shows the
+  recovered data and timezone without a reload.
+
+`node scripts/dev/test-recovery.mjs` verifies these cases with the real React
+components in a browser and simulated services. Build, TypeScript and lint pass.
+The local build cannot reach the live pull-up feed under network restrictions.
+Also verified the built `/fun` page opens Gary, renders a reply link and keeps
+the conversation after closing and reopening, using a simulated API response.
+
+Pat approved the preview upload on 2026-09-12. Vercel's build passed and the
+deployment is READY:
+https://pat-personal-site-if3yot8f7-neyland-solutions.vercel.app
+Pat then approved production. Promoted the tested preview through Vercel;
+production deployment `dpl_2i9wg4qBDiK621Th3wDCX5pDtwMM` is READY and serves
+https://www.patrickneyland.com. Verified `/`, `/fun`, `/portfolio`, `/garden`,
+`/arcade` and `/pullups` return 200, and the live `/arcade/net.js` matches the
+tested source. Source changes remain local and uncommitted; no Git push was
+performed as part of this Vercel promotion.
+
+Pat explicitly kept the garden as it is and declined the Snake change after
+testing it himself. Neither garden files nor Snake gameplay were changed.
 
 ---
 

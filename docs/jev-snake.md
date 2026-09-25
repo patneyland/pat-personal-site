@@ -68,3 +68,13 @@ Code enumerates and simulates only: growth, moving tail, walls, clear cells afte
 - Total trial spend: $0.100481, no unknown costs. Outputs are in pat_agent/output/jev-build/ (`edge-trials-*`, `free-trials-1`, `long-trial*`), each with a `.cost.json`.
 
 Open: latency tail at top speed is now the limiting factor, not planning. Options: a wider lead margin, or offering Jev a longer committed continuation after each plan so one late reply is survivable.
+
+## Jev stays off the main arcade (2026-09-25)
+
+Pat: "the main page should just be the normal game, with jev just on the leader board. zero other mention of it."
+
+The attract-screen replay of Jev's best game, the `JEV` tag with its crown, and the `TRY TO BEAT JEV AND PAT` button now exist only on `/arcade-jev`. `cabinet.js` reads `jev-enabled` once into `jevPage` and builds `.ov-demo-tag` and `.ov-demo-play` only when it is set, so on `/arcade` they are absent from the DOM rather than hidden in it - the string JEV does not appear in the cabinet markup at all. `loadReplay` returns null there, so no recording is ever fetched and Snake's attract screen is the plain sign: title, rule, controls, INSERT COIN.
+
+The one place Jev survives on `/arcade` is his leaderboard row, with the verified badge, exactly as before.
+
+`test-jev-replay.cjs` now records on `/arcade-jev`, replays there, checks the button leaves for the real arcade, and then asserts `/arcade` serves Jev's best run from the board and still ignores it: nothing self-plays, no tag, no button, no JEV anywhere in the screen markup. Cabinet-flow, jev-overlay, arcade-share and touch-game suites still pass.

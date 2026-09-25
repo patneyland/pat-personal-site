@@ -131,6 +131,7 @@ window.ArcadeGames.asteroids = (function () {
     var hyperTimer = 0, hyperJumps = 0, hyperCool = 0;
     var state = 'idle';
     var keys = {};
+    var keyboardKeys = {}, padKeys = {};
     var last = 0, raf = null;
     var scale = 1, offX = 0, offY = 0;
 
@@ -262,6 +263,7 @@ window.ArcadeGames.asteroids = (function () {
 
     function start() {
       if (!api.canStart()) return;
+      clearInputs();
       reset();
       state = 'playing';
       api.setState('playing');
@@ -269,10 +271,33 @@ window.ArcadeGames.asteroids = (function () {
       last = performance.now();
     }
 
-    function gameOver() {
-      state = 'over';
+    function pause() {
+      clearInputs();
+      if (state !== 'playing') return;
+      state = 'paused';
       S.heartbeat.stop();
       S.saucer.stop();
+      api.setState('paused');
+      draw();
+    }
+
+    function resume() {
+      if (state !== 'paused') return;
+      clearInputs();
+      last = performance.now();
+      state = 'playing';
+      api.setState('playing');
+      S.heartbeat.start();
+      if (saucer) S.saucer.start(saucer.size);
+    }
+
+    function gameOver() {
+      if (state !== 'playing') return;
+      state = 'over';
+      clearInputs();
+      S.heartbeat.stop();
+      S.saucer.stop();
+      api.setState('over');
       api.gameOver({ score: score, display: window.ArcadeNet.formatScore(score) });
     }
 
@@ -290,14 +315,33 @@ window.ArcadeGames.asteroids = (function () {
 
     /* ------------------------------- input ------------------------------ */
 
+    function syncKeys() {
+      ['left', 'right', 'thrust'].forEach(function (key) {
+        keys[key] = !!(keyboardKeys[key] || padKeys[key]);
+      });
+    }
+
+    function clearInputs() {
+      keyboardKeys = {}; padKeys = {}; keys = {};
+      resetJoystick();
+      if (ship) ship.thrusting = false;
+      if (padButtons) padButtons.forEach(function (button) {
+        button.classList.remove('is-down');
+        button.setAttribute('aria-pressed', 'false');
+      });
+      if (actionPointers) actionPointers.clear();
+    }
+
     function onKeyDown(e) {
-      var tag = e.target && e.target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (e.defaultPrevented) return;
+      if (e.target && e.target.closest &&
+          e.target.closest('input, textarea, select, button, a, [contenteditable="true"], [role="button"]')) return;
+      if (state === 'paused') return;
       var k = e.key;
 
-      if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keys.left = true; e.preventDefault(); }
-      else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keys.right = true; e.preventDefault(); }
-      else if (k === 'ArrowUp' || k === 'w' || k === 'W') { keys.thrust = true; e.preventDefault(); }
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') { keyboardKeys.left = true; e.preventDefault(); }
+      else if (k === 'ArrowRight' || k === 'd' || k === 'D') { keyboardKeys.right = true; e.preventDefault(); }
+      else if (k === 'ArrowUp' || k === 'w' || k === 'W') { keyboardKeys.thrust = true; e.preventDefault(); }
       else if (k === ' ') {
         e.preventDefault();
         if (state === 'idle') { start(); return; }
@@ -313,14 +357,20 @@ window.ArcadeGames.asteroids = (function () {
         if (state === 'idle') { e.preventDefault(); start(); }
       } else if (k === 'r' || k === 'R') { e.preventDefault(); start(); }
 
-      if (state === 'idle' && (keys.left || keys.right || keys.thrust)) start();
+      if (state === 'idle' && (keyboardKeys.left || keyboardKeys.right || keyboardKeys.thrust)) {
+        var held = keyboardKeys;
+        start();
+        keyboardKeys = held;
+      }
+      syncKeys();
     }
 
     function onKeyUp(e) {
       var k = e.key;
-      if (k === 'ArrowLeft' || k === 'a' || k === 'A') keys.left = false;
-      else if (k === 'ArrowRight' || k === 'd' || k === 'D') keys.right = false;
-      else if (k === 'ArrowUp' || k === 'w' || k === 'W') keys.thrust = false;
+      if (k === 'ArrowLeft' || k === 'a' || k === 'A') keyboardKeys.left = false;
+      else if (k === 'ArrowRight' || k === 'd' || k === 'D') keyboardKeys.right = false;
+      else if (k === 'ArrowUp' || k === 'w' || k === 'W') keyboardKeys.thrust = false;
+      syncKeys();
       // Space is edge-triggered in onKeyDown; there is no held fire state.
     }
 
@@ -330,79 +380,139 @@ window.ArcadeGames.asteroids = (function () {
     document.addEventListener('keyup', onKeyUp);
     host.addEventListener('pointerdown', onPointerDown);
 
-    /* ----------------------------- the pad ------------------------------
-       Five controls for two thumbs: turn left and right under the left one,
-       hyperspace, thrust and fire under the right.
+    /* A captured thumb joystick combines turn and thrust without changing
+       either rate. The right thumb has Fire and a separate Hyperspace.
+       Fire remains edge-triggered, with the original four-bullet cap. */
+    var pad = null, padButtons = [], joystickPointer = null;
+    var joystick = null, joystickKnob = null;
+    var actionPointers = new Map();
 
-       Turning and thrust are held, and the press is captured to the button
-       so a thumb that slides off it still delivers its pointerup - without
-       that the ship keeps turning forever, which is the classic way a touch
-       pad goes wrong.
+    function resetJoystick() {
+      var pointer = joystickPointer;
+      joystickPointer = null;
+      padKeys = {}; syncKeys();
+      if (!joystick) return;
+      joystick.classList.remove('is-active');
+      joystickKnob.style.transform = 'translate(-50%, -50%) translate(0px, 0px)';
+      try {
+        if (pointer !== null && joystick.hasPointerCapture(pointer)) joystick.releasePointerCapture(pointer);
+      } catch (err) { /* The browser may already have cancelled the pointer. */ }
+    }
 
-       Fire stays one press one shot, the same rule the keyboard has. The
-       four-bullet cap is what makes the game bite, and auto-fire while held
-       would quietly delete it. If it reads as stiff under a thumb, that is
-       the knob to turn, and it is a decision rather than an oversight.
-       -------------------------------------------------------------------- */
-
-    var pad = null;
-
-    function padKey(name, glyph, aria, down, up) {
+    function padKey(name, glyph, aria) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'ast-key ast-key-' + name;
       b.setAttribute('aria-label', aria);
+      b.setAttribute('aria-pressed', 'false');
       b.innerHTML = glyph;
-      b.addEventListener('pointerdown', function (e) {
-        e.preventDefault();
-        if (b.setPointerCapture) {
-          try { b.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
-        }
-        b.classList.add('is-down');
-        down();
-      });
-      var release = function () { b.classList.remove('is-down'); if (up) up(); };
-      b.addEventListener('pointerup', release);
-      b.addEventListener('pointercancel', release);
-      b.addEventListener('lostpointercapture', release);
-      // A pad press is never a press on the game behind it.
-      b.addEventListener('click', function (e) { e.stopPropagation(); });
+      padButtons.push(b);
       return b;
     }
 
-    function tri(rot) {
-      return '<svg viewBox="0 0 24 24" aria-hidden="true" style="transform:rotate(' +
-             rot + 'deg)"><polygon points="12,5 20,19 4,19" fill="currentColor"/></svg>';
+    function markDown(button, down) {
+      button.classList.toggle('is-down', down);
+      button.setAttribute('aria-pressed', down ? 'true' : 'false');
     }
 
-    function wake() { if (state === 'idle') start(); }
+    function wake() {
+      if (state === 'idle') start();
+      return state === 'playing';
+    }
+
+    function actionKey(name, label, action) {
+      var button = padKey(name, label, label);
+      button.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (actionPointers.has(name) || !wake()) return;
+        actionPointers.set(name, e.pointerId);
+        if (button.setPointerCapture) button.setPointerCapture(e.pointerId);
+        markDown(button, true);
+        action();
+      });
+      function release(e) {
+        if (actionPointers.get(name) !== e.pointerId) return;
+        actionPointers.delete(name);
+        markDown(button, false);
+      }
+      button.addEventListener('pointerup', release);
+      button.addEventListener('pointercancel', release);
+      button.addEventListener('lostpointercapture', release);
+      button.addEventListener('keydown', function (e) {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault(); e.stopPropagation();
+        if (!e.repeat && wake()) { markDown(button, true); action(); }
+      });
+      button.addEventListener('keyup', function (e) {
+        if (e.key !== ' ' && e.key !== 'Enter') return;
+        e.preventDefault(); e.stopPropagation(); markDown(button, false);
+      });
+      button.addEventListener('blur', function () { markDown(button, false); });
+      button.addEventListener('click', function (e) {
+        e.stopPropagation();
+        // Keyboard/assistive activation generates a click without a pointer.
+        if (e.detail === 0 && wake()) action();
+      });
+      return button;
+    }
 
     if (coarse) {
       pad = document.createElement('div');
       pad.className = 'ast-pad';
 
-      var left = document.createElement('div');
-      left.className = 'ast-cluster';
-      left.appendChild(padKey('left', tri(-90), 'Turn left',
-        function () { keys.left = true; wake(); },
-        function () { keys.left = false; }));
-      left.appendChild(padKey('right', tri(90), 'Turn right',
-        function () { keys.right = true; wake(); },
-        function () { keys.right = false; }));
+      joystick = document.createElement('div');
+      joystick.className = 'ast-joystick';
+      joystick.tabIndex = 0;
+      joystick.setAttribute('role', 'group');
+      joystick.setAttribute('aria-label', 'Joystick: left and right turn, up thrusts. Keyboard: arrows or W A D.');
+      joystickKnob = document.createElement('span');
+      joystickKnob.className = 'ast-joystick-knob';
+      joystickKnob.setAttribute('aria-hidden', 'true');
+      joystick.appendChild(joystickKnob);
+      function trackJoystick(e) {
+        var rect = joystick.getBoundingClientRect();
+        var travel = Math.min(rect.width, rect.height) * 0.28;
+        if (!travel) return;
+        var dx = e.clientX - rect.left - rect.width / 2;
+        var dy = e.clientY - rect.top - rect.height / 2;
+        var distance = Math.hypot(dx, dy);
+        var clamp = distance > travel ? travel / distance : 1;
+        dx *= clamp; dy *= clamp;
+        joystickKnob.style.transform = 'translate(-50%, -50%) translate(' + dx + 'px, ' + dy + 'px)';
+        // A central dead zone absorbs resting-thumb jitter. Each axis stays
+        // digital, matching keyboard turn/thrust rates and ranked physics.
+        var x = dx / travel, y = dy / travel;
+        padKeys = distance < travel * 0.22 ? {} : {
+          left: x < -0.25, right: x > 0.25, thrust: y < -0.25
+        };
+        syncKeys();
+      }
+      joystick.addEventListener('pointerdown', function (e) {
+        e.preventDefault(); e.stopPropagation();
+        if (e.button !== 0 || joystickPointer !== null || !wake()) return;
+        joystickPointer = e.pointerId;
+        try { joystick.setPointerCapture(e.pointerId); } catch (err) { /* Pointer already ended. */ }
+        joystick.classList.add('is-active');
+        trackJoystick(e);
+      });
+      joystick.addEventListener('pointermove', function (e) {
+        if (e.pointerId === joystickPointer && state === 'playing') trackJoystick(e);
+      });
+      function releaseJoystick(e) {
+        if (e.pointerId === joystickPointer) resetJoystick();
+      }
+      joystick.addEventListener('pointerup', releaseJoystick);
+      joystick.addEventListener('pointercancel', releaseJoystick);
+      joystick.addEventListener('lostpointercapture', releaseJoystick);
+      joystick.addEventListener('blur', clearInputs);
+      joystick.addEventListener('click', function (e) { e.stopPropagation(); });
 
       var right = document.createElement('div');
-      right.className = 'ast-cluster';
-      right.appendChild(padKey('hyper', 'H', 'Hyperspace',
-        function () { if (state === 'playing') hyperspace(); }));
-      right.appendChild(padKey('thrust', tri(0), 'Thrust',
-        function () { keys.thrust = true; wake(); },
-        function () { keys.thrust = false; }));
-      right.appendChild(padKey('fire',
-        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-          '<circle cx="12" cy="12" r="6" fill="currentColor"/></svg>', 'Fire',
-        function () { if (state === 'idle') { start(); return; } fire(); }));
+      right.className = 'ast-actions';
+      right.appendChild(actionKey('hyper', 'Hyperspace', hyperspace));
+      right.appendChild(actionKey('fire', 'Fire', fire));
 
-      pad.appendChild(left);
+      pad.appendChild(joystick);
       pad.appendChild(right);
       host.appendChild(pad);
       host.classList.add('has-ast-pad');
@@ -411,7 +521,7 @@ window.ArcadeGames.asteroids = (function () {
     /* ------------------------------- update ----------------------------- */
 
     function fire() {
-      if (bullets.length >= MAX_BULLETS || cooldown > 0) return;
+      if (state !== 'playing' || bullets.length >= MAX_BULLETS || cooldown > 0) return;
       bullets.push({
         x: ship.x + Math.cos(ship.a) * SHIP_R,
         y: ship.y + Math.sin(ship.a) * SHIP_R,
@@ -560,6 +670,7 @@ window.ArcadeGames.asteroids = (function () {
         hyperTimer -= dt;
         if (hyperTimer <= 0) { hyperTimer = 0; hyperArrive(); }
       }
+      if (state !== 'playing') return;
 
       /* ship */
       if (hyperTimer > 0) { ship.thrusting = false; } else {
@@ -879,7 +990,8 @@ window.ArcadeGames.asteroids = (function () {
 
     function frame(now) {
       raf = requestAnimationFrame(frame);
-      var dt = Math.min((now - last) / 1000, 0.05);
+      var elapsed = Math.max(0, (now - last) / 1000);
+      var dt = Math.min(elapsed, 0.05);
       last = now;
       if (state === 'playing') update(dt);
       draw();
@@ -894,9 +1006,13 @@ window.ArcadeGames.asteroids = (function () {
 
     return {
       start: start,
+      pause: pause,
+      resume: resume,
+      getState: function () { return state; },
       repaint: draw,
       resize: resize,
       destroy: function () {
+        clearInputs();
         S.heartbeat.stop();
         S.saucer.stop();
         cancelAnimationFrame(raf);
@@ -920,7 +1036,7 @@ window.ArcadeGames.asteroids = (function () {
     metric: 'score',
     attract: 'SPLIT THE ROCKS. MIND THE SAUCER.',
     controls: 'ARROWS TURN AND THRUST  /  SPACE FIRES  /  DOWN IS HYPERSPACE',
-    touchControls: 'TURN AND THRUST  /  TAP TO FIRE  /  H IS HYPERSPACE',
+    touchControls: 'JOYSTICK: TURN + THRUST  /  TAP FIRE  /  HYPERSPACE',
     mount: mount
   };
 })();

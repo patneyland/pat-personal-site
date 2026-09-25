@@ -1,0 +1,219 @@
+/* Challenge shell uses the cabinet's existing phosphor palette and pixel font. */
+.challenge-bar { position:absolute; top:10%; left:5%; right:5%; z-index:5; display:flex; flex-direction:column; align-items:center; gap:8px; }
+.challenge-target,.ph-gate-target,.ph-gate-game,.ov-comparison,.pause-note { font-family:var(--font-arcade); font-size:10px; line-height:1.8; color:var(--sc-score); }
+.game-choices { display:flex; align-items:stretch; justify-content:center; gap:6px; width:100%; }
+.game-choices button,.pause-btn,.resume-btn,.unsaved-btn,.ov-save { min-height:44px; border:1px solid var(--sc-rule); border-radius:3px; background:#111; color:var(--sc-rank); font-family:var(--font-arcade); font-size:9px; line-height:1.5; padding:8px 12px; cursor:pointer; touch-action:manipulation; }
+.game-choices button { flex:1; max-width:180px; }
+.game-choices button[aria-pressed="true"] { border-color:var(--sc-score); color:var(--sc-score); background:#202020; }
+.game-choices button:disabled { cursor:default; }
+button:focus-visible { outline:2px solid var(--sc-score); outline-offset:3px; }
+.pause-btn { position:absolute; bottom:8px; left:5%; z-index:8; }
+.unsaved-btn { position:absolute; bottom:10px; z-index:8; }
+.unsaved-btn { right:5%; max-width:230px; font-size:8px; }
+.screen-ui .stage { top:26%; bottom:58px; }
+.screen-ui .overlay { top:26%; bottom:58px; z-index:6; }
+.screen-ui .overlay[data-ov="attract"] { z-index:3; }
+.screen-ui .overlay[data-ov="pause"] { background:#090909; z-index:7; }
+.screen-ui[data-state="paused"] .stage { visibility:hidden; }
+.screen-ui .overlay[data-ov="over"] { overflow:auto; justify-content:flex-start; padding:20px 5%; gap:12px; background:rgba(0,0,0,.94); filter:none; overscroll-behavior:contain; }
+.screen-ui .overlay[data-ov="over"] > * { flex-shrink:0; }
+.screen-ui .ov-result { line-height:1.6; font-size:clamp(16px,2vw,26px); }
+.ov-comparison { color:var(--ink-warm); max-width:100%; }
+.ov-comparison.is-beat { color:var(--sc-score); }
+.screen-ui button.ov-again { min-height:48px; background:var(--sc-score); color:#000; border:2px solid var(--sc-score); border-radius:3px; padding:10px 24px; font-family:var(--font-arcade); font-size:12px; }
+.screen-ui .ov-save { min-width:180px; }
+.screen-ui .ov-msg:empty { display:none; }
+.screen-ui .ov-input { min-height:44px; }
+.screen-ui .ov-btn { min-height:44px; }
+.screen-ui [hidden],.ph-hud [hidden] { display:none !important; }
+.screen-ui .vol-btn { z-index:8; }
+/* Unsaved results stay with scores. */
+.rail .unsaved-btn { position:static; width:100%; max-width:none; margin-top:12px; flex-shrink:0; }
+.rail .unsaved-btn[hidden] { display:none; }
+/* The desktop already has a labeled cabinet dial. Keep its original game area. */
+html:not([data-phone]) .challenge-bar { top:3.2%; left:25%; right:25%; }
+html:not([data-phone]) .challenge-bar .game-choices { display:none; }
+html:not([data-phone]) .screen-ui .stage,
+html:not([data-phone]) .screen-ui .overlay { top:11%; }
+.screen-ui[data-state="idle"] .ast-pad { visibility:hidden; }
+.screen-ui[data-state="over"] .stage { visibility:hidden; }
+
+/* A phone is a game screen. Cabinet treatment belongs to desktop only. */
+html[data-phone], html[data-phone] body { background:#080808; }
+html[data-phone] *, html[data-phone] *::before, html[data-phone] *::after {
+  filter:none !important;
+  text-shadow:none !important;
+  backdrop-filter:none !important;
+}
+html[data-phone] .layer,
+html[data-phone] .coin-module,
+html[data-phone] .ph-gate,
+html[data-phone] .rule-glow { display:none !important; }
+html[data-phone] .bezel::before,
+html[data-phone] .bezel::after,
+html[data-phone] .screen::before,
+html[data-phone] .screen::after,
+html[data-phone] .picture::before,
+html[data-phone] .picture::after { display:none !important; }
+html[data-phone] .bezel,
+html[data-phone] .screen,
+html[data-phone] .picture,
+html[data-phone] .screen-ui {
+  border:0;
+  border-radius:0;
+  box-shadow:none;
+  background:#080808;
+  transform:none;
+  transition:none;
+}
+html[data-phone] .picture { padding:0; }
+html[data-phone] .screen-ui .stage {
+  inset:calc(env(safe-area-inset-top,0px) + 44px) env(safe-area-inset-right,0px)
+    env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+}
+html[data-phone] .status {
+  top:calc(env(safe-area-inset-top,0px) + 12px);
+  left:calc(env(safe-area-inset-left,0px) + 10px);
+  right:calc(env(safe-area-inset-right,0px) + 56px);
+  gap:8px;
+  align-items:center;
+  min-height:20px;
+}
+html[data-phone] .status-value { font-size:10px; }
+html[data-phone] .status-extra { font-size:8px; line-height:1.5; }
+html[data-phone] .ph-hud,
+html[data-phone][data-play="playing"] .ph-hud {
+  display:block;
+  top:env(safe-area-inset-top,0px);
+  right:calc(env(safe-area-inset-right,0px) + 4px);
+  left:auto;
+  width:44px;
+  height:44px;
+  padding:0;
+  opacity:1;
+  pointer-events:none;
+  transition:none;
+}
+html[data-phone] .ph-hud .ph-board {
+  display:flex;
+  width:44px;
+  height:44px;
+  border:0;
+  border-radius:0;
+  background:transparent;
+  color:#c9c9c9;
+  pointer-events:auto;
+  cursor:pointer;
+}
+html[data-phone] .ph-hud .ph-board svg { width:20px; height:20px; }
+html[data-phone] .screen-ui .challenge-bar,
+html[data-phone] .screen-ui > .pause-btn,
+html[data-phone] .screen-ui > .vol-btn,
+html[data-phone] .screen-ui > .unsaved-btn { display:none; }
+
+/* The sheet owns scores, the game picker, and optional controls. */
+html[data-phone] .ph-sheet {
+  background:#101010;
+  padding:calc(env(safe-area-inset-top,0px) + 56px)
+    max(16px,env(safe-area-inset-right,0px))
+    calc(env(safe-area-inset-bottom,0px) + 24px)
+    max(16px,env(safe-area-inset-left,0px));
+  overscroll-behavior:contain;
+}
+html[data-phone] .ph-sheet-body { max-width:520px; padding-top:0; }
+html[data-phone] .ph-close {
+  top:calc(env(safe-area-inset-top,0px) + 4px);
+  right:calc(env(safe-area-inset-right,0px) + 8px);
+  width:44px;
+  height:44px;
+  border:0;
+  background:transparent;
+  color:#ddd;
+  font:28px/1 sans-serif;
+}
+html[data-phone] .ph-sheet-controls { display:flex; flex-direction:column; gap:16px; margin-bottom:24px; }
+html[data-phone] .ph-sheet .challenge-bar {
+  position:static;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  gap:12px;
+  width:100%;
+  text-align:center;
+}
+html[data-phone] .ph-sheet .challenge-target { font-size:10px; line-height:1.8; }
+html[data-phone] .ph-sheet .game-choices { display:flex; visibility:visible; gap:6px; }
+html[data-phone] .ph-sheet .game-choices button { max-width:none; min-width:0; padding:8px 4px; font-size:8px; }
+html[data-phone] .ph-sheet-settings { display:flex; flex-wrap:wrap; gap:8px; justify-content:center; }
+html[data-phone] .ph-timer-note { width:100%; margin:4px 0; text-align:center; font:9px/1.6 var(--font-arcade); color:var(--sc-score); }
+html[data-phone] .ph-sheet .pause-btn,
+html[data-phone] .ph-sheet .ph-arrows,
+html[data-phone] .ph-sheet .vol-btn {
+  position:static;
+  transform:none;
+  width:auto;
+  min-width:44px;
+  max-width:none;
+  min-height:44px;
+  margin:0;
+  padding:10px 12px;
+  border:1px solid #555;
+  border-radius:4px;
+  background:#181818;
+  color:#ddd;
+  font:9px/1.6 var(--font-arcade);
+  opacity:1;
+  pointer-events:auto;
+  cursor:pointer;
+}
+html[data-phone] .ph-sheet .vol-btn { display:inline-flex; align-items:center; gap:8px; width:auto; height:44px; padding:10px; }
+html[data-phone] .ph-sheet .vol-btn svg { width:22px; height:22px; }
+html[data-phone] .ph-sheet .ph-arrows[aria-pressed="true"] { border-color:var(--sc-score); color:var(--sc-score); }
+html[data-phone] .ph-sheet .unsaved-btn { position:static; transform:none; max-width:none; width:100%; margin-top:16px; }
+html[data-phone] .ph-sheet [hidden],html[data-phone] .ph-hud [hidden],html[data-phone] .screen-ui [hidden] { display:none !important; }
+
+/* Small instructions, and scrollable results without opening a keyboard. */
+html[data-phone] .screen-ui .overlay {
+  top:calc(env(safe-area-inset-top,0px) + 44px);
+  bottom:env(safe-area-inset-bottom,0px);
+  left:env(safe-area-inset-left,0px);
+  right:env(safe-area-inset-right,0px);
+  padding:20px;
+  gap:14px;
+  background:rgba(8,8,8,.88);
+}
+html[data-phone] .screen-ui .overlay[data-ov="attract"] { background:rgba(8,8,8,.78); }
+html[data-phone] .screen-ui .overlay[data-ov="attract"] .ov-title { font-size:18px; }
+html[data-phone] .screen-ui .overlay[data-ov="attract"] .ov-sub,
+html[data-phone] .screen-ui .overlay[data-ov="attract"] .ov-controls { max-width:310px; font-size:9px; line-height:1.9; }
+html[data-phone] .screen-ui .overlay[data-ov="attract"] .ov-sub { display:none; }
+html[data-phone] .screen-ui .insert { font-size:10px; animation:none; margin-top:8px; }
+html[data-phone] .screen-ui .overlay[data-ov="pause"] { background:#080808; }
+html[data-phone] .screen-ui .overlay[data-ov="over"] {
+  bottom:0;
+  padding:20px 14px calc(env(safe-area-inset-bottom,0px) + 20px);
+  gap:12px;
+  background:#080808;
+}
+html[data-phone] .screen-ui .ov-title-sm { font-size:16px; }
+html[data-phone] .screen-ui .ov-result { font-size:22px; }
+html[data-phone] .screen-ui .ov-input { font-size:16px; width:min(280px,82vw); }
+
+/* Swipe-only Snake uses every available square pixel. */
+html[data-phone] .snake-pad-toggle { display:none !important; }
+html[data-phone] .has-snake .snake-view { bottom:0; }
+html[data-phone] .has-snake-pad .snake-view { bottom:116px; }
+html[data-phone] .snake-controls { bottom:8px; gap:0; }
+html[data-phone] .ms-board { width:min(100%,calc(100cqh - 58px)); }
+html[data-phone] .ms-secondary { display:none; }
+html[data-phone] .ms-marks { gap:8px; }
+html[data-phone] .ms-marks .ms-flag-btn { min-width:112px; }
+@media (max-height:560px) {
+  html[data-phone] .has-snake-pad .snake-view { bottom:52px; }
+  html[data-phone] .snake-controls { bottom:4px; }
+  html[data-phone] .screen-ui .overlay[data-ov="attract"] { gap:10px; }
+  html[data-phone] .screen-ui .overlay[data-ov="attract"] .ov-title { font-size:16px; }
+}
+@media (max-width:360px) {
+  html[data-phone] .ph-sheet .game-choices button { font-size:7px; padding:8px 2px; }
+}

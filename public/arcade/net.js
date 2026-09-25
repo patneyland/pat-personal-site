@@ -67,7 +67,7 @@ window.ArcadeNet = (function () {
   }
   function isOwnerMode() { return !!getOwnerSecret(); }
 
-  var offline = false;   // set true after the first failed request
+  var offline = false;   // outcome of the latest board read, not a retry gate
 
   function cleanPlayerName(raw) {
     var name = String(raw == null ? '' : raw).trim();
@@ -75,18 +75,16 @@ window.ArcadeNet = (function () {
     return name;
   }
 
-  /** Top `limit` rows for one game/mode. Never rejects: falls back to samples. */
+  /** Top `limit` rows for one game/mode. Failed reads can be retried. */
   function fetchScores(game, mode, limit) {
     limit = limit || 8;
     var m = METRIC[game];
     if (!m) return Promise.resolve([]);
 
-    if (offline) return Promise.resolve([]);
-
     var url = URL + '/rest/v1/' + TABLE + ''
       + '?game=eq.' + encodeURIComponent(game)
       + '&mode=eq.' + encodeURIComponent(mode)
-      + '&select=id,player,' + m.col + ',is_owner,created_at'
+      + '&select=id,player,' + m.col + ',is_owner,is_jev,created_at'
       + '&order=' + m.order
       + '&limit=' + limit;
 
@@ -96,6 +94,7 @@ window.ArcadeNet = (function () {
         return res.json();
       })
       .then(function (rows) {
+        offline = false;
         // An empty board is a real answer and it gets shown as one. Samples
         // are for a request that never arrived, nothing else. The page is
         // public now, and inventing scores under names that read like real
@@ -149,12 +148,12 @@ window.ArcadeNet = (function () {
       an invented owner row would be a lie about who holds the score. */
   function fetchOwnerBest(game, mode) {
     var m = METRIC[game];
-    if (!m || offline) return Promise.resolve(null);
+    if (!m) return Promise.resolve(null);
     var url = URL + '/rest/v1/' + TABLE
       + '?game=eq.' + encodeURIComponent(game)
       + '&mode=eq.' + encodeURIComponent(mode)
       + '&is_owner=is.true'
-      + '&select=id,player,' + m.col + ',is_owner,created_at'
+      + '&select=id,player,' + m.col + ',is_owner,is_jev,created_at'
       + '&order=' + m.order
       + '&limit=1';
     return fetch(url, { headers: HEADERS })
@@ -166,7 +165,7 @@ window.ArcadeNet = (function () {
   /** Where a value sits on the board: one plus however many rows beat it. */
   function fetchRank(game, mode, value) {
     var m = METRIC[game];
-    if (!m || offline || value == null) return Promise.resolve(null);
+    if (!m || value == null) return Promise.resolve(null);
     var url = URL + '/rest/v1/' + TABLE
       + '?game=eq.' + encodeURIComponent(game)
       + '&mode=eq.' + encodeURIComponent(mode)
@@ -214,6 +213,38 @@ window.ArcadeNet = (function () {
     }, function () {
       throw new Error('Network error - score not saved.');
     });
+  }
+
+  /** Jev (the AI player) keeps one verified row per game, its best. Anyone
+      watching Jev with their own key can post his run, but only as a
+      recording: the database replays it under Snake's rules and derives the
+      score itself, so a typed-in number cannot get on the board.
+      Resolves { ok, improved, first, score }. */
+  function submitJevScore(opts) {
+    if (!opts.replay) return Promise.reject(new Error('This run has no recording to post.'));
+    return fetch(URL + '/rest/v1/rpc/submit_jev_score', {
+      method: 'POST',
+      headers: Object.assign({}, HEADERS, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ p_game: opts.game, p_mode: opts.mode, p_replay: opts.replay })
+    }).then(function (res) {
+      if (!res.ok) throw new Error('Submit failed (' + res.status + ')');
+      return res.json();
+    }).then(function (r) {
+      if (!r || r.ok !== true) throw new Error('Recording rejected: ' + ((r && r.reason) || 'unknown'));
+      return r;
+    }, function () {
+      throw new Error('Network error - score not saved.');
+    });
+  }
+
+  /** Jev's best game as a recording, or null if there is none. */
+  function fetchJevReplay(game, mode) {
+    return fetch(URL + '/rest/v1/' + TABLE
+      + '?game=eq.' + encodeURIComponent(game) + '&mode=eq.' + encodeURIComponent(mode)
+      + '&is_jev=is.true&replay=not.is.null&select=score,replay&limit=1', { headers: HEADERS })
+      .then(function (res) { return res.ok ? res.json() : []; })
+      .then(function (rows) { var r = rows && rows[0]; return r && r.replay ? Object.assign({}, r.replay, { score: r.score }) : null; })
+      .catch(function () { return null; });
   }
 
   /** Flip is_owner on a row. Returns true only if the secret was right. */
@@ -273,6 +304,8 @@ window.ArcadeNet = (function () {
   return {
     OWNER_NAME: OWNER_NAME,
     submitOwnerScore: submitOwnerScore,
+    submitJevScore: submitJevScore,
+    fetchJevReplay: fetchJevReplay,
     metricCol: metricCol,
     fetchScores: fetchScores,
     fetchOwnerBest: fetchOwnerBest,

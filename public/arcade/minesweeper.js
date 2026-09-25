@@ -32,63 +32,71 @@ window.ArcadeGames.minesweeper = (function () {
     boardEl.className = 'ms-board';
     wrap.appendChild(boardEl);
 
-    /* Right-click flags, but nobody discovers that and a touch screen has no
-       right button at all. This is the visible way in. It sits bottom left,
-       opposite the volume button, so it reads as another piece of cabinet
-       furniture rather than part of the board. */
-    /* The keys are printed on the buttons rather than left in the attract
-       text, which is gone by the time anyone needs them. */
+    /* Explicit primary modes remain visible below the board. Question marks
+       are secondary, while right-click and keyboard shortcuts still work. */
     function markButton(cls, glyph, label, key) {
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'ms-flag-btn ' + cls;
       b.setAttribute('aria-pressed', 'false');
       b.setAttribute('aria-label', label);
-      b.innerHTML = '<span class="ms-flag-glyph">' + glyph + '</span>' +
-                    '<kbd class="ms-flag-key">' + key + '</kbd>';
-      wrap.appendChild(b);
+      b.innerHTML = '<span class="ms-mode-label">' + glyph + '</span>' +
+                    (key ? '<kbd class="ms-flag-key">' + key + '</kbd>' : '');
       return b;
     }
 
     var bar = document.createElement('div');
     bar.className = 'ms-marks';
+    bar.setAttribute('role', 'group');
+    bar.setAttribute('aria-label', 'Cell action');
     wrap.appendChild(bar);
-    var flagBtn = markButton('is-flag', '⚑',
+    var revealBtn = markButton('is-reveal', 'Reveal', 'Reveal cells', '');
+    var flagBtn = markButton('is-flag', 'Flag',
                              'Flag mode: click cells to flag them', 'F');
-    var quesBtn = markButton('is-question', '?',
+    var quesBtn = markButton('is-question', 'Question',
                              'Question mode: click cells to mark them unsure', 'Q');
+    bar.appendChild(revealBtn);
     bar.appendChild(flagBtn);
-    bar.appendChild(quesBtn);
+    var secondary = document.createElement('details');
+    secondary.className = 'ms-secondary';
+    var summary = document.createElement('summary');
+    summary.textContent = 'More';
+    secondary.appendChild(summary);
+    secondary.appendChild(quesBtn);
+    bar.appendChild(secondary);
     host.appendChild(wrap);
 
     /* 0 plain clicking, 1 planting flags, 2 planting question marks. One
-       mode, two buttons: turning one on turns the other off, because a click
+       mode: turning one on turns the others off, because a click
        can only mean one thing. */
     var markMode = 0;
 
     function setMarkMode(mode) {
       markMode = mode;
+      revealBtn.setAttribute('aria-pressed', mode === 0 ? 'true' : 'false');
       flagBtn.setAttribute('aria-pressed', mode === 1 ? 'true' : 'false');
       quesBtn.setAttribute('aria-pressed', mode === 2 ? 'true' : 'false');
       wrap.classList.toggle('flagging', mode !== 0);
+      if (mode === 2) secondary.open = true;
     }
 
     function wireMode(btn, mode) {
       btn.addEventListener('click', function (e) {
         e.stopPropagation();
-        setMarkMode(markMode === mode ? 0 : mode);
+        setMarkMode(mode);
         S.flag();
         // Give the keyboard back, or the next R/F/Q lands on this button.
         if (e.detail > 0) btn.blur();
       });
     }
+    wireMode(revealBtn, 0);
     wireMode(flagBtn, 1);
     wireMode(quesBtn, 2);
 
     var grid, minesPlaced, revealedCount, flagCount;
     var state = 'idle';          // idle | ready | playing | won | lost
     var startedAt = 0, elapsed = 0, timerId = null;
-    var pressTimer = null, longPressed = false;
+    var pressTimer = null, press = null, beforePause = null;
 
     /* ------------------------------ helpers ------------------------------ */
 
@@ -114,7 +122,13 @@ window.ArcadeGames.minesweeper = (function () {
     /* ------------------------------- build ------------------------------- */
 
     function newGame() {
+      cancelPress();
       stopTimer();
+      if (api.runReset) api.runReset();
+      beforePause = null;
+      wrap.classList.remove('is-paused');
+      boardEl.inert = false;
+      bar.inert = false;
       grid = [];
       minesPlaced = false;
       revealedCount = 0;
@@ -132,6 +146,7 @@ window.ArcadeGames.minesweeper = (function () {
           el.className = 'ms-cell';
           el.dataset.r = r;
           el.dataset.c = c;
+          el.setAttribute('aria-label', 'Row ' + (r + 1) + ', column ' + (c + 1) + ': hidden');
           boardEl.appendChild(el);
           // mark: 0 none, 1 flag, 2 question. Windows cycled through all
           // three on right click, and only the flag counted against the
@@ -141,7 +156,7 @@ window.ArcadeGames.minesweeper = (function () {
         grid.push(row);
       }
       setMarkMode(0);
-      api.setState('playing');   // the board is live the moment it is drawn
+      api.setState('ready');     // choices stay available until the first reveal
       report();
     }
 
@@ -178,9 +193,10 @@ window.ArcadeGames.minesweeper = (function () {
     /* ------------------------------- timer ------------------------------- */
 
     function startTimer() {
-      startedAt = performance.now();
+      // Wall time includes time spent in a suspended browser or paused sheet.
+      startedAt = Date.now();
       timerId = setInterval(function () {
-        elapsed = performance.now() - startedAt;
+        elapsed = Math.max(0, Date.now() - startedAt);
         report();
       }, 100);
     }
@@ -191,6 +207,11 @@ window.ArcadeGames.minesweeper = (function () {
 
     /* ------------------------------ revealing ---------------------------- */
 
+    function labelCell(cell, description) {
+      cell.el.setAttribute('aria-label',
+        'Row ' + (+cell.el.dataset.r + 1) + ', column ' + (+cell.el.dataset.c + 1) + ': ' + description);
+    }
+
     function paintRevealed(cell) {
       cell.el.classList.add('revealed');
       if (cell.adj > 0) {
@@ -199,6 +220,7 @@ window.ArcadeGames.minesweeper = (function () {
       } else {
         cell.el.textContent = '';
       }
+      labelCell(cell, cell.adj > 0 ? cell.adj + ' adjacent ' + (cell.adj === 1 ? 'mine' : 'mines') : 'revealed, no adjacent mines');
     }
 
     function reveal(startR, startC) {
@@ -259,6 +281,7 @@ window.ArcadeGames.minesweeper = (function () {
       cell.el.textContent = mark === 1 ? '⚑' : mark === 2 ? '?' : '';
       cell.el.classList.toggle('flagged', mark === 1);
       cell.el.classList.toggle('guess', mark === 2);
+      labelCell(cell, mark === 1 ? 'flagged' : mark === 2 ? 'question mark' : 'hidden');
     }
 
     /** Click a revealed number with the right count of flags around it. */
@@ -280,7 +303,7 @@ window.ArcadeGames.minesweeper = (function () {
 
     function handleReveal(r, c) {
       if (!minesPlaced && !api.canStart()) return;
-      if (state === 'won' || state === 'lost') return;
+      if (state !== 'playing' && state !== 'ready') return;
       var cell = grid[r][c];
       if (cell.revealed) { chord(r, c); return; }
       if (cell.mark === 1) return;      // flagged cells are protected; questioned ones are not
@@ -288,6 +311,8 @@ window.ArcadeGames.minesweeper = (function () {
       if (!minesPlaced) {
         placeMines(r, c);
         state = 'playing';
+        if (api.runStarted) api.runStarted();
+        api.setState('playing');
         startTimer();
       } else if (state === 'ready') {
         state = 'playing';
@@ -298,6 +323,7 @@ window.ArcadeGames.minesweeper = (function () {
     /* ------------------------------- endings ----------------------------- */
 
     function lose(r, c) {
+      cancelPress();
       state = 'lost';
       stopTimer();
       S.boom();
@@ -309,8 +335,10 @@ window.ArcadeGames.minesweeper = (function () {
             cell.el.classList.remove('guess');
             cell.el.classList.add('revealed', 'mine');
             cell.el.textContent = '✹';
+            labelCell(cell, rr === r && cc === c ? 'exploded mine' : 'mine');
           } else if (!cell.mine && cell.mark === 1) {
             cell.el.classList.add('wrong');
+            labelCell(cell, 'incorrect flag');
           }
         }
       }
@@ -320,9 +348,10 @@ window.ArcadeGames.minesweeper = (function () {
     function checkWin() {
       if (revealedCount !== SIZE * SIZE - MINES) return;
       state = 'won';
+      cancelPress();
       stopTimer();
       S.win();
-      elapsed = startedAt ? performance.now() - startedAt : 0;
+      elapsed = startedAt ? Math.max(0, Date.now() - startedAt) : 0;
       report();
       for (var r = 0; r < SIZE; r++) {
         for (var c = 0; c < SIZE; c++) {
@@ -340,28 +369,53 @@ window.ArcadeGames.minesweeper = (function () {
 
     function cellFrom(e) {
       var el = e.target.closest('.ms-cell');
-      if (!el) return null;
-      return { r: +el.dataset.r, c: +el.dataset.c };
+      if (!el || !boardEl.contains(el)) return null;
+      return { r: +el.dataset.r, c: +el.dataset.c, el: el };
+    }
+
+    function cancelPress(e) {
+      if (e && (!press || e.pointerId !== press.id)) return;
+      clearTimeout(pressTimer);
+      pressTimer = null;
+      if (!press) return;
+      var old = press;
+      press = null;
+      old.cell.el.classList.remove('is-pressed');
+      try { if (boardEl.hasPointerCapture(old.id)) boardEl.releasePointerCapture(old.id); } catch (_) { /* Already released. */ }
+    }
+
+    function insidePressedCell(e) {
+      var bounds = press.cell.el.getBoundingClientRect();
+      return e.clientX >= bounds.left && e.clientX < bounds.right &&
+             e.clientY >= bounds.top && e.clientY < bounds.bottom;
+    }
+
+    function onPointerMove(e) {
+      if (press && press.id === e.pointerId && !insidePressedCell(e)) cancelPress(e);
     }
 
     function onPointerDown(e) {
+      if (e.button !== 0 || press || (state !== 'playing' && state !== 'ready')) return;
       var rc = cellFrom(e);
       if (!rc) return;
-      longPressed = false;
+      press = { id: e.pointerId, cell: rc, long: false };
+      rc.el.classList.add('is-pressed');
+      try { boardEl.setPointerCapture(e.pointerId); } catch (_) { /* Already ended. */ }
       if (e.pointerType === 'touch') {
         pressTimer = setTimeout(function () {
-          longPressed = true;
-          cycleMark(rc.r, rc.c);
+          if (!press || press.id !== e.pointerId) return;
+          press.long = true;
+          applyMark(rc.r, rc.c, 1);
         }, LONG_PRESS_MS);
       }
     }
 
     function onPointerUp(e) {
-      clearTimeout(pressTimer);
-      var rc = cellFrom(e);
-      if (!rc) return;
-      if (longPressed) { longPressed = false; return; }
-      if (e.button === 2) return;         // handled by contextmenu
+      if (!press || press.id !== e.pointerId) return;
+      var rc = press.cell;
+      var activate = !press.long && insidePressedCell(e) && e.button === 0;
+      cancelPress(e);
+      if (!activate) return;
       // In a marking mode a plain click plants that mark, and clicking it
       // again lifts it - no cycling through the other one to get back to
       // plain. Clicking an already revealed cell still chords, because that
@@ -373,36 +427,82 @@ window.ArcadeGames.minesweeper = (function () {
       handleReveal(rc.r, rc.c);
     }
 
+    function onCellClick(e) {
+      // Pointer release is handled above; keyboard and assistive clicks have
+      // no pointer gesture and still need to activate the focused cell.
+      if (e.detail !== 0) return;
+      var rc = cellFrom(e);
+      if (!rc) return;
+      if (markMode && !grid[rc.r][rc.c].revealed) applyMark(rc.r, rc.c, markMode);
+      else handleReveal(rc.r, rc.c);
+    }
+
     function onContext(e) {
       e.preventDefault();
+      if (e.pointerType === 'touch' || (press && press.long)) return;
       var rc = cellFrom(e);
       if (rc) cycleMark(rc.r, rc.c);
     }
 
     function onKey(e) {
       var tag = e.target && e.target.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      var ownCell = e.target && e.target.classList && e.target.classList.contains('ms-cell') && boardEl.contains(e.target);
+      if (e.defaultPrevented || (/^(INPUT|TEXTAREA|BUTTON|SELECT|A)$/.test(tag) && !ownCell) || (e.target && e.target.isContentEditable)) return;
       if (e.key === 'r' || e.key === 'R') { e.preventDefault(); newGame(); }
       if (e.key === 'f' || e.key === 'F') { e.preventDefault(); setMarkMode(markMode === 1 ? 0 : 1); }
       if (e.key === 'q' || e.key === 'Q') { e.preventDefault(); setMarkMode(markMode === 2 ? 0 : 2); }
     }
 
     boardEl.addEventListener('pointerdown', onPointerDown);
+    boardEl.addEventListener('pointermove', onPointerMove);
     boardEl.addEventListener('pointerup', onPointerUp);
+    boardEl.addEventListener('pointercancel', cancelPress);
+    boardEl.addEventListener('lostpointercapture', cancelPress);
+    boardEl.addEventListener('click', onCellClick);
     boardEl.addEventListener('contextmenu', onContext);
     document.addEventListener('keydown', onKey);
 
     newGame();
 
+    function pause() {
+      if (state !== 'playing' && state !== 'ready') return;
+      cancelPress();
+      beforePause = state;
+      state = 'paused';
+      wrap.classList.add('is-paused');
+      boardEl.inert = true;
+      bar.inert = true;
+      api.setState('paused');
+    }
+
+    function resume() {
+      if (state !== 'paused') return;
+      state = beforePause;
+      beforePause = null;
+      wrap.classList.remove('is-paused');
+      boardEl.inert = false;
+      bar.inert = false;
+      if (minesPlaced) elapsed = Math.max(0, Date.now() - startedAt);
+      report();
+      api.setState(state);
+    }
+
     return {
       start: newGame,
+      pause: pause,
+      resume: resume,
+      getState: function () { return state; },
       repaint: function () { /* CSS driven, nothing to redraw */ },
       resize: function () { /* CSS grid handles it */ },
       destroy: function () {
         stopTimer();
-        clearTimeout(pressTimer);
+        cancelPress();
         boardEl.removeEventListener('pointerdown', onPointerDown);
+        boardEl.removeEventListener('pointermove', onPointerMove);
         boardEl.removeEventListener('pointerup', onPointerUp);
+        boardEl.removeEventListener('pointercancel', cancelPress);
+        boardEl.removeEventListener('lostpointercapture', cancelPress);
+        boardEl.removeEventListener('click', onCellClick);
         boardEl.removeEventListener('contextmenu', onContext);
         document.removeEventListener('keydown', onKey);
         wrap.remove();

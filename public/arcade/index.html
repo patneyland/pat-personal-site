@@ -2,12 +2,18 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
 <title>Arcade - Patrick Neyland</title>
 <meta name="description" content="Snake, Minesweeper and Asteroids on a CRT. Insert a coin and put your name on the board." />
 <meta property="og:title" content="Arcade - Patrick Neyland" />
 <meta property="og:description" content="Snake, Minesweeper and Asteroids on a CRT. Insert a coin and put your name on the board." />
 <meta property="og:type" content="website" />
+<meta property="og:url" content="https://www.patrickneyland.com/arcade" />
+<meta property="og:image" content="https://www.patrickneyland.com/arcade/challenge-preview.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Arcade: Snake, Minesweeper and Asteroids. Beat Pat's high scores." />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="/arcade/icon.svg" />
 <meta name="theme-color" content="#0e0e0e" />
 <meta name="mobile-web-app-capable" content="yes" />
@@ -1119,7 +1125,8 @@ body {
 .board li.is-owner .b-name,
 .board li.is-owner .b-rank { color: var(--sc-score); opacity: 1; }
 /* Pat's name is one token with the badge - never split across lines. */
-.board li.is-owner .b-name { white-space: nowrap; }
+.board li.is-owner .b-name,
+.board li.is-jev .b-name { white-space: nowrap; }
 .b-verified {
   display: inline-block;
   margin-left: 7px;
@@ -1625,6 +1632,34 @@ body {
    stage and swallows the tap - and the click - that every game reads as
    "start", which is why tapping the glass appeared to do nothing. */
 .overlay[data-ov="attract"] { pointer-events: none; }
+/* Attract replay: Jev's best game plays at full brightness, as if live.
+   Only his tag and the play button sit over it; the button takes clicks
+   even though the sign itself does not. */
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] {
+  justify-content: flex-end;
+  background: none;
+}
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] .ov-title,
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] .rule-glow,
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] .ov-sub,
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] .ov-controls,
+.screen-ui[data-demo="on"] .overlay[data-ov="attract"] .insert { display: none; }
+.ov-demo-tag {
+  position: absolute; top: 5%; left: 5%;
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-arcade); font-size: 11px; color: var(--sc-name);
+}
+.ov-demo-tag .b-verified { margin-left: 0; }
+.ov-demo-tag span { color: var(--sc-score); }
+.ov-demo-tag[hidden], .screen-ui button.ov-demo-play[hidden] { display: none; }
+/* Same look as TRY AGAIN, its own class so nothing mistakes one for the other. */
+.screen-ui button.ov-demo-play.is-placed { position: absolute; transform: translateX(-50%); margin: 0; }
+.screen-ui button.ov-demo-play {
+  pointer-events: auto; cursor: pointer; touch-action: manipulation;
+  min-height: 48px; padding: 10px 24px; border: 2px solid var(--sc-score); border-radius: 3px;
+  background: var(--sc-score); color: #000; font-family: var(--font-arcade); font-size: 12px;
+}
+html[data-phone] .screen-ui button.ov-demo-play { font-size: 0.6rem; }
 
 /* Nothing on the glass scrolls, zooms or selects. A swipe in Snake was
    turning the snake and scrolling the page underneath it at the same time,
@@ -1939,6 +1974,10 @@ html[data-phone][data-play="playing"] .vol-btn {
 .ph-close svg { width: 22px; height: 22px; }
 
 </style>
+<link rel="stylesheet" href="/arcade/touch-games.css" />
+<link rel="stylesheet" href="/arcade/asteroids-mobile.css" />
+<link rel="stylesheet" href="/arcade/challenge.css" />
+
 </head>
 
 <body>
@@ -2007,8 +2046,8 @@ html[data-phone][data-play="playing"] .vol-btn {
       <div class="champion">
         <div class="champion-label">ALL-TIME HIGH</div>
         <div class="champion-body">
-          <div class="champion-initials">PJN</div>
-          <div class="champion-score">184,750</div>
+          <div class="champion-initials">---</div>
+          <div class="champion-score">---</div>
         </div>
         <div class="champion-meta">
           <span data-slot-game>SNAKE</span>
@@ -2072,6 +2111,7 @@ html[data-phone][data-play="playing"] .vol-btn {
 <script src="/arcade/minesweeper.js"></script>
 <script src="/arcade/asteroids.js"></script>
 <script src="/arcade/mobile.js"></script>
+
 <script src="/arcade/jev-controller.js"></script>
 <script src="/arcade/cabinet.js"></script>
 <script src="/arcade/gary.js"></script>
