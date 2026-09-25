@@ -83,5 +83,27 @@ function request(body) { return { headers: new Headers({ host: 'localhost:3217',
   answer = { answers: { move: { choice: 'up' } } };
   context.fetch = async () => { throw Error('fixture failure'); };
   assert.equal((await exportsObject.POST(request(board))).status, 504);
-  console.log('PASS: missing key, invalid input, Choice payload, reverse exclusion, apple routes with escapes, wall/corner/body-blocked exits, growth vs tail, trapped route, invalid provider result, upstream failure. No external API calls.');
+  // Pat's site key pays when a visitor has none; a visitor's own key wins.
+  env.JEV_OPENROUTER_KEY = 'sk-or-site-fixture-key-000';
+  const ready = await (await exportsObject.GET({ headers: new Headers() })).json();
+  assert.equal(ready.ready, true); assert.equal(ready.provider, 'site');
+  let seen;
+  context.fetch = async (url, opts) => { seen = { url, auth: opts.headers.Authorization, body: JSON.parse(opts.body) };
+    return Response.json({ answers: { move: { choice: 'right_1' } }, usage: { cost: 0.0003 }, id: 'gen-site' }); };
+  const siteReq = (body, extra = {}) => ({ headers: new Headers({ host: 'localhost:3217', 'x-forwarded-for': '10.0.0.9', ...extra }), nextUrl: new URL('http://localhost:3217/api/jev'), text: async () => JSON.stringify(body) });
+  const paid = await (await exportsObject.POST(siteReq({ ...board, plan: true }))).json();
+  assert.equal(seen.url, 'https://openrouter.ai/api/alpha/decisions'); assert.equal(seen.auth, 'Bearer sk-or-site-fixture-key-000');
+  assert.equal(seen.body.model, 'typesafe/jev-1.13'); assert.deepEqual(seen.body.usage, { include: true });
+  assert.equal(paid.paidBy, 'site'); assert.equal(paid.provider, 'OpenRouter'); assert.equal(paid.usage.cost, 0.0003);
+  await exportsObject.POST(siteReq({ ...board, plan: true }, { 'x-openrouter-key': 'sk-or-visitor-fixture-key-1' }));
+  assert.equal(seen.auth, 'Bearer sk-or-visitor-fixture-key-1', 'A visitor key is used before the site key');
+  context.fetch = async () => Response.json({ error: 'no credit' }, { status: 402 });
+  const broke = await exportsObject.POST(siteReq({ ...board, plan: true }));
+  assert.equal(broke.status, 503); assert.match((await broke.json()).error, /own OpenRouter key/);
+  context.fetch = async () => Response.json({ answers: { move: { choice: 'right_1' } } });
+  let limited = 0;
+  for (let i = 0; i < 130; i++) if ((await exportsObject.POST(siteReq({ ...board, plan: true }, { 'x-forwarded-for': '10.0.0.77' }))).status === 429) limited++;
+  assert.equal(limited, 10, 'Site-paid moves are capped at 120 a minute per visitor');
+  delete env.JEV_OPENROUTER_KEY;
+  console.log('PASS: missing key, invalid input, Choice payload, reverse exclusion, apple routes with escapes, wall/corner/body-blocked exits, growth vs tail, trapped route, site-paid key (priority, usage, credit-out message, per-visitor cap), invalid provider result, upstream failure. No external API calls.');
 })().catch(e => { console.error(e); process.exit(1); });
